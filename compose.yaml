@@ -1,0 +1,25 @@
+# Wolfy: admin web UI for Wolf. `docker compose up -d --build` then http://<serveur>:8420
+services:
+  wolfy:
+    build: .
+    image: wolfy:latest
+    container_name: wolfy
+    env_file: .env
+    ports:
+      - "8420:8420"
+    volumes:
+      - ./data:/data
+      # start/stop Wolf, list app containers, build/pull images
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Wolf state: cfg/config.toml, covers, crash dumps (same path as in the Wolf container)
+      - /opt/stacks/config/wolf:/opt/stacks/config/wolf
+      # build contexts of the custom emulator images
+      - /opt/stacks/wolf/images:/opt/stacks/wolf/images:ro
+      # Wolf API socket, shared with the Wolf container (see README)
+      - wolf-api:/var/run/wolf
+    restart: unless-stopped
+
+volumes:
+  wolf-api:
+    external: true
+    name: wolf-api
