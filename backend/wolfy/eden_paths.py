@@ -1,28 +1,41 @@
-"""Switch (Eden) paths: keys, firmware (NAND), ROM folders, user saves.
+"""Switch (Eden) paths: keys, firmware (NAND), ROM folders, users (profiles + saves),
+and the keys / firmware uploads.
+
+Default layout, in the Wolfy project (config/ is not versioned):
+    config/switch/keys    prod.keys, title.keys
+    config/switch/nand    Eden NAND: firmware (system/Contents/registered), installed content
+    config/switch/users   Eden save dir: system/save (profiles, system settings) + user/save (games)
 
 They live in two places that must agree:
 - Eden's shared qt-config.ini ([Data%20Storage] nand/save dirs, [UI] game dirs), used by the
   host Eden and copied into every Wolf session;
 - the mounts of the Wolf apps running Eden (config.toml), so each host path exists at the
   same absolute path in the session container. Keys have no Eden setting (always
-  <data dir>/keys): a custom keys folder is mounted over the session's keys folder.
+  <data dir>/keys): <data dir>/keys is made a symlink to the keys folder, which is mounted
+  at the same path in the sessions (the host Eden follows the same link).
 
 Host paths are checked through the read-only host mount (settings.HOST_ROOT).
 """
+import os
 import re
+import shutil
+import tempfile
+import zipfile
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import HTTPException
 
 from . import eden_config, settings, store, wolf_config
 
-DATA_DIR = "/home/remy/.local/share/eden"          # host Eden data dir
+DATA_DIR = settings.EDEN_DATA_DIR                 # host Eden data dir
 SESSION_DATA_DIR = "/home/retro/.local/share/eden"  # same dir inside the sessions
+SWITCH_DIR = f"{settings.WOLFY_HOST_DIR}/config/switch"
 DEFAULTS = {
-    "keys": f"{DATA_DIR}/keys",
-    "firmware": f"{DATA_DIR}/nand",
+    "keys": f"{SWITCH_DIR}/keys",
+    "firmware": f"{SWITCH_DIR}/nand",
     "roms": ["/mnt/Jeux/ROMS/switch"],
-    "users": "",
+    "users": f"{SWITCH_DIR}/users",
 }
 GAME_EXT = (".xci", ".nsp", ".nca", ".nro", ".nso", ".xcz", ".nsz")
 SPECIAL_GAMEDIRS = ("SDMC", "UserNAND", "SysNAND")
@@ -63,9 +76,9 @@ def _gamedirs(lines) -> list[str]:
 
 def current() -> dict:
     lines = _ini_lines()
-    meta = store.get("emulator_paths").get("eden", {})
+    keys = Path(DATA_DIR) / "keys"
     return {
-        "keys": meta.get("keys", DEFAULTS["keys"]),
+        "keys": os.readlink(keys) if keys.is_symlink() else str(keys),
         "firmware": _ini_value(lines, "nand_directory") or DEFAULTS["firmware"],
         "roms": [d for d in _gamedirs(lines) if d not in SPECIAL_GAMEDIRS],
         "users": _ini_value(lines, "save_directory"),
@@ -95,11 +108,13 @@ def status(paths: dict) -> dict:
         roms.append({"path": d, "exists": p.is_dir(), "ok": n > 0, "detail": f"{n} jeu(x)"})
     out["roms"] = roms
 
-    users = host(paths["users"]) if paths["users"] else nand / "user" / "save"
-    saves = [p for p in users.rglob("*") if p.is_dir() and re.fullmatch(r"[0-9A-F]{16}", p.name)] \
-        if users.is_dir() else []
-    out["users"] = {"ok": users.is_dir(), "exists": users.is_dir(),
-                    "detail": f"{len(saves)} sauvegarde(s)" + ("" if paths["users"] else " · dans la NAND")}
+    users = host(paths["users"]) if paths["users"] else nand
+    game_saves = users / "user" / "save"
+    saves = [p for p in game_saves.glob("*/*/*") if p.is_dir()] if game_saves.is_dir() else []
+    profiles = (users / "system" / "save" / "8000000000000010").is_dir()
+    out["users"] = {"ok": users.is_dir() and profiles, "exists": users.is_dir(),
+                    "detail": f"{len(saves)} sauvegarde(s) de jeux · profils {'présents' if profiles else 'absents'}"
+                              + ("" if paths["users"] else " · dans la NAND")}
     return out
 
 
@@ -130,13 +145,37 @@ def browse(path: str) -> dict:
 def _session_mounts(paths: dict) -> list[str]:
     """Extra mounts the Eden sessions need for these paths."""
     mounts = []
-    if paths["keys"] != DEFAULTS["keys"]:
-        mounts.append(f"{paths['keys']}:{SESSION_DATA_DIR}/keys:ro")
+    # <data dir>/keys links there (see _link_keys)
+    if not _in_data_dir(paths["keys"]):
+        mounts.append(f"{paths['keys']}:{paths['keys']}:ro")
     for p in (paths["firmware"], paths["users"]):
         if p and not (p == DATA_DIR or p.startswith(DATA_DIR + "/")):
             mounts.append(f"{p}:{p}:rw")
     mounts += [f"{d}:{d}:ro" for d in paths["roms"]]
     return mounts
+
+
+def _in_data_dir(path: str) -> bool:
+    return path == DATA_DIR or path.startswith(DATA_DIR + "/")
+
+
+def _chown_like(path: Path, ref: Path) -> None:
+    st = ref.stat()
+    for p in [path, *path.rglob("*")] if path.is_dir() else [path]:
+        os.lchown(p, st.st_uid, st.st_gid)
+
+
+def _link_keys(keys: str) -> None:
+    """Make <data dir>/keys point to the keys folder (Eden has no keys path setting)."""
+    link = Path(DATA_DIR) / "keys"
+    if str(link) == keys or (link.is_symlink() and os.readlink(link) == keys):
+        return
+    if link.is_symlink():
+        link.unlink()
+    elif link.exists():
+        link.rename(link.with_name(f"keys.bak-{datetime.now():%Y-%m-%d_%H-%M-%S}"))
+    link.symlink_to(keys)
+    _chown_like(link, link.parent)
 
 
 def _write_ini(paths: dict) -> bool:
@@ -201,12 +240,13 @@ def apply(paths: dict, restart_wolf) -> dict:
             raise HTTPException(400, f"ROMs : dossier introuvable ({d})")
 
     ini_changed = _write_ini(paths)
+    _link_keys(paths["keys"])
     previous = store.get("emulator_paths").get("eden", {})
     # mounts this feature added last time (first run: the ones Wolfy would have added)
     old_mounts = set(previous.get("mounts") or _session_mounts(
-        {**DEFAULTS, "keys": previous.get("keys", DEFAULTS["keys"]), "roms": current()["roms"]}))
+        {"keys": f"{DATA_DIR}/keys", "firmware": f"{DATA_DIR}/nand", "users": "", "roms": current()["roms"]}))
     new_mounts = _session_mounts(paths)
-    store.put("emulator_paths", "eden", {"keys": paths["keys"], "mounts": new_mounts})
+    store.put("emulator_paths", "eden", {"mounts": new_mounts})
 
     def wanted(app) -> list[str]:
         rom = [f"{app['rom_dir']}:{app['rom_dir']}:ro"] if app["rom_dir"] else []
@@ -229,3 +269,95 @@ def apply(paths: dict, restart_wolf) -> dict:
         changed = [a["title"] for _, a in eden_apps(doc)]
         restart_wolf(change, "chemins-eden")
     return {"paths": paths, "apps_updated": changed, "eden_config_changed": ini_changed}
+
+
+# ------------------------------------------------------------------ uploads
+
+KEY_LINE = re.compile(r"^\s*[a-z0-9_]+\s*=\s*[0-9a-fA-F]+\s*$")
+KEY_FILES = ("prod.keys", "title.keys")
+
+
+def _check_keys(name: str, data: bytes) -> str:
+    try:
+        text = data.decode()
+    except UnicodeDecodeError:
+        raise HTTPException(400, f"{name} : fichier texte attendu")
+    lines = [l for l in text.splitlines() if l.strip() and not l.lstrip().startswith(("#", ";"))]
+    bad = [l for l in lines if not KEY_LINE.match(l)]
+    if not lines or len(bad) > len(lines) // 10:
+        raise HTTPException(400, f"{name} : ce n'est pas un fichier de clés (lignes « nom = hex » attendues)")
+    if name == "prod.keys" and "header_key" not in text:
+        raise HTTPException(400, "prod.keys : header_key absente, fichier incomplet ?")
+    return text
+
+
+def upload_keys(files: list[tuple[str, bytes]]) -> dict:
+    """prod.keys / title.keys, or a .zip containing them."""
+    found: dict[str, bytes] = {}
+    for name, data in files:
+        base = Path(name).name.lower()
+        if base.endswith(".zip"):
+            with zipfile.ZipFile(_bytes_file(data)) as z:
+                for member in z.namelist():
+                    if Path(member).name.lower() in KEY_FILES:
+                        found[Path(member).name.lower()] = z.read(member)
+        elif base in KEY_FILES:
+            found[base] = data
+        else:
+            raise HTTPException(400, f"{name} : prod.keys, title.keys ou .zip attendu")
+    if not found:
+        raise HTTPException(400, "Aucun prod.keys ni title.keys trouvé")
+    texts = {name: _check_keys(name, data) for name, data in found.items()}
+
+    keys_dir = Path(current()["keys"])
+    keys_dir.mkdir(parents=True, exist_ok=True)
+    backup = keys_dir / ".backups" / datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    for name, text in texts.items():
+        dest = keys_dir / name
+        if dest.exists():
+            backup.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(dest, backup / name)
+        dest.write_text(text)
+    _chown_like(keys_dir, keys_dir.parent)
+    return {"installed": sorted(texts)}
+
+
+def _bytes_file(data: bytes):
+    import io
+    return io.BytesIO(data)
+
+
+def upload_firmware(zip_path: str) -> dict:
+    """Firmware .zip (the .nca files of a Switch firmware) -> NAND system/Contents/registered."""
+    try:
+        z = zipfile.ZipFile(zip_path)
+    except zipfile.BadZipFile:
+        raise HTTPException(400, "Archive .zip invalide")
+    with z:
+        ncas = [m for m in z.infolist() if not m.is_dir() and m.filename.lower().endswith(".nca")]
+        if len(ncas) < 20:
+            raise HTTPException(400, f"Pas un firmware Switch : {len(ncas)} fichier(s) .nca dans l'archive")
+        names = [Path(m.filename).name for m in ncas]
+        if len(set(names)) != len(names):
+            raise HTTPException(400, "Archive invalide : fichiers .nca en double")
+
+        nand = Path(current()["firmware"])
+        contents = nand / "system" / "Contents"
+        contents.mkdir(parents=True, exist_ok=True)
+        staging = Path(tempfile.mkdtemp(prefix="registered.new-", dir=contents))
+        try:
+            for m in ncas:
+                with z.open(m) as src, open(staging / Path(m.filename).name, "wb") as dst:
+                    shutil.copyfileobj(src, dst, 1 << 20)
+        except Exception:
+            shutil.rmtree(staging, ignore_errors=True)
+            raise
+    registered = contents / "registered"
+    previous = contents / "registered.bak"
+    if registered.exists():
+        shutil.rmtree(previous, ignore_errors=True)
+        registered.rename(previous)
+    staging.rename(registered)
+    registered.chmod(0o755)
+    _chown_like(registered, contents)
+    return {"installed": len(ncas), "backup": str(previous) if previous.exists() else None}

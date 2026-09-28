@@ -23,9 +23,13 @@ WOLF_COVERS_DIR = Path(_env("WOLF_COVERS_DIR", str(WOLF_STATE_DIR / "covers")))
 WOLFY_IMAGES_DIR = Path(_env("WOLFY_IMAGES_DIR", str(Path(__file__).resolve().parents[2] / "images")))
 WOLF_IMAGES_DIR = Path(_env("WOLF_IMAGES_DIR", "/opt/stacks/wolf/images"))
 # emulator configs shared by the host and every Wolf session
+EDEN_DATA_DIR = _env("EDEN_DATA_DIR", "/home/remy/.local/share/eden")
 EDEN_CONFIG = Path(_env("EDEN_CONFIG", "/home/remy/.config/eden/qt-config.ini"))
 # Moonlight clients only see this profile
 DEFAULT_PROFILE = _env("WOLF_DEFAULT_PROFILE", "moonlight-profile-id")
+
+# host path of this project (emulator data lives in <it>/config, mounted at the same path)
+WOLFY_HOST_DIR = _env("WOLFY_DIR", "/home/remy/Bureau/wolfy")
 
 # read-only view of the host filesystem (emulator paths: checks and folder picker)
 HOST_ROOT = Path(_env("WOLFY_HOST_ROOT", "/host"))

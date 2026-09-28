@@ -50,6 +50,7 @@ services:
     env_file: .env
     environment:
       - WOLFY_IMAGES_DIR=/app/images
+      - WOLFY_DIR=${WOLFY_DIR:-/home/remy/Bureau/wolfy}
     ports:
       - "8420:8420"
     volumes:
@@ -60,8 +61,13 @@ services:
       - /opt/stacks/config/wolf:/opt/stacks/config/wolf
       # build contexts of the emulator images
       - ./images:/app/images:ro
-      # Eden settings shared by the host and the Wolf sessions
+      # emulator data (config/switch/keys, nand, users), at its host path: the Wolf
+      # sessions mount the same paths
+      - ./config:${WOLFY_DIR:-/home/remy/Bureau/wolfy}/config
+      # Eden settings shared by the host and the Wolf sessions, and Eden's data dir
+      # (its keys/ is a link to config/switch/keys)
       - /home/remy/.config/eden:/home/remy/.config/eden
+      - /home/remy/.local/share/eden:/home/remy/.local/share/eden
       # read-only view of the host (emulator paths: checks + folder picker)
       - /:/host:ro
       - wolf-api:/var/run/wolf

@@ -8,3 +8,5 @@ __pycache__/
 # extracted Eden AppImage (≈300 Mo), see images/eden/README.md
 images/eden/AppDir/
 *.bak-*
+# emulator data (keys, firmware, saves): never versioned
+config/

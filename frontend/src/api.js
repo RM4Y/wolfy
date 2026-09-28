@@ -75,3 +75,20 @@ export function coverUrl(icon) {
   if (/^https?:/.test(icon)) return icon
   return `/api/covers/${icon.split('/').pop()}`
 }
+
+// multipart upload with progress (fetch has no upload progress)
+export function upload(path, formData, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', `/api${path}`)
+    xhr.upload.onprogress = e => e.lengthComputable && onProgress?.(e.loaded / e.total)
+    xhr.onload = () => {
+      let data = {}
+      try { data = JSON.parse(xhr.responseText) } catch { /* not JSON */ }
+      if (xhr.status >= 200 && xhr.status < 300) resolve(data)
+      else reject(new ApiError(xhr.status, data.detail || `Erreur ${xhr.status}`))
+    }
+    xhr.onerror = () => reject(new ApiError(0, 'Envoi interrompu'))
+    xhr.send(formData)
+  })
+}

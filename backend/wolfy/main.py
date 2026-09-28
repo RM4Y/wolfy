@@ -2,6 +2,7 @@
 import asyncio
 import hmac
 import re
+import tempfile
 import time
 from pathlib import Path
 
@@ -233,6 +234,32 @@ def set_eden_paths(body: EdenPaths):
     result = eden_paths.apply(body.model_dump(), _apply)
     paths = eden_paths.current()
     return {**result, "status": eden_paths.status(paths)}
+
+
+@api.post("/emulators/eden/keys")
+async def upload_eden_keys(files: list[UploadFile] = File(...)):
+    data = [(f.filename or "", await f.read()) for f in files]
+    result = await run_in_threadpool(eden_paths.upload_keys, data)
+    return {**result, "status": eden_paths.status(eden_paths.current())}
+
+
+@api.post("/emulators/eden/firmware")
+async def upload_eden_firmware(file: UploadFile = File(...)):
+    # replacing the firmware under a running Switch session would break it
+    if wolf_api.available():
+        doc = wolf_config.load()
+        eden_titles = {a["title"] for p in wolf_config.list_profiles(doc) for a in p["apps"] if a["emulator"] == "eden"}
+        apps = {a["id"]: a["title"] for a in (await wolf_api.get("apps")).get("apps", [])}
+        running = [s for s in (await wolf_api.get("sessions")).get("sessions", [])
+                   if apps.get(str(s.get("app_id"))) in eden_titles]
+        if running:
+            raise HTTPException(409, "Une session Switch est en cours : quitte-la avant d'installer un firmware")
+    with tempfile.NamedTemporaryFile(suffix=".zip") as tmp:
+        while chunk := await file.read(1 << 20):
+            tmp.write(chunk)
+        tmp.flush()
+        result = await run_in_threadpool(eden_paths.upload_firmware, tmp.name)
+    return {**result, "status": eden_paths.status(eden_paths.current())}
 
 
 @api.get("/fs")

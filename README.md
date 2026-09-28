@@ -60,6 +60,12 @@ docker compose --profile images build     # images des émulateurs (ou Wolfy > �
 Interface : <http://192.168.1.85:8420>
 
 - État de Wolf (config.toml, jaquettes, appareils appairés) : `/opt/stacks/config/wolf`, inchangé.
+- Données des émulateurs dans `config/` (jamais versionné) :
+  `config/switch/keys` (prod.keys, title.keys — envoi depuis Émulateurs > Eden),
+  `config/switch/nand` (firmware — installation d'un .zip depuis la même page, contenu installé),
+  `config/switch/users` (profils `system/save` + sauvegardes `user/save`).
+  Eden sur le PC utilise les mêmes dossiers (`~/.local/share/eden/keys` est un lien vers
+  `config/switch/keys`, la NAND et les sauvegardes sont réglées dans `~/.config/eden/qt-config.ini`).
 - Le volume `nvidia-driver-vol` (pilote NVIDIA pour les conteneurs d'applis) est externe : à recréer
   après une mise à jour du pilote NVIDIA.
 - Wolf et Wolfy partagent le socket d'API de Wolf via le volume `wolf-api`.
