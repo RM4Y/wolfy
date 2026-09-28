@@ -44,13 +44,17 @@ async def post(path: str, payload: dict) -> dict:
 
 
 def available() -> bool:
-    """Wolf answers on its socket (the file itself outlives Wolf in the shared volume)."""
+    """Wolf answers on its socket (the file itself outlives Wolf in the shared volume).
+
+    Sends a real request: a bare connect/close makes Wolf log "Error reading request".
+    """
     if not os.path.exists(settings.WOLF_SOCKET):
         return False
     try:
         with socket.socket(socket.AF_UNIX) as s:
-            s.settimeout(1)
+            s.settimeout(2)
             s.connect(settings.WOLF_SOCKET)
-        return True
+            s.sendall(b"GET /api/v1/clients HTTP/1.1\r\nHost: wolf\r\nConnection: close\r\n\r\n")
+            return s.recv(16).startswith(b"HTTP/1.1 200")
     except OSError:
         return False
