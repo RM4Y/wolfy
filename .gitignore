@@ -5,3 +5,6 @@ backend/static/
 __pycache__/
 *.pyc
 .venv/
+# extracted Eden AppImage (≈300 Mo), see images/eden/README.md
+images/eden/AppDir/
+*.bak-*

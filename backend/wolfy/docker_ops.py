@@ -163,8 +163,11 @@ def image_info(ref: str) -> dict:
 def build_context(build_dir: str | None):
     if not build_dir:
         return None
-    path = settings.WOLF_IMAGES_DIR / build_dir
-    return path if (path / "Dockerfile").is_file() else None
+    for base in (settings.WOLFY_IMAGES_DIR, settings.WOLF_IMAGES_DIR):
+        path = base / build_dir
+        if (path / "Dockerfile").is_file():
+            return path
+    return None
 
 
 # ------------------------------------------------------------------- jobs
@@ -216,7 +219,8 @@ def run_job(title: str, work: Callable[[Job], None]) -> Job:
 def build_image(ref: str, build_dir: str) -> Job:
     ctx = build_context(build_dir)
     if ctx is None:
-        raise HTTPException(404, f"Pas de Dockerfile dans {settings.WOLF_IMAGES_DIR / build_dir}")
+        raise HTTPException(404, f"Pas de Dockerfile pour « {build_dir} » dans {settings.WOLFY_IMAGES_DIR} "
+                                 f"ni {settings.WOLF_IMAGES_DIR}")
 
     def work(job: Job):
         job.log(f"Construction de {ref} depuis {ctx}")

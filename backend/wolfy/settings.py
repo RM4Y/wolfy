@@ -18,7 +18,9 @@ WOLF_CONTAINER = _env("WOLF_CONTAINER", "wolf")
 WOLF_STATE_DIR = Path(_env("WOLF_STATE_DIR", "/opt/stacks/config/wolf"))
 WOLF_CONFIG = Path(_env("WOLF_CONFIG", str(WOLF_STATE_DIR / "cfg" / "config.toml")))
 WOLF_COVERS_DIR = Path(_env("WOLF_COVERS_DIR", str(WOLF_STATE_DIR / "covers")))
-# build contexts of the custom app images (one sub-folder per image)
+# build contexts of the custom app images (one sub-folder per image): Wolfy's own
+# images/ folder first, then the Wolf stack's
+WOLFY_IMAGES_DIR = Path(_env("WOLFY_IMAGES_DIR", str(Path(__file__).resolve().parents[2] / "images")))
 WOLF_IMAGES_DIR = Path(_env("WOLF_IMAGES_DIR", "/opt/stacks/wolf/images"))
 # emulator configs shared by the host and every Wolf session
 EDEN_CONFIG = Path(_env("EDEN_CONFIG", "/home/remy/.config/eden/qt-config.ini"))

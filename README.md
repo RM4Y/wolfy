@@ -37,7 +37,8 @@ navigateur ──► Wolfy (FastAPI + Vue 3, port 8420)
   les sessions Wolf copient ce fichier à leur démarrage. Les réglages imposés par l'image Wolf
   (pseudo, IP du salon, moteur audio, interface réseau) sont affichés verrouillés.
 - Le catalogue d'émulateurs est dans `backend/wolfy/emulators.py`. Les images locales sont construites
-  depuis `/opt/stacks/wolf/images/<émulateur>/Dockerfile`.
+  depuis `images/<émulateur>/` (ce dépôt), sinon `/opt/stacks/wolf/images/<émulateur>/`.
+  `images/eden` = image `wolfy-eden` de l'appli Switch (voir son README).
 
 ## Installation
 

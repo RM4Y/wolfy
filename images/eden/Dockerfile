@@ -1,0 +1,30 @@
+# Wolf app image: Eden (Switch emulator) booting the Switch HOME menu (qlaunch).
+FROM ghcr.io/games-on-whales/base-app:edge
+
+# AppImages can't mount (no FUSE in containers): extracted on the host beforehand
+# (./eden.AppImage --appimage-extract && mv squashfs-root eden-app)
+COPY eden-app /opt/eden
+RUN chmod -R a+rX /opt/eden
+
+COPY 20-fix-home-perms.sh /etc/cont-init.d/20-fix-home-perms.sh
+RUN chmod +x /etc/cont-init.d/20-fix-home-perms.sh
+
+RUN apt-get update && apt-get install -y --no-install-recommends xdotool \
+    && rm -rf /var/lib/apt/lists/*
+COPY eden-run.sh /opt/gow/eden-run.sh
+RUN chmod +x /opt/gow/eden-run.sh
+
+# no bar at all: Eden is fullscreen, the bar showed up whenever a dialog took focus
+RUN sed -i '/^bar swaybar_command waybar/d' /cfg/sway/config
+COPY sway-hide-dialogs.conf /tmp/sway-hide-dialogs.conf
+RUN sed -i '/^# Need to autostart/e cat /tmp/sway-hide-dialogs.conf' /cfg/sway/config && rm /tmp/sway-hide-dialogs.conf
+
+# gamepad combo -> Switch HOME, configurable from Wolfy
+COPY home-combo.py /opt/gow/home-combo.py
+RUN chmod +x /opt/gow/home-combo.py
+
+COPY startup-app.sh /opt/gow/startup-app.sh
+RUN chmod +x /opt/gow/startup-app.sh
+
+ARG IMAGE_SOURCE
+LABEL org.opencontainers.image.source=$IMAGE_SOURCE

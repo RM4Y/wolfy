@@ -4,3 +4,4 @@ frontend/node_modules
 backend/static
 **/__pycache__
 .git
+images
