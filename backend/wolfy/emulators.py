@@ -27,6 +27,7 @@ EMULATORS = [
                        "local « Maison » pour le sans-fil local entre sessions.",
         "image": "wolf-eden:latest",
         "build_dir": "eden",
+        "settings_page": "eden",
         "rom_dir": "/mnt/Jeux/ROMS/switch",
         "mounts": [
             "/home/remy/.local/share/eden:/home/remy/.local/share/eden:rw",

@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import auth, docker_ops, emulators, settings, store, wolf_api, wolf_config
+from . import auth, docker_ops, eden_config, emulators, settings, store, wolf_api, wolf_config
 
 app = FastAPI(title="Wolfy", docs_url="/api/docs", openapi_url="/api/openapi.json")
 public = APIRouter(prefix="/api")
@@ -239,6 +239,69 @@ class Move(BaseModel):
 @api.post("/profiles/{profile_id}/apps/{index}/move")
 def move_app(profile_id: str, index: int, body: Move):
     _apply(lambda doc: wolf_config.move_app(doc, profile_id, index, body.delta), "ordre-apps")
+    return {"ok": True}
+
+
+# ------------------------------------------------------------------- emulator settings (Eden)
+
+@api.get("/emulator-settings/eden")
+def eden_settings():
+    return eden_config.read()
+
+
+class SettingChange(BaseModel):
+    section: str
+    key: str
+    value: bool | int | float | str | None = None
+    raw: str | None = None
+    reset: bool = False
+
+
+class SettingsUpdate(BaseModel):
+    changes: list[SettingChange]
+    mtime: float | None = None
+
+
+@api.put("/emulator-settings/eden")
+def update_eden_settings(body: SettingsUpdate):
+    changes = [c.model_dump(exclude_none=True) for c in body.changes]
+    return {"changed": eden_config.write(changes, body.mtime)}
+
+
+class HomeCombo(BaseModel):
+    enabled: bool = True
+    modifier: str
+    button: str
+
+
+@api.get("/emulator-settings/eden/home-combo")
+def get_home_combo():
+    return eden_config.read_combo()
+
+
+@api.put("/emulator-settings/eden/home-combo")
+def set_home_combo(body: HomeCombo):
+    return eden_config.write_combo(body.enabled, body.modifier, body.button)
+
+
+@api.get("/emulator-settings/eden/wolfy")
+def get_wolfy_eden():
+    return eden_config.read_wolfy()
+
+
+class MenuResolution(BaseModel):
+    value: int | None = None
+
+
+@api.put("/emulator-settings/eden/wolfy/menu-resolution")
+def set_menu_resolution(body: MenuResolution):
+    eden_config.write_menu_resolution(body.value)
+    return eden_config.read_wolfy()
+
+
+@api.post("/emulator-settings/eden/backups/{name}/restore")
+def restore_eden_settings(name: str):
+    eden_config.restore(name)
     return {"ok": True}
 
 

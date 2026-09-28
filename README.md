@@ -9,7 +9,7 @@ chacun dans son propre conteneur.
 | **Tableau de bord** | État de Wolf, sessions actives, appareils, alerte quand un appareil demande l'appairage |
 | **Appairage** | Saisie du code PIN Moonlight, nom des appareils, type de manette forcé, désappairage |
 | **Sessions** | Sessions en cours (appli, appareil, résolution), arrêt d'une session |
-| **Applications** | Les applis affichées dans Moonlight : émulateur principal, image, dossier des ROMs, jaquette, montages, variables, options Docker, ordre |
+| **Applications** | Les applis affichées dans Moonlight, ordre, ajout/suppression. « Configurer » ouvre la page de l'appli : tous les réglages de son émulateur (Eden : 800+ réglages de `qt-config.ini`, en onglets, en français) + le conteneur Wolf (image, ROMs, jaquette, montages, variables, options Docker) |
 | **Émulateurs** | Catalogue (Eden, RetroArch, Dolphin…), état des images, construction/mise à jour |
 | **Maintenance** | Redémarrer/arrêter Wolf, journaux, conteneurs d'applis, rapports de plantage, sauvegardes/restauration de `config.toml` |
 
@@ -20,6 +20,7 @@ navigateur ──► Wolfy (FastAPI + Vue 3, port 8420)
                  ├─ API Wolf ........ socket UNIX /var/run/wolf/wolf.sock (volume docker « wolf-api »)
                  │                    appairage, sessions, clients
                  ├─ config.toml ..... /opt/stacks/config/wolf/cfg (applications / profils)
+                 ├─ qt-config.ini ... ~/.config/eden (réglages Eden)
                  └─ Docker .......... /var/run/docker.sock (redémarrage Wolf, conteneurs, images)
 ```
 
@@ -29,6 +30,12 @@ navigateur ──► Wolfy (FastAPI + Vue 3, port 8420)
   des sessions en cours.
 - Les infos propres à Wolfy (noms des appareils, émulateur associé à chaque appli, notes) sont dans
   `data/wolfy.json`.
+- Réglages Eden : `backend/wolfy/emulator_settings/eden.json` est généré depuis les sources d'Eden
+  (types, valeurs par défaut, bornes, libellés et traduction française officielle) :
+  `python3 tools/gen_eden_schema.py v0.2.1` (à relancer quand Eden est mis à jour). Wolfy modifie
+  `~/.config/eden/qt-config.ini` ligne par ligne (sauvegardes dans `~/.config/eden/wolfy-backups/`) ;
+  les sessions Wolf copient ce fichier à leur démarrage. Les réglages imposés par l'image Wolf
+  (pseudo, IP du salon, moteur audio, interface réseau) sont affichés verrouillés.
 - Le catalogue d'émulateurs est dans `backend/wolfy/emulators.py`. Les images locales sont construites
   depuis `/opt/stacks/wolf/images/<émulateur>/Dockerfile`.
 

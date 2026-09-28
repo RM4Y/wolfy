@@ -20,6 +20,8 @@ WOLF_CONFIG = Path(_env("WOLF_CONFIG", str(WOLF_STATE_DIR / "cfg" / "config.toml
 WOLF_COVERS_DIR = Path(_env("WOLF_COVERS_DIR", str(WOLF_STATE_DIR / "covers")))
 # build contexts of the custom app images (one sub-folder per image)
 WOLF_IMAGES_DIR = Path(_env("WOLF_IMAGES_DIR", "/opt/stacks/wolf/images"))
+# emulator configs shared by the host and every Wolf session
+EDEN_CONFIG = Path(_env("EDEN_CONFIG", "/home/remy/.config/eden/qt-config.ini"))
 # Moonlight clients only see this profile
 DEFAULT_PROFILE = _env("WOLF_DEFAULT_PROFILE", "moonlight-profile-id")
 

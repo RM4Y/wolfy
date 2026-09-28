@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { act, api, coverUrl } from '../api'
 import AppEditor from '../components/AppEditor.vue'
 
@@ -10,6 +11,7 @@ const baseCreateJson = ref('')
 const sessions = ref(0)
 const editing = ref(undefined) // undefined = closed, null = new app
 const error = ref('')
+const router = useRouter()
 
 const profile = computed(() => profiles.value.find(p => p.id === current.value))
 const emuName = id => emulators.value.find(e => e.id === id)?.name || id
@@ -96,7 +98,8 @@ onMounted(load)
           <button class="ghost sm" :disabled="app.index === profile.apps.length - 1" title="Descendre" @click="move(app, 1)">▶</button>
         </div>
         <div class="row" style="gap:4px">
-          <button class="sm" :disabled="app.runner_type !== 'docker'" @click="editing = app">✏️ Configurer</button>
+          <button class="sm" :disabled="app.runner_type !== 'docker'"
+                  @click="router.push(`/applications/${current}/${app.index}`)">⚙️ Configurer</button>
           <button class="sm danger" title="Supprimer" @click="remove(app)">🗑</button>
         </div>
       </div>
