@@ -3,14 +3,35 @@ set -e
 source /opt/gow/bash-lib/utils.sh
 gow_log "Starting RetroArch (PlayStation)"
 
-# Everything lives in the host's flatpak RetroArch dir, mounted at the same
-# "~/.var/app/..." path the config uses (+ /home/remy/... for playlist core
-# paths). Each session runs on its own copy of retroarch.cfg so concurrent
-# sessions don't overwrite each other's config on exit; saves, states, cores,
-# BIOS, playlists and thumbnails stay shared.
+# The host's flatpak RetroArch dir is mounted at the same "~/.var/app/..." path the
+# config uses. Each session runs on its own copy of retroarch.cfg so concurrent sessions
+# don't overwrite each other's config on exit; saves, states, BIOS, core options and
+# thumbnails stay shared. Cores come from the image (/opt/wolfy), not from the PC.
 RA=$HOME/.var/app/org.libretro.RetroArch/config/retroarch
+CFG=$HOME/.config/retroarch/retroarch.cfg
 mkdir -p "$HOME/.config/retroarch"
-cp "$RA/retroarch.cfg" "$HOME/.config/retroarch/retroarch.cfg"
+cp "$RA/retroarch.cfg" "$CFG"
+set_cfg() {  # set_cfg key value (in this session's copy only)
+    if grep -q "^$1 = " "$CFG"; then sed -i "s|^$1 = .*|$1 = \"$2\"|" "$CFG"; else echo "$1 = \"$2\"" >> "$CFG"; fi
+}
+PL=$HOME/.config/retroarch/playlists
+set_cfg libretro_directory /opt/wolfy/cores
+set_cfg libretro_info_path /opt/wolfy/info
+set_cfg playlist_directory "$PL"
+set_cfg content_history_path "$PL/builtin/content_history.lpl"
+set_cfg content_favorites_path "$PL/builtin/content_favorites.lpl"
+set_cfg content_image_history_path "$PL/builtin/content_image_history.lpl"
+set_cfg content_music_history_path "$PL/builtin/content_music_history.lpl"
+set_cfg content_video_history_path "$PL/builtin/content_video_history.lpl"
+# pad: the shared config still has manual player bindings made for the Sunshine pad (other
+# button numbers); drop them here so the Wolf pad profile (autoconfig) applies
+sed -i -E 's/^(input_player[0-9]+_[a-z0-9_]+_(btn|axis)) = .*/\1 = "nul"/' "$CFG"
+# no threaded video: only useful for software-rendered cores, and RetroArch crashed when
+# going from the (threaded) menu to a GPU-rendered game (LRPS2, PPSSPP)
+set_cfg video_threaded false
+# playlists: session copy with the image's core paths, changes written back to the PC's
+python3 /opt/gow/playlist-sync.py in
+python3 /opt/gow/playlist-sync.py watch &
 
 # gamepad combos (Wolfy > PlayStation > Configurer): Guide = RetroArch menu
 python3 /opt/gow/home-combo.py &

@@ -42,7 +42,10 @@ navigateur ──► Wolfy (FastAPI + Vue 3, port 8420)
   du RetroArch flatpak du PC (sauvegardes dans `wolfy-backups/`), refusé si RetroArch est ouvert sur le PC.
 - Le catalogue d'émulateurs est dans `backend/wolfy/emulators.py`. Les images locales sont construites
   depuis `images/<émulateur>/` : `images/eden` = `wolfy-eden` (Switch, voir son README),
-  `images/retroarch` = `wolfy-retroarch` (PlayStation).
+  `images/retroarch` = `wolfy-retroarch` (PlayStation) : cœurs LRPS2 / PPSSPP intégrés à l'image
+  (`/opt/wolfy/cores`, dernières versions du buildbot libretro à la construction, liste dans
+  `/opt/wolfy/cores/VERSIONS`) ; les playlists partagées sont copiées dans la session avec ces cœurs et
+  les changements (scans, historique, favoris) réécrits vers celles du PC (`playlist-sync.py`).
 
 ## Installation
 
