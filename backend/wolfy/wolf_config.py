@@ -93,7 +93,7 @@ def app_to_dict(app, index: int, profile_id: str) -> dict:
     meta = store.get("apps").get(name, {})
     emulator = meta.get("emulator") or emulators.guess(image)
     mounts = [str(m) for m in runner.get("mounts", [])]
-    rom_dir = meta.get("rom_dir") or emulators.BY_ID.get(emulator, {}).get("rom_dir", "")
+    rom_dir = meta["rom_dir"] if "rom_dir" in meta else emulators.BY_ID.get(emulator, {}).get("rom_dir", "")
     rom_dir, mounts = _split_rom_mount(mounts, rom_dir)
     return {
         "profile_id": profile_id,

@@ -1,9 +1,52 @@
-# Wolfy: admin web UI for Wolf. `docker compose up -d --build` then http://<serveur>:8420
+# Wolfy Docker: Wolf (Moonlight streaming, one container per session) + Wolfy (admin UI)
+# + the emulator images of the Wolf apps.
+#
+#   docker compose up -d --build              Wolf + Wolfy, UI on http://<serveur>:8420
+#   docker compose --profile images build     (re)build wolfy-eden / wolfy-retroarch
+name: wolfy
+
 services:
+  wolf:
+    image: ghcr.io/games-on-whales/wolf:stable
+    container_name: wolf
+    environment:
+      - NVIDIA_DRIVER_VOLUME_NAME=nvidia-driver-vol
+      # host path of the state folder, used when Wolf mounts app data into app containers
+      - HOST_APPS_STATE_FOLDER=/opt/stacks/config/wolf
+      - TZ=Europe/Paris
+      # API socket, shared with Wolfy through the wolf-api volume
+      - WOLF_SOCKET_PATH=/var/run/wolf/wolf.sock
+    volumes:
+      # same path inside and outside: Wolf uses it both for its config and for app mounts
+      - /opt/stacks/config/wolf:/opt/stacks/config/wolf:rw
+      - /var/run/docker.sock:/var/run/docker.sock:rw
+      - /dev/:/dev/:rw
+      - /run/udev:/run/udev:rw
+      # NVIDIA driver for the app containers: rebuild this volume after a driver upgrade
+      - nvidia-driver-vol:/usr/nvidia:rw
+      - wolf-api:/var/run/wolf:rw
+    devices:
+      - /dev/dri
+      - /dev/uinput
+      - /dev/uhid
+      - /dev/nvidia-uvm
+      - /dev/nvidia-uvm-tools
+      - /dev/nvidia-caps/nvidia-cap1
+      - /dev/nvidia-caps/nvidia-cap2
+      - /dev/nvidiactl
+      - /dev/nvidia0
+      - /dev/nvidia-modeset
+    device_cgroup_rules:
+      - 'c 13:* rmw'
+    network_mode: host
+    restart: unless-stopped
+
   wolfy:
     build: .
     image: wolfy:latest
     container_name: wolfy
+    depends_on:
+      - wolf
     env_file: .env
     environment:
       - WOLFY_IMAGES_DIR=/app/images
@@ -15,16 +58,28 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       # Wolf state: cfg/config.toml, covers, crash dumps (same path as in the Wolf container)
       - /opt/stacks/config/wolf:/opt/stacks/config/wolf
-      # build contexts of the custom emulator images (Wolfy's own first)
+      # build contexts of the emulator images
       - ./images:/app/images:ro
-      - /opt/stacks/wolf/images:/opt/stacks/wolf/images:ro
-      # Eden settings shared by the host and the Wolf sessions (Eden page)
+      # Eden settings shared by the host and the Wolf sessions
       - /home/remy/.config/eden:/home/remy/.config/eden
-      # Wolf API socket, shared with the Wolf container (see README)
+      # read-only view of the host (emulator paths: checks + folder picker)
+      - /:/host:ro
       - wolf-api:/var/run/wolf
     restart: unless-stopped
 
+  # emulator images used by the Wolf apps (build only: Wolf starts them per session)
+  wolfy-eden:
+    build: images/eden
+    image: wolfy-eden:latest
+    profiles: [images]
+
+  wolfy-retroarch:
+    build: images/retroarch
+    image: wolfy-retroarch:latest
+    profiles: [images]
+
 volumes:
-  wolf-api:
+  nvidia-driver-vol:
     external: true
+  wolf-api:
     name: wolf-api

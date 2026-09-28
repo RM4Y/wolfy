@@ -1,4 +1,4 @@
-# Wolfy
+# Wolfy Docker
 
 Interface web d'administration pour [Wolf](https://games-on-whales.github.io/wolf/) (Games on Whales) :
 le serveur de streaming Moonlight multi-sessions qui fait tourner les émulateurs (Switch, PlayStation, Wii…),
@@ -37,42 +37,37 @@ navigateur ──► Wolfy (FastAPI + Vue 3, port 8420)
   les sessions Wolf copient ce fichier à leur démarrage. Les réglages imposés par l'image Wolf
   (pseudo, IP du salon, moteur audio, interface réseau) sont affichés verrouillés.
 - Le catalogue d'émulateurs est dans `backend/wolfy/emulators.py`. Les images locales sont construites
-  depuis `images/<émulateur>/` (ce dépôt), sinon `/opt/stacks/wolf/images/<émulateur>/`.
-  `images/eden` = image `wolfy-eden` de l'appli Switch (voir son README).
+  depuis `images/<émulateur>/` : `images/eden` = `wolfy-eden` (Switch, voir son README),
+  `images/retroarch` = `wolfy-retroarch` (PlayStation).
 
 ## Installation
 
-### 1. Partager le socket de l'API Wolf
+Une seule pile Docker (`compose.yaml`, projet `wolfy`) :
 
-Par défaut Wolf crée son socket d'API dans son propre conteneur. Dans `/opt/stacks/wolf/compose.yaml` :
-
-```yaml
-services:
-  wolf:
-    environment:
-      - WOLF_SOCKET_PATH=/var/run/wolf/wolf.sock   # ajouter
-    volumes:
-      - wolf-api:/var/run/wolf:rw                  # ajouter
-
-volumes:
-  wolf-api:                                        # ajouter
-    name: wolf-api
-```
-
-puis `docker compose up -d` dans `/opt/stacks/wolf` (redémarre Wolf : à faire sans session en cours).
-
-### 2. Lancer Wolfy
+| Service | Rôle |
+|---|---|
+| `wolf` | Wolf (image officielle `ghcr.io/games-on-whales/wolf:stable`), réseau hôte, GPU NVIDIA |
+| `wolfy` | cette interface, construite depuis le dépôt, port 8420 |
+| `wolfy-eden`, `wolfy-retroarch` | images des applis Switch / PlayStation (profil `images`, construction seulement : Wolf les lance à chaque session) |
 
 ```bash
 cd ~/Bureau/wolfy
-cp .env.example .env        # puis choisir WOLFY_ADMIN_PASSWORD
-docker compose up -d --build
+cp .env.example .env                      # puis choisir WOLFY_ADMIN_PASSWORD
+docker compose up -d --build              # Wolf + Wolfy
+docker compose --profile images build     # images des émulateurs (ou Wolfy > Émulateurs)
 ```
 
 Interface : <http://192.168.1.85:8420>
 
-Wolfy peut arrêter Wolf et lancer des conteneurs via le socket Docker : ne l'expose pas sur Internet
-sans reverse proxy HTTPS (swag) devant.
+- État de Wolf (config.toml, jaquettes, appareils appairés) : `/opt/stacks/config/wolf`, inchangé.
+- Le volume `nvidia-driver-vol` (pilote NVIDIA pour les conteneurs d'applis) est externe : à recréer
+  après une mise à jour du pilote NVIDIA.
+- Wolf et Wolfy partagent le socket d'API de Wolf via le volume `wolf-api`.
+- Wolfy peut arrêter Wolf et lancer des conteneurs via le socket Docker, et voit le disque de l'hôte
+  en lecture seule : ne l'expose pas sur Internet sans reverse proxy HTTPS (swag) devant.
+
+Ancienne pile : `/opt/stacks/wolf/compose.yaml.migrated-to-wolfy` (retour arrière : `docker compose down`
+ici, puis la renommer en `compose.yaml` et `docker compose up -d` dans `/opt/stacks/wolf`).
 
 ## Développement
 

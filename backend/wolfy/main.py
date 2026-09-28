@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import auth, docker_ops, eden_config, emulators, settings, store, wolf_api, wolf_config
+from . import auth, docker_ops, eden_config, eden_paths, emulators, settings, store, wolf_api, wolf_config
 
 app = FastAPI(title="Wolfy", docs_url="/api/docs", openapi_url="/api/openapi.json")
 public = APIRouter(prefix="/api")
@@ -207,6 +207,37 @@ class AppBody(BaseModel):
 @api.get("/profiles")
 def profiles():
     return {"profiles": wolf_config.list_profiles(wolf_config.load())}
+
+
+@api.get("/emulators/eden/paths")
+def get_eden_paths():
+    paths = eden_paths.current()
+    return {"paths": paths, "status": eden_paths.status(paths), "defaults": eden_paths.DEFAULTS}
+
+
+class EdenPaths(BaseModel):
+    keys: str = ""
+    firmware: str = ""
+    roms: list[str] = []
+    users: str = ""
+
+
+@api.post("/emulators/eden/paths/check")
+def check_eden_paths(body: EdenPaths):
+    paths = {**eden_paths.DEFAULTS, **{k: v for k, v in body.model_dump().items() if v or k == "users"}}
+    return {"status": eden_paths.status(paths)}
+
+
+@api.put("/emulators/eden/paths")
+def set_eden_paths(body: EdenPaths):
+    result = eden_paths.apply(body.model_dump(), _apply)
+    paths = eden_paths.current()
+    return {**result, "status": eden_paths.status(paths)}
+
+
+@api.get("/fs")
+def browse_host(path: str = "/"):
+    return eden_paths.browse(path)
 
 
 @api.get("/emulators")

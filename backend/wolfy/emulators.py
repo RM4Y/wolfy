@@ -28,6 +28,7 @@ EMULATORS = [
         "image": "wolfy-eden:latest",
         "build_dir": "eden",
         "settings_page": "eden",
+        "paths_page": "eden",
         "rom_dir": "/mnt/Jeux/ROMS/switch",
         "mounts": [
             "/home/remy/.local/share/eden:/home/remy/.local/share/eden:rw",
@@ -43,7 +44,7 @@ EMULATORS = [
         "systems": ["PlayStation", "PlayStation 2", "PSP", "Multi-système"],
         "description": "Interface XMB, cœurs LRPS2 / PPSSPP… Configuration, sauvegardes et BIOS "
                        "partagés avec le RetroArch flatpak de l'hôte.",
-        "image": "wolf-retroarch:latest",
+        "image": "wolfy-retroarch:latest",
         "build_dir": "retroarch",
         "rom_dir": "/mnt/Jeux/ROMS",
         "mounts": [

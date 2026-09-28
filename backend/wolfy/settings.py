@@ -27,6 +27,9 @@ EDEN_CONFIG = Path(_env("EDEN_CONFIG", "/home/remy/.config/eden/qt-config.ini"))
 # Moonlight clients only see this profile
 DEFAULT_PROFILE = _env("WOLF_DEFAULT_PROFILE", "moonlight-profile-id")
 
+# read-only view of the host filesystem (emulator paths: checks and folder picker)
+HOST_ROOT = Path(_env("WOLFY_HOST_ROOT", "/host"))
+
 # host port of Wolfy, called back by the Switch sessions (quit combo)
 PUBLIC_PORT = int(_env("WOLFY_PUBLIC_PORT", "8420"))
 

@@ -48,7 +48,7 @@ def wolf_status() -> dict:
     }
 
 
-def _wait_socket(present: bool, timeout: float = 30) -> None:
+def _wait_socket(present: bool, timeout: float = 60) -> None:
     end = time.time() + timeout
     while time.time() < end:
         if wolf_api.available() == present:

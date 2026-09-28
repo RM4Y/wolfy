@@ -1,11 +1,13 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { act, api, ago, bytes } from '../api'
+import EdenPaths from '../components/EdenPaths.vue'
 import JobLog from '../components/JobLog.vue'
 
 const emulators = ref([])
 const apps = ref([])
 const jobId = ref('')
+const pathsFor = ref('')
 const error = ref('')
 
 async function load() {
@@ -71,6 +73,7 @@ onMounted(load)
         </tbody>
       </table>
       <div class="row end" style="margin-top:12px">
+        <button v-if="emu.paths_page" class="primary" @click="pathsFor = emu.paths_page">📁 Chemins</button>
         <button v-if="emu.buildable" @click="build(emu)">🔨 {{ emu.image_info.present ? 'Reconstruire' : 'Construire' }}</button>
         <button v-else-if="emu.pullable" @click="pull(emu)">⬇ {{ emu.image_info.present ? 'Mettre à jour' : 'Télécharger' }}</button>
         <span v-else class="muted small">Pas de Dockerfile dans <code>images/{{ emu.build_dir }}</code></span>
@@ -79,9 +82,10 @@ onMounted(load)
   </div>
 
   <div class="alert info" style="margin-top:16px">
-    Les images locales sont construites depuis <code>/opt/stacks/wolf/images/&lt;émulateur&gt;</code>.
+    Les images locales sont construites depuis <code>images/&lt;émulateur&gt;</code> du dépôt Wolfy (sinon <code>/opt/stacks/wolf/images</code>).
     Une reconstruction ne touche pas aux sessions en cours : les nouvelles sessions utiliseront la nouvelle image.
   </div>
 
+  <EdenPaths v-if="pathsFor === 'eden'" @close="pathsFor = ''; load()" />
   <JobLog v-if="jobId" :job-id="jobId" @close="jobId = ''" @done="load" />
 </template>

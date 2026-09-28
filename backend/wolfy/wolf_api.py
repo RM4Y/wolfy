@@ -1,5 +1,6 @@
 """Client for Wolf's REST API, served on a UNIX socket (WOLF_SOCKET_PATH in the Wolf container)."""
 import os
+import socket
 
 import httpx
 from fastapi import HTTPException
@@ -18,8 +19,8 @@ def _client() -> httpx.AsyncClient:
 
 
 async def call(method: str, path: str, payload: dict | None = None) -> dict:
-    if not os.path.exists(settings.WOLF_SOCKET):
-        raise WolfUnavailable(f"socket {settings.WOLF_SOCKET} absent (Wolf arrêté ?)")
+    if not available():
+        raise WolfUnavailable(f"pas de réponse sur {settings.WOLF_SOCKET} (Wolf arrêté ou en démarrage ?)")
     try:
         async with _client() as client:
             resp = await client.request(method, f"/api/v1/{path}", json=payload)
@@ -43,4 +44,13 @@ async def post(path: str, payload: dict) -> dict:
 
 
 def available() -> bool:
-    return os.path.exists(settings.WOLF_SOCKET)
+    """Wolf answers on its socket (the file itself outlives Wolf in the shared volume)."""
+    if not os.path.exists(settings.WOLF_SOCKET):
+        return False
+    try:
+        with socket.socket(socket.AF_UNIX) as s:
+            s.settimeout(1)
+            s.connect(settings.WOLF_SOCKET)
+        return True
+    except OSError:
+        return False
