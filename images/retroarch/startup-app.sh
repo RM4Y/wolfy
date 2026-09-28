@@ -12,5 +12,13 @@ RA=$HOME/.var/app/org.libretro.RetroArch/config/retroarch
 mkdir -p "$HOME/.config/retroarch"
 cp "$RA/retroarch.cfg" "$HOME/.config/retroarch/retroarch.cfg"
 
+# gamepad combos (Wolfy > PlayStation > Configurer): Guide = RetroArch menu
+python3 /opt/gow/home-combo.py &
+
 source /opt/gow/launch-comp.sh
-launcher /usr/bin/retroarch --config "$HOME/.config/retroarch/retroarch.cfg"
+# detailed log kept on the host (the container is deleted when the session ends)
+LOG="$RA/logs/wolf-session-${WOLF_SESSION_ID: -4}.log"
+mkdir -p "$RA/logs"
+# X11 (XWayland) rather than native Wayland, as on the PC: in Wayland mode RetroArch
+# died when switching from the menu to a game (video restart for the core)
+launcher env -u WAYLAND_DISPLAY DISPLAY=:0 /usr/bin/retroarch --verbose --log-file "$LOG" --config "$HOME/.config/retroarch/retroarch.cfg"

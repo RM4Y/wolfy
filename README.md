@@ -36,6 +36,10 @@ navigateur ──► Wolfy (FastAPI + Vue 3, port 8420)
   `~/.config/eden/qt-config.ini` ligne par ligne (sauvegardes dans `~/.config/eden/wolfy-backups/`) ;
   les sessions Wolf copient ce fichier à leur démarrage. Les réglages imposés par l'image Wolf
   (pseudo, IP du salon, moteur audio, interface réseau) sont affichés verrouillés.
+- Réglages RetroArch : `backend/wolfy/emulator_settings/retroarch.json`, généré depuis les sources de
+  RetroArch (configuration.c, menu_setting.c, traduction française) et des cœurs LRPS2 / PPSSPP :
+  `python3 tools/gen_retroarch_schema.py v1.22.2`. Wolfy modifie `retroarch.cfg` et `config/<cœur>/<cœur>.opt`
+  du RetroArch flatpak du PC (sauvegardes dans `wolfy-backups/`), refusé si RetroArch est ouvert sur le PC.
 - Le catalogue d'émulateurs est dans `backend/wolfy/emulators.py`. Les images locales sont construites
   depuis `images/<émulateur>/` : `images/eden` = `wolfy-eden` (Switch, voir son README),
   `images/retroarch` = `wolfy-retroarch` (PlayStation).
@@ -63,7 +67,10 @@ Interface : <http://192.168.1.85:8420>
 - Données des émulateurs dans `config/` (jamais versionné) :
   `config/switch/keys` (prod.keys, title.keys — envoi depuis Émulateurs > Eden),
   `config/switch/nand` (firmware — installation d'un .zip depuis la même page, contenu installé),
-  `config/switch/users` (profils `system/save` + sauvegardes `user/save`).
+  `config/switch/users` (profils `system/save` + sauvegardes `user/save`),
+  `config/playstation/bios` (dossier « system » de RetroArch : BIOS PS2 dans `pcsx2/bios`, PS1, fichiers PPSSPP),
+  `config/playstation/saves`, `config/playstation/states` ;
+  `config/<système>/wolfy/combo.json` : combinaisons de manette (menu / quitter).
   Eden sur le PC utilise les mêmes dossiers (`~/.local/share/eden/keys` est un lien vers
   `config/switch/keys`, la NAND et les sauvegardes sont réglées dans `~/.config/eden/qt-config.ini`).
 - Le volume `nvidia-driver-vol` (pilote NVIDIA pour les conteneurs d'applis) est externe : à recréer

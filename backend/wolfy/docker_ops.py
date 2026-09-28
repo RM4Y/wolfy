@@ -216,15 +216,30 @@ def run_job(title: str, work: Callable[[Job], None]) -> Job:
     return job
 
 
+def _context_tar(root, build_dir: str):
+    """images/<build_dir> + images/common as a tar (build context = images/)."""
+    import io
+    import tarfile
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tar:
+        for name in (build_dir, "common"):
+            if (root / name).exists():
+                tar.add(root / name, arcname=name,
+                        filter=lambda t: None if ".bak-" in t.name or t.name.endswith(".dockerignore") else t)
+    buf.seek(0)
+    return buf
+
+
 def build_image(ref: str, build_dir: str) -> Job:
     ctx = build_context(build_dir)
     if ctx is None:
-        raise HTTPException(404, f"Pas de Dockerfile pour « {build_dir} » dans {settings.WOLFY_IMAGES_DIR} "
-                                 f"ni {settings.WOLF_IMAGES_DIR}")
+        raise HTTPException(404, f"Pas de Dockerfile pour « {build_dir} »")
 
     def work(job: Job):
         job.log(f"Construction de {ref} depuis {ctx}")
-        for chunk in client().api.build(path=str(ctx), tag=ref, rm=True, pull=True, decode=True):
+        context = _context_tar(ctx.parent, build_dir)
+        for chunk in client().api.build(fileobj=context, custom_context=True, dockerfile=f"{build_dir}/Dockerfile",
+                                        tag=ref, rm=True, pull=True, decode=True):
             if "stream" in chunk:
                 job.log(chunk["stream"])
             elif "status" in chunk:

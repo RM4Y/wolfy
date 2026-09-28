@@ -248,27 +248,35 @@ def apply(paths: dict, restart_wolf) -> dict:
     new_mounts = _session_mounts(paths)
     store.put("emulator_paths", "eden", {"mounts": new_mounts})
 
+    changed = update_app_mounts("eden", old_mounts, new_mounts, restart_wolf, "chemins-eden")
+    return {"paths": paths, "apps_updated": changed, "eden_config_changed": ini_changed}
+
+
+def update_app_mounts(emulator: str, old_mounts: set, new_mounts: list, restart_wolf, reason: str) -> list[str]:
+    """Replace, in the Wolf apps of an emulator, the mounts Wolfy manages (old -> new).
+
+    Restarts Wolf only if config.toml really changes; -> titles of the updated apps.
+    """
     def wanted(app) -> list[str]:
         rom = [f"{app['rom_dir']}:{app['rom_dir']}:ro"] if app["rom_dir"] else []
         kept = [m for m in app["mounts"] + rom if m not in old_mounts and m not in new_mounts]
         return kept + new_mounts
 
-    def eden_apps(doc):
-        return [(p["id"], a) for p in wolf_config.list_profiles(doc) for a in p["apps"] if a["emulator"] == "eden"]
+    def apps(doc):
+        return [(p["id"], a) for p in wolf_config.list_profiles(doc) for a in p["apps"] if a["emulator"] == emulator]
 
     def change(doc):
-        for pid, app in eden_apps(doc):
+        for pid, app in apps(doc):
             wolf_config.upsert_app(doc, pid, app["index"], {**app, "mounts": wanted(app), "rom_dir": ""})
 
-    # restart Wolf only if config.toml really changes
     doc = wolf_config.load()
     before = wolf_config.tomlkit.dumps(doc)
     change(doc)
-    changed = []
-    if wolf_config.tomlkit.dumps(doc) != before:
-        changed = [a["title"] for _, a in eden_apps(doc)]
-        restart_wolf(change, "chemins-eden")
-    return {"paths": paths, "apps_updated": changed, "eden_config_changed": ini_changed}
+    if wolf_config.tomlkit.dumps(doc) == before:
+        return []
+    titles = [a["title"] for _, a in apps(doc)]
+    restart_wolf(change, reason)
+    return titles
 
 
 # ------------------------------------------------------------------ uploads

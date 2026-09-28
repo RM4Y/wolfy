@@ -91,7 +91,9 @@ def app_to_dict(app, index: int, profile_id: str) -> dict:
     image = str(runner.get("image", ""))
     name = str(runner.get("name", ""))
     meta = store.get("apps").get(name, {})
-    emulator = meta.get("emulator") or emulators.guess(image)
+    emulator = meta.get("emulator") or "custom"
+    if emulator == "custom":  # e.g. image renamed to a preset's image after the app was saved
+        emulator = emulators.guess(image)
     mounts = [str(m) for m in runner.get("mounts", [])]
     rom_dir = meta["rom_dir"] if "rom_dir" in meta else emulators.BY_ID.get(emulator, {}).get("rom_dir", "")
     rom_dir, mounts = _split_rom_mount(mounts, rom_dir)

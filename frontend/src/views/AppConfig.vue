@@ -4,7 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { api, coverUrl } from '../api'
 import AppEditor from '../components/AppEditor.vue'
-import EdenSettings from '../components/EdenSettings.vue'
+import EmulatorSettings from '../components/EmulatorSettings.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -16,8 +16,7 @@ const editContainer = ref(false)
 const error = ref('')
 
 const emu = computed(() => emulators.value.find(e => e.id === app.value?.emulator))
-const settingsPages = { eden: EdenSettings }
-const settingsPage = computed(() => settingsPages[emu.value?.settings_page])
+const settingsPage = computed(() => emu.value?.settings_page)
 
 async function load() {
   try {
@@ -65,7 +64,7 @@ onMounted(load)
       <button @click="editContainer = true">🐳 Conteneur Wolf</button>
     </div>
 
-    <component :is="settingsPage" v-if="settingsPage" />
+    <EmulatorSettings v-if="settingsPage" :key="settingsPage" :emulator="settingsPage" />
     <div v-else class="card empty">
       <div class="big">🧩</div>
       Pas encore de page de réglages pour {{ emu?.name || 'cet émulateur' }}.<br />

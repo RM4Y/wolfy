@@ -16,7 +16,7 @@ from pathlib import Path
 
 from fastapi import HTTPException
 
-from . import settings
+from . import combos, settings
 
 SCHEMA_FILE = Path(__file__).parent / "emulator_settings" / "eden.json"
 BACKUP_KEEP = 20
@@ -409,57 +409,6 @@ def restore(name: str) -> None:
     _atomic_write(_path(), src.read_text())
 
 
-# ------------------------------------------------------------------ HOME combo
-# Read live by home-combo.py in every Switch session (images/eden in /opt/stacks/wolf)
-COMBO_DEFAULT = {"enabled": True, "modifier": "start", "button": "a",
-                 "quit_enabled": True, "quit_combo": "start+guide", "quit_hold": 1.0}
-COMBO_MODIFIERS = ("start", "guide")
-COMBO_BUTTONS = ("a", "b", "x", "y")
-QUIT_COMBOS = ("start+guide", "back+start", "back+guide")
-
-
-def _combo_path() -> Path:
-    return _path().parent / "wolfy-home-combo.json"
-
-
-def read_combo() -> dict:
-    """Combo settings as shown in the UI (without the session hook)."""
-    try:
-        data = {**COMBO_DEFAULT, **json.loads(_combo_path().read_text())}
-    except (OSError, ValueError):
-        data = dict(COMBO_DEFAULT)
-    data.pop("hook", None)
-    return data
-
-
-def write_combo(data: dict) -> dict:
-    data = {**read_combo(), **data}
-    if (data["modifier"] not in COMBO_MODIFIERS or data["button"] not in COMBO_BUTTONS
-            or data["quit_combo"] not in QUIT_COMBOS or not 0.3 <= float(data["quit_hold"]) <= 5):
-        raise HTTPException(400, "Combinaison invalide")
-    data["quit_hold"] = float(data["quit_hold"])
-    # sessions call Wolfy back (quit combo) with this token, through the docker gateway
-    data["hook"] = {"port": settings.PUBLIC_PORT, "token": settings.hook_token()}
-    path = _combo_path()
-    tmp = path.with_suffix(".wolfy-tmp")
-    tmp.write_text(json.dumps(data, indent=2) + "\n")
-    st = _path().stat()
-    os.chown(tmp, st.st_uid, st.st_gid)
-    tmp.chmod(0o644)
-    tmp.replace(path)
-    return read_combo()
-
-
-def ensure_hook() -> None:
-    """Keep the hook (token, port) in the combo file up to date at startup."""
-    try:
-        current = json.loads(_combo_path().read_text()).get("hook")
-    except (OSError, ValueError):
-        current = None
-    if current != {"port": settings.PUBLIC_PORT, "token": settings.hook_token()} and _path().is_file():
-        write_combo({})
-
-
 # ------------------------------------------------------------------ per-title overrides
 # Eden's per-game files (custom/<title id>.ini): "key\\use_global=false" + value.
 # The Switch HOME menu (qlaunch) is a title too, and renders in 720p even docked.
@@ -523,7 +472,7 @@ def write_override(title_id: str, section: str, key: str, value: str | None) -> 
 def read_wolfy() -> dict:
     res = read_override(QLAUNCH, "Renderer", "resolution_setup")
     return {
-        "home_combo": read_combo(),
+        "home_combo": combos.read("eden"),
         "menu_resolution": int(res) if res is not None else None,
         "resolution_options": schema()["enums"]["ResolutionSetup"],
         "global_resolution": next((i["value"] for i in read()["items"]

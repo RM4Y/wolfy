@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import auth, docker_ops, eden_config, eden_paths, emulators, settings, store, wolf_api, wolf_config
+from . import auth, combos, docker_ops, eden_config, eden_paths, ra_config, ra_paths, emulators, settings, store, wolf_api, wolf_config
 
 app = FastAPI(title="Wolfy", docs_url="/api/docs", openapi_url="/api/openapi.json")
 public = APIRouter(prefix="/api")
@@ -262,6 +262,38 @@ async def upload_eden_firmware(file: UploadFile = File(...)):
     return {**result, "status": eden_paths.status(eden_paths.current())}
 
 
+@api.get("/emulators/retroarch/paths")
+def get_ra_paths():
+    paths = ra_paths.current()
+    return {"paths": paths, "status": ra_paths.status(paths), "defaults": ra_paths.DEFAULTS}
+
+
+class RaPaths(BaseModel):
+    bios: str = ""
+    saves: str = ""
+    states: str = ""
+    roms: list[str] = []
+
+
+@api.post("/emulators/retroarch/paths/check")
+def check_ra_paths(body: RaPaths):
+    paths = {**ra_paths.DEFAULTS, **{k: v for k, v in body.model_dump().items() if v or k == "roms"}}
+    return {"status": ra_paths.status(paths)}
+
+
+@api.put("/emulators/retroarch/paths")
+def set_ra_paths(body: RaPaths):
+    result = ra_paths.apply(body.model_dump(), _apply)
+    return {**result, "status": ra_paths.status(ra_paths.current())}
+
+
+@api.post("/emulators/retroarch/bios")
+async def upload_ra_bios(files: list[UploadFile] = File(...)):
+    data = [(f.filename or "", await f.read()) for f in files]
+    result = await run_in_threadpool(ra_paths.upload_bios, data)
+    return {**result, "status": ra_paths.status(ra_paths.current())}
+
+
 @api.get("/fs")
 def browse_host(path: str = "/"):
     return eden_paths.browse(path)
@@ -352,14 +384,14 @@ class HomeCombo(BaseModel):
     quit_hold: float = 1.0
 
 
-@api.get("/emulator-settings/eden/home-combo")
-def get_home_combo():
-    return eden_config.read_combo()
+@api.get("/emulator-settings/{emulator}/home-combo")
+def get_home_combo(emulator: str):
+    return combos.read(emulator)
 
 
-@api.put("/emulator-settings/eden/home-combo")
-def set_home_combo(body: HomeCombo):
-    return eden_config.write_combo(body.model_dump())
+@api.put("/emulator-settings/{emulator}/home-combo")
+def set_home_combo(emulator: str, body: HomeCombo):
+    return combos.write(emulator, body.model_dump())
 
 
 @api.get("/emulator-settings/eden/wolfy")
@@ -380,6 +412,23 @@ def set_menu_resolution(body: MenuResolution):
 @api.post("/emulator-settings/eden/backups/{name}/restore")
 def restore_eden_settings(name: str):
     eden_config.restore(name)
+    return {"ok": True}
+
+
+@api.get("/emulator-settings/retroarch")
+def retroarch_settings():
+    return ra_config.read()
+
+
+@api.put("/emulator-settings/retroarch")
+def update_retroarch_settings(body: SettingsUpdate):
+    changes = [c.model_dump(exclude_none=True) for c in body.changes]
+    return {"changed": ra_config.write(changes, body.mtime)}
+
+
+@api.post("/emulator-settings/retroarch/backups/{name}/restore")
+def restore_retroarch_settings(name: str):
+    ra_config.restore(name)
     return {"ok": True}
 
 
@@ -520,7 +569,7 @@ app.include_router(public)
 app.include_router(api)
 
 try:
-    eden_config.ensure_hook()
+    combos.ensure_hooks()
 except Exception as exc:  # Eden config not mounted: the quit combo just stays off
     print(f"hook not written: {exc}", flush=True)
 

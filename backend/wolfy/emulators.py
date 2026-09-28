@@ -46,6 +46,8 @@ EMULATORS = [
                        "partagés avec le RetroArch flatpak de l'hôte.",
         "image": "wolfy-retroarch:latest",
         "build_dir": "retroarch",
+        "settings_page": "retroarch",
+        "paths_page": "retroarch",
         "rom_dir": "/mnt/Jeux/ROMS",
         "mounts": [
             f"{RA_HOST}:/home/retro/.var/app/org.libretro.RetroArch/config/retroarch:rw",

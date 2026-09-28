@@ -1,9 +1,18 @@
 <script setup>
-// Every setting of Eden's qt-config.ini, grouped in tabs, with a draft of pending changes.
+// Every setting of an emulator (Eden: qt-config.ini, RetroArch: retroarch.cfg + core options),
+// grouped in tabs, with a draft of pending changes. First tab: Wolfy's own settings.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { act, api, toast } from '../api'
+import HomeCombo from './HomeCombo.vue'
 import SettingField from './SettingField.vue'
 import WolfyEden from './WolfyEden.vue'
+
+const props = defineProps({ emulator: { type: String, required: true } })
+const NAMES = { eden: 'Eden', retroarch: 'RetroArch' }
+const name = NAMES[props.emulator] || props.emulator
+const base = `/emulator-settings/${props.emulator}`
+const open = ref({}) // collapsed/expanded groups
+const BIG = 40       // groups longer than this start collapsed
 
 const data = ref(null)
 const error = ref('')
@@ -15,7 +24,7 @@ const id = it => `${it.section}\u0000${it.key}`
 
 async function load() {
   try {
-    data.value = await api.get('/emulator-settings/eden')
+    data.value = await api.get(base)
     draft.value = {}
     error.value = ''
   } catch (e) {
@@ -75,20 +84,24 @@ async function save() {
     const [section, key] = k.split('\u0000')
     return d.reset ? { section, key, reset: true } : d.raw !== undefined ? { section, key, raw: d.raw } : { section, key, value: d.value }
   })
-  const r = await act('Enregistrement de la configuration Eden',
-    () => api.put('/emulator-settings/eden', { changes, mtime: data.value.mtime }))
+  const r = await act(`Enregistrement de la configuration ${name}`,
+    () => api.put(base, { changes, mtime: data.value.mtime }))
   if (r) {
     toast(`${r.changed} réglage(s) enregistré(s) — actif à la prochaine session`)
     load()
   }
 }
 
-async function restore(name) {
-  if (!name) return
-  if (!confirm(`Restaurer la configuration Eden du ${name.replace('qt-config.ini.', '')} ?`)) return
-  await act('Restauration', () => api.post(`/emulator-settings/eden/backups/${name}/restore`), 'Configuration restaurée')
+async function restore(backup) {
+  if (!backup) return
+  if (!confirm(`Restaurer ${backupLabel(backup)} ?`)) return
+  await act('Restauration', () => api.post(`${base}/backups/${backup}/restore`), 'Configuration restaurée')
   load()
 }
+
+const backupLabel = b => b.replace('qt-config.ini.', '').replace(/\.(\d{4}-)/, ' du $1').replace('_', ' ')
+const isOpen = g => open.value[g.name] ?? (search.value || g.items.length <= BIG)
+function toggle(g) { open.value = { ...open.value, [g.name]: !isOpen(g) } }
 
 function beforeUnload(e) { if (pending.value) { e.preventDefault(); e.returnValue = '' } }
 onMounted(() => { load(); window.addEventListener('beforeunload', beforeUnload) })
@@ -100,21 +113,27 @@ defineExpose({ pending })
   <div v-if="error" class="alert bad">{{ error }}</div>
   <template v-if="data">
     <div class="alert info small" style="margin-bottom:16px">
-      Configuration Eden <b>partagée</b> (<code>{{ data.path }}</code>) : utilisée par Eden sur le PC et copiée
-      au démarrage de <b>chaque session Wolf</b>. Les changements s'appliquent aux prochaines sessions.
-      Réglages et libellés issus d'Eden {{ data.eden_tag }}.
+      <template v-if="data.description">{{ data.description }}</template>
+      <template v-else>
+        Configuration Eden <b>partagée</b> : utilisée par Eden sur le PC et copiée au démarrage de
+        <b>chaque session Wolf</b>. Les changements s'appliquent aux prochaines sessions.
+      </template>
+      <code>{{ data.path }}</code> · réglages et libellés issus de {{ data.version || `Eden ${data.eden_tag}` }}.
+    </div>
+    <div v-if="data.host_running" class="alert warn small" style="margin-bottom:16px">
+      {{ name }} est ouvert sur le PC : ferme-le avant d'enregistrer (il réécrit sa config en quittant).
     </div>
 
     <div class="row" style="margin-bottom:14px">
       <input v-model="search" placeholder="🔍 Rechercher un réglage (résolution, vsync, langue…)" style="flex:1;min-width:220px" />
       <select style="width:auto" @change="restore($event.target.value); $event.target.value = ''">
         <option value="">↺ Restaurer une sauvegarde…</option>
-        <option v-for="b in data.backups" :key="b.name" :value="b.name">{{ b.name.replace('qt-config.ini.', '') }}</option>
+        <option v-for="b in data.backups" :key="b.name" :value="b.name">{{ backupLabel(b.name) }}</option>
       </select>
     </div>
 
     <div v-if="!search" class="tabs">
-      <button type="button" :class="{ active: tab === 'wolfy' }" @click="tab = 'wolfy'">🐺 Wolfy-Eden</button>
+      <button type="button" :class="{ active: tab === 'wolfy' }" @click="tab = 'wolfy'">🐺 Wolfy-{{ name }}</button>
       <button v-for="t in data.tabs" :key="t.id" type="button" :class="{ active: tab === t.id }" @click="tab = t.id">
         {{ t.label }} <span class="muted small">{{ counts[t.id] || 0 }}</span>
       </button>
@@ -125,12 +144,19 @@ defineExpose({ pending })
       Valeurs brutes du fichier (liaisons de boutons, listes, chemins…) : modifie seulement si tu sais ce que tu fais.
     </div>
 
-    <WolfyEden v-if="tab === 'wolfy' && !search" />
+    <template v-if="tab === 'wolfy' && !search">
+      <WolfyEden v-if="emulator === 'eden'" />
+      <HomeCombo v-else :emulator="emulator" />
+    </template>
 
     <div v-for="g in groups" :key="g.name" class="card" style="padding:8px 4px;margin-bottom:14px">
-      <h3 style="padding:8px 14px 4px;color:var(--accent-2)">{{ g.name }}</h3>
-      <SettingField v-for="it in g.items" :key="id(it)" :item="it" :value="valueOf(it)"
-                    :modified="!!draft[id(it)]" @update="v => update(it, v)" @reset="reset(it)" />
+      <h3 class="group-title" @click="toggle(g)">
+        {{ isOpen(g) ? '▾' : '▸' }} {{ g.name }} <span class="muted small">{{ g.items.length }}</span>
+      </h3>
+      <template v-if="isOpen(g)">
+        <SettingField v-for="it in g.items" :key="id(it)" :item="it" :value="valueOf(it)"
+                      :modified="!!draft[id(it)]" @update="v => update(it, v)" @reset="reset(it)" />
+      </template>
     </div>
     <div v-if="!groups.length && (tab !== 'wolfy' || search)" class="empty card">Aucun réglage.</div>
 
@@ -146,6 +172,7 @@ defineExpose({ pending })
 </template>
 
 <style scoped>
+.group-title { padding: 8px 14px 4px; color: var(--accent-2); cursor: pointer; user-select: none; }
 .savebar {
   position: sticky; bottom: 16px; z-index: 20;
   display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;

@@ -3,6 +3,9 @@
 import { computed, onMounted, ref } from 'vue'
 import { act, api } from '../api'
 
+const props = defineProps({ emulator: { type: String, default: 'eden' } })
+const isEden = computed(() => props.emulator === 'eden')
+const menuName = computed(() => (isEden.value ? 'menu HOME' : 'menu RetroArch'))
 const saved = ref(null)
 const form = ref(null)
 
@@ -29,12 +32,12 @@ const modLabel = computed(() => MODIFIERS.find(m => m.id === form.value?.modifie
 const btnLabel = computed(() => BUTTONS.find(b => b.id === form.value?.button)?.label)
 
 async function load() {
-  saved.value = await api.get('/emulator-settings/eden/home-combo')
+  saved.value = await api.get(`/emulator-settings/${props.emulator}/home-combo`)
   form.value = { ...saved.value }
 }
 
 async function save() {
-  const r = await act('Enregistrement', () => api.put('/emulator-settings/eden/home-combo', form.value),
+  const r = await act('Enregistrement', () => api.put(`/emulator-settings/${props.emulator}/home-combo`, form.value),
     'Combinaisons enregistrées — actives dans les sessions en cours sous 2 s')
   if (r) { saved.value = r; form.value = { ...r } }
 }
@@ -46,8 +49,8 @@ onMounted(load)
   <div v-if="form" class="card" style="margin-bottom:18px">
     <div class="row between">
       <div>
-        <h2 style="margin:0">🏠 Retour au menu HOME</h2>
-        <div class="muted small">Combinaison de la manette qui ramène la session au menu Switch.</div>
+        <h2 style="margin:0">🏠 Retour au {{ menuName }}</h2>
+        <div class="muted small">Combinaison de la manette qui ouvre le {{ menuName }} de la session.</div>
       </div>
       <label class="switch" title="Activer"><input v-model="form.enabled" type="checkbox" /><span></span></label>
     </div>
@@ -75,14 +78,15 @@ onMounted(load)
 
     <div class="muted small" style="margin-top:12px">
       <template v-if="form.enabled">
-        <b>{{ modLabel }} + {{ btnLabel }}</b>, puis relâcher : la session revient au menu HOME.
+        <b>{{ modLabel }} + {{ btnLabel }}</b>, puis relâcher : ouvre le {{ menuName }}.
         Lettres telles qu'imprimées sur une manette Xbox.
-        <template v-if="form.modifier === 'guide'">
+        <template v-if="form.modifier === 'guide' && !isEden">Guide seul ouvre déjà le menu RetroArch.</template>
+        <template v-if="form.modifier === 'guide' && isEden">
           Guide seul ouvre déjà le menu HOME dans Eden ; le raccourci Eden « Home + {{ { a: 'B', b: 'A', x: 'Y', y: 'X' }[form.button] }} »
           est désactivé dans les sessions pour ne pas se déclencher en même temps.
         </template>
       </template>
-      <template v-else>Désactivé : seul le bouton Guide ramène au menu HOME.</template>
+      <template v-else>Désactivé : seul le bouton Guide ouvre le {{ menuName }}.</template>
     </div>
 
     <hr class="sep" />
@@ -90,7 +94,7 @@ onMounted(load)
     <div class="row between">
       <div>
         <h2 style="margin:0">⏏️ Quitter l'émulateur</h2>
-        <div class="muted small">Combinaison maintenue qui ferme Eden et termine proprement la session Moonlight.</div>
+        <div class="muted small">Combinaison maintenue qui ferme {{ isEden ? 'Eden' : 'RetroArch' }} et termine proprement la session Moonlight.</div>
       </div>
       <label class="switch" title="Activer"><input v-model="form.quit_enabled" type="checkbox" /><span></span></label>
     </div>
@@ -111,7 +115,7 @@ onMounted(load)
     </div>
     <div class="muted small" style="margin-top:12px">
       La session s'arrête comme avec « Quitter » dans Moonlight : les sauvegardes du jeu en cours non enregistrées
-      sont perdues. Guide étant aussi le bouton HOME, le menu peut s'afficher une fraction de seconde avant.
+      sont perdues. Guide ouvrant aussi le {{ menuName }}, il peut s'afficher une fraction de seconde avant.
     </div>
 
     <div v-if="dirty" class="row end" style="margin-top:12px">

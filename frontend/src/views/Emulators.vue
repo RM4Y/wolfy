@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { act, api, ago, bytes } from '../api'
 import EdenPaths from '../components/EdenPaths.vue'
+import RetroArchPaths from '../components/RetroArchPaths.vue'
 import JobLog from '../components/JobLog.vue'
 
 const emulators = ref([])
@@ -73,7 +74,7 @@ onMounted(load)
         </tbody>
       </table>
       <div class="row end" style="margin-top:12px">
-        <button v-if="emu.paths_page" class="primary" @click="pathsFor = emu.paths_page">⚙️ Clés, firmware, jeux</button>
+        <button v-if="emu.paths_page" class="primary" @click="pathsFor = emu.paths_page">⚙️ {{ emu.paths_page === 'eden' ? 'Clés, firmware, jeux' : 'BIOS, jeux, sauvegardes' }}</button>
         <button v-if="emu.buildable" @click="build(emu)">🔨 {{ emu.image_info.present ? 'Reconstruire' : 'Construire' }}</button>
         <button v-else-if="emu.pullable" @click="pull(emu)">⬇ {{ emu.image_info.present ? 'Mettre à jour' : 'Télécharger' }}</button>
         <span v-else class="muted small">Pas de Dockerfile dans <code>images/{{ emu.build_dir }}</code></span>
@@ -87,5 +88,6 @@ onMounted(load)
   </div>
 
   <EdenPaths v-if="pathsFor === 'eden'" @close="pathsFor = ''; load()" />
+  <RetroArchPaths v-if="pathsFor === 'retroarch'" @close="pathsFor = ''; load()" />
   <JobLog v-if="jobId" :job-id="jobId" @close="jobId = ''" @done="load" />
 </template>

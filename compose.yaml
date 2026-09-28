@@ -72,19 +72,27 @@ services:
       # (its keys/ is a link to config/switch/keys)
       - /home/remy/.config/eden:/home/remy/.config/eden
       - /home/remy/.local/share/eden:/home/remy/.local/share/eden
+      # the PC's flatpak RetroArch (retroarch.cfg, core options), shared with the PlayStation sessions
+      - /home/remy/.var/app/org.libretro.RetroArch/config/retroarch:/home/remy/.var/app/org.libretro.RetroArch/config/retroarch
       # read-only view of the host (emulator paths: checks + folder picker)
       - /:/host:ro
       - wolf-api:/var/run/wolf
     restart: unless-stopped
 
   # emulator images used by the Wolf apps (build only: Wolf starts them per session)
+  # build context images/ (shared scripts in images/common); each Dockerfile has its own
+  # .dockerignore (Dockerfile.dockerignore) to leave the other images out
   wolfy-eden:
-    build: images/eden
+    build:
+      context: images
+      dockerfile: eden/Dockerfile
     image: wolfy-eden:latest
     profiles: [images]
 
   wolfy-retroarch:
-    build: images/retroarch
+    build:
+      context: images
+      dockerfile: retroarch/Dockerfile
     image: wolfy-retroarch:latest
     profiles: [images]
 

@@ -45,6 +45,12 @@ function num(v) { const n = Number(v); if (!Number.isNaN(n)) set(n) }
         <option v-if="!it.options.some(o => o.value === value)" :value="value">Valeur {{ value }}</option>
       </select>
 
+      <select v-else-if="it.type === 'choice' && it.options?.length" :value="value" :disabled="!!it.forced"
+              @change="set($event.target.value)">
+        <option v-for="o in it.options" :key="o.value" :value="o.value">{{ o.label }}</option>
+        <option v-if="!it.options.some(o => o.value === value)" :value="value">{{ value }}</option>
+      </select>
+
       <div v-else-if="slider" class="row" style="flex-wrap:nowrap">
         <input type="range" :min="it.min" :max="it.max" :value="value" :disabled="!!it.forced"
                @input="num($event.target.value)" />

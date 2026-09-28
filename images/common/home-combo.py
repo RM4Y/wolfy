@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Gamepad combos of the Wolf "Switch" sessions (set from Wolfy > Switch > Wolfy-Eden).
+"""Gamepad combos of the Wolf sessions (Switch: Eden, PlayStation: RetroArch), set from Wolfy.
 
-HOME combo: return to the Switch HOME menu.
+HOME combo: back to the emulator's menu (Switch HOME menu / RetroArch menu), by injecting
+a Guide press, which both emulators map to their menu.
 Quit combo (held, e.g. Start+Guide 1 s): ask Wolfy to end this Moonlight session
 cleanly (Wolf API sessions/stop) instead of killing Eden, since Wolf crashes when
 Moonlight resumes a session whose container died.
@@ -30,7 +31,11 @@ import struct
 import sys
 import time
 
-SETTINGS = os.environ.get("HOME_COMBO_SETTINGS", "/eden-config-host/wolfy-home-combo.json")
+# RetroArch sessions mount config/<system>/wolfy at /wolfy-config; Eden reads its
+# combo file from the shared Eden config dir
+SETTINGS = os.environ.get("HOME_COMBO_SETTINGS") or next(
+    (p for p in ("/wolfy-config/combo.json", "/eden-config-host/wolfy-home-combo.json") if os.path.exists(p)),
+    "/wolfy-config/combo.json")
 DEFAULT = {"enabled": True, "modifier": "start", "button": "a",
            "quit_enabled": True, "quit_combo": "start+guide", "quit_hold": 1.0}
 
