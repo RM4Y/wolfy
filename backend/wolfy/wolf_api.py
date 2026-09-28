@@ -55,6 +55,7 @@ def available() -> bool:
             s.settimeout(2)
             s.connect(settings.WOLF_SOCKET)
             s.sendall(b"GET /api/v1/clients HTTP/1.1\r\nHost: wolf\r\nConnection: close\r\n\r\n")
-            return s.recv(16).startswith(b"HTTP/1.1 200")
+            status = s.recv(32).split(b"\r\n", 1)[0].split()  # Wolf answers HTTP/1.0
+            return len(status) >= 2 and status[0].startswith(b"HTTP/") and status[1] == b"200"
     except OSError:
         return False
