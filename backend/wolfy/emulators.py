@@ -25,7 +25,7 @@ EMULATORS = [
         "systems": ["Nintendo Switch"],
         "description": "Démarre sur le menu HOME Switch (qlaunch). Rejoint automatiquement le salon "
                        "local « Maison » pour le sans-fil local entre sessions.",
-        "image": "wolf-eden:latest",
+        "image": "wolfy-eden:latest",
         "build_dir": "eden",
         "settings_page": "eden",
         "rom_dir": "/mnt/Jeux/ROMS/switch",

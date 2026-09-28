@@ -18,6 +18,12 @@ const BUTTONS = [
   { id: 'y', label: 'Y', hint: 'en haut', color: '#f5b041' },
 ]
 
+const QUIT_COMBOS = [
+  { id: 'start+guide', label: 'Start + Guide' },
+  { id: 'back+start', label: 'Back + Start', hint: 'certains clients Moonlight le transforment en Guide' },
+  { id: 'back+guide', label: 'Back + Guide' },
+]
+
 const dirty = computed(() => JSON.stringify(form.value) !== JSON.stringify(saved.value))
 const modLabel = computed(() => MODIFIERS.find(m => m.id === form.value?.modifier)?.label)
 const btnLabel = computed(() => BUTTONS.find(b => b.id === form.value?.button)?.label)
@@ -29,7 +35,7 @@ async function load() {
 
 async function save() {
   const r = await act('Enregistrement', () => api.put('/emulator-settings/eden/home-combo', form.value),
-    'Combinaison enregistrée — active dans les sessions en cours sous 2 s')
+    'Combinaisons enregistrées — actives dans les sessions en cours sous 2 s')
   if (r) { saved.value = r; form.value = { ...r } }
 }
 
@@ -79,6 +85,35 @@ onMounted(load)
       <template v-else>Désactivé : seul le bouton Guide ramène au menu HOME.</template>
     </div>
 
+    <hr class="sep" />
+
+    <div class="row between">
+      <div>
+        <h2 style="margin:0">⏏️ Quitter l'émulateur</h2>
+        <div class="muted small">Combinaison maintenue qui ferme Eden et termine proprement la session Moonlight.</div>
+      </div>
+      <label class="switch" title="Activer"><input v-model="form.quit_enabled" type="checkbox" /><span></span></label>
+    </div>
+    <div class="combo" :class="{ off: !form.quit_enabled }">
+      <div>
+        <label>Maintenir ensemble</label>
+        <div class="row">
+          <button v-for="q in QUIT_COMBOS" :key="q.id" type="button" class="pick" :class="{ primary: form.quit_combo === q.id }"
+                  :disabled="!form.quit_enabled" @click="form.quit_combo = q.id">
+            <b>{{ q.label }}</b><span v-if="q.hint" class="small">{{ q.hint }}</span>
+          </button>
+        </div>
+      </div>
+      <div style="min-width:200px">
+        <label>Pendant {{ Number(form.quit_hold).toFixed(1) }} s</label>
+        <input v-model.number="form.quit_hold" type="range" min="0.5" max="3" step="0.5" :disabled="!form.quit_enabled" />
+      </div>
+    </div>
+    <div class="muted small" style="margin-top:12px">
+      La session s'arrête comme avec « Quitter » dans Moonlight : les sauvegardes du jeu en cours non enregistrées
+      sont perdues. Guide étant aussi le bouton HOME, le menu peut s'afficher une fraction de seconde avant.
+    </div>
+
     <div v-if="dirty" class="row end" style="margin-top:12px">
       <button type="button" class="ghost" @click="form = { ...saved }">Annuler</button>
       <button type="button" class="primary" @click="save">💾 Enregistrer</button>
@@ -89,6 +124,7 @@ onMounted(load)
 <style scoped>
 .combo { display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; margin-top: 16px; }
 .combo.off { opacity: .45; }
+.sep { border: none; border-top: 1px solid var(--line); margin: 20px 0 16px; }
 .plus { font-size: 26px; font-weight: 700; color: var(--muted); padding-bottom: 10px; }
 .pick { flex-direction: column; align-items: flex-start; gap: 0; min-width: 150px; }
 .face {

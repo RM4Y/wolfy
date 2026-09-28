@@ -25,6 +25,9 @@ EDEN_CONFIG = Path(_env("EDEN_CONFIG", "/home/remy/.config/eden/qt-config.ini"))
 # Moonlight clients only see this profile
 DEFAULT_PROFILE = _env("WOLF_DEFAULT_PROFILE", "moonlight-profile-id")
 
+# host port of Wolfy, called back by the Switch sessions (quit combo)
+PUBLIC_PORT = int(_env("WOLFY_PUBLIC_PORT", "8420"))
+
 STATIC_DIR = Path(_env("WOLFY_STATIC", str(Path(__file__).resolve().parent.parent / "static")))
 
 
@@ -36,5 +39,15 @@ def secret_key() -> str:
     path = DATA_DIR / "secret.key"
     if not path.exists():
         path.write_text(secrets.token_urlsafe(48))
+        path.chmod(0o600)
+    return path.read_text().strip()
+
+
+def hook_token() -> str:
+    """Token the Wolf sessions send to Wolfy's hooks (generated once, in the data dir)."""
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    path = DATA_DIR / "hook.token"
+    if not path.exists():
+        path.write_text(secrets.token_urlsafe(32))
         path.chmod(0o600)
     return path.read_text().strip()

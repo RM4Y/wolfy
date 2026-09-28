@@ -411,9 +411,11 @@ def restore(name: str) -> None:
 
 # ------------------------------------------------------------------ HOME combo
 # Read live by home-combo.py in every Switch session (images/eden in /opt/stacks/wolf)
-COMBO_DEFAULT = {"enabled": True, "modifier": "start", "button": "a"}
+COMBO_DEFAULT = {"enabled": True, "modifier": "start", "button": "a",
+                 "quit_enabled": True, "quit_combo": "start+guide", "quit_hold": 1.0}
 COMBO_MODIFIERS = ("start", "guide")
 COMBO_BUTTONS = ("a", "b", "x", "y")
+QUIT_COMBOS = ("start+guide", "back+start", "back+guide")
 
 
 def _combo_path() -> Path:
@@ -421,17 +423,23 @@ def _combo_path() -> Path:
 
 
 def read_combo() -> dict:
+    """Combo settings as shown in the UI (without the session hook)."""
     try:
         data = {**COMBO_DEFAULT, **json.loads(_combo_path().read_text())}
     except (OSError, ValueError):
         data = dict(COMBO_DEFAULT)
+    data.pop("hook", None)
     return data
 
 
-def write_combo(enabled: bool, modifier: str, button: str) -> dict:
-    if modifier not in COMBO_MODIFIERS or button not in COMBO_BUTTONS:
+def write_combo(data: dict) -> dict:
+    data = {**read_combo(), **data}
+    if (data["modifier"] not in COMBO_MODIFIERS or data["button"] not in COMBO_BUTTONS
+            or data["quit_combo"] not in QUIT_COMBOS or not 0.3 <= float(data["quit_hold"]) <= 5):
         raise HTTPException(400, "Combinaison invalide")
-    data = {"enabled": enabled, "modifier": modifier, "button": button}
+    data["quit_hold"] = float(data["quit_hold"])
+    # sessions call Wolfy back (quit combo) with this token, through the docker gateway
+    data["hook"] = {"port": settings.PUBLIC_PORT, "token": settings.hook_token()}
     path = _combo_path()
     tmp = path.with_suffix(".wolfy-tmp")
     tmp.write_text(json.dumps(data, indent=2) + "\n")
@@ -439,7 +447,17 @@ def write_combo(enabled: bool, modifier: str, button: str) -> dict:
     os.chown(tmp, st.st_uid, st.st_gid)
     tmp.chmod(0o644)
     tmp.replace(path)
-    return data
+    return read_combo()
+
+
+def ensure_hook() -> None:
+    """Keep the hook (token, port) in the combo file up to date at startup."""
+    try:
+        current = json.loads(_combo_path().read_text()).get("hook")
+    except (OSError, ValueError):
+        current = None
+    if current != {"port": settings.PUBLIC_PORT, "token": settings.hook_token()} and _path().is_file():
+        write_combo({})
 
 
 # ------------------------------------------------------------------ per-title overrides

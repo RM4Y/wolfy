@@ -1,5 +1,6 @@
 """Wolfy: admin web UI for Wolf (games-on-whales) — pairing, sessions, apps/emulators, maintenance."""
 import asyncio
+import hmac
 import re
 import time
 from pathlib import Path
@@ -42,6 +43,22 @@ def login(body: Login, response: Response):
 @public.post("/auth/logout")
 def logout(response: Response):
     auth.close_session(response)
+    return {"ok": True}
+
+
+# ------------------------------------------------------------------- hooks (called by Wolf sessions)
+
+class SessionHook(BaseModel):
+    session_id: str
+    token: str
+
+
+@public.post("/hooks/session-stop")
+async def hook_session_stop(body: SessionHook):
+    """Quit combo pressed in a Switch session: end that Moonlight session cleanly."""
+    if not hmac.compare_digest(body.token, settings.hook_token()):
+        raise HTTPException(403, "Jeton invalide")
+    await wolf_api.post("sessions/stop", {"session_id": body.session_id})
     return {"ok": True}
 
 
@@ -270,8 +287,11 @@ def update_eden_settings(body: SettingsUpdate):
 
 class HomeCombo(BaseModel):
     enabled: bool = True
-    modifier: str
-    button: str
+    modifier: str = "start"
+    button: str = "a"
+    quit_enabled: bool = True
+    quit_combo: str = "start+guide"
+    quit_hold: float = 1.0
 
 
 @api.get("/emulator-settings/eden/home-combo")
@@ -281,7 +301,7 @@ def get_home_combo():
 
 @api.put("/emulator-settings/eden/home-combo")
 def set_home_combo(body: HomeCombo):
-    return eden_config.write_combo(body.enabled, body.modifier, body.button)
+    return eden_config.write_combo(body.model_dump())
 
 
 @api.get("/emulator-settings/eden/wolfy")
@@ -440,6 +460,11 @@ def job(job_id: str):
 
 app.include_router(public)
 app.include_router(api)
+
+try:
+    eden_config.ensure_hook()
+except Exception as exc:  # Eden config not mounted: the quit combo just stays off
+    print(f"hook not written: {exc}", flush=True)
 
 
 # ------------------------------------------------------------------- frontend (built SPA)
