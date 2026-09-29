@@ -118,9 +118,6 @@ montages correspondants du service `wolfy` dans `compose.yaml`.
 - Wolfy peut arrêter Wolf et lancer des conteneurs via le socket Docker, et voit le disque de l'hôte
   en lecture seule : ne l'expose pas sur Internet sans reverse proxy HTTPS (swag) devant.
 
-Ancienne pile : `/opt/stacks/wolf/compose.yaml.migrated-to-wolfy` (retour arrière : `docker compose down`
-ici, puis la renommer en `compose.yaml` et `docker compose up -d` dans `/opt/stacks/wolf`).
-
 ## Développement
 
 ```bash
