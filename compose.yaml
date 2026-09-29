@@ -96,6 +96,13 @@ services:
     image: wolfy-retroarch:latest
     profiles: [images]
 
+  wolfy-steam:
+    build:
+      context: images
+      dockerfile: steam/Dockerfile
+    image: wolfy-steam:latest
+    profiles: [images]
+
 volumes:
   nvidia-driver-vol:
     external: true

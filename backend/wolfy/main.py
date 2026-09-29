@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import auth, combos, docker_ops, eden_config, eden_paths, ra_config, ra_paths, emulators, settings, store, wolf_api, wolf_config
+from . import auth, combos, docker_ops, eden_config, eden_paths, ra_config, ra_paths, steam, emulators, settings, store, wolf_api, wolf_config
 
 app = FastAPI(title="Wolfy", docs_url="/api/docs", openapi_url="/api/openapi.json")
 public = APIRouter(prefix="/api")
@@ -294,6 +294,27 @@ async def upload_ra_bios(files: list[UploadFile] = File(...)):
     return {**result, "status": ra_paths.status(ra_paths.current())}
 
 
+@api.get("/emulators/steam/paths")
+def get_steam_paths():
+    cur = steam.current()
+    return {"paths": cur, "status": steam.status(cur["libraries"]), "defaults": steam.DEFAULT}
+
+
+class SteamPaths(BaseModel):
+    libraries: list[str] = []
+
+
+@api.post("/emulators/steam/paths/check")
+def check_steam_paths(body: SteamPaths):
+    return {"status": steam.status(body.libraries)}
+
+
+@api.put("/emulators/steam/paths")
+def set_steam_paths(body: SteamPaths):
+    result = steam.apply(body.libraries, _apply)
+    return {**result, "status": steam.status(result["libraries"])}
+
+
 @api.get("/fs")
 def browse_host(path: str = "/"):
     return eden_paths.browse(path)
@@ -413,6 +434,17 @@ def set_menu_resolution(body: MenuResolution):
 def restore_eden_settings(name: str):
     eden_config.restore(name)
     return {"ok": True}
+
+
+@api.get("/emulator-settings/steam")
+def steam_settings():
+    return steam.read()
+
+
+@api.put("/emulator-settings/steam")
+def update_steam_settings(body: SettingsUpdate):
+    changes = [c.model_dump(exclude_none=True) for c in body.changes]
+    return {"changed": steam.write(changes, body.mtime)}
 
 
 @api.get("/emulator-settings/retroarch")

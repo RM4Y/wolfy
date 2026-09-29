@@ -8,7 +8,7 @@ import SettingField from './SettingField.vue'
 import WolfyEden from './WolfyEden.vue'
 
 const props = defineProps({ emulator: { type: String, required: true } })
-const NAMES = { eden: 'Eden', retroarch: 'RetroArch' }
+const NAMES = { eden: 'Eden', retroarch: 'RetroArch', steam: 'Steam' }
 const name = NAMES[props.emulator] || props.emulator
 const base = `/emulator-settings/${props.emulator}`
 const open = ref({}) // collapsed/expanded groups

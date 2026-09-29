@@ -2,7 +2,7 @@
 
 Read live by images/common/home-combo.py in each session:
 - Switch (Eden): ~/.config/eden/wolfy-home-combo.json (sessions see it as /eden-config-host)
-- PlayStation (RetroArch): config/playstation/wolfy/combo.json (mounted at /wolfy-config)
+- PlayStation (RetroArch), Steam: config/<system>/wolfy/combo.json (mounted at /wolfy-config)
 """
 import json
 import os
@@ -22,8 +22,9 @@ QUIT_COMBOS = ("start+guide", "back+start", "back+guide")
 def path(emulator: str) -> Path:
     if emulator == "eden":
         return settings.EDEN_CONFIG.parent / "wolfy-home-combo.json"
-    if emulator == "retroarch":
-        return Path(settings.WOLFY_HOST_DIR) / "config" / "playstation" / "wolfy" / "combo.json"
+    systems = {"retroarch": "playstation", "steam": "steam"}
+    if emulator in systems:
+        return Path(settings.WOLFY_HOST_DIR) / "config" / systems[emulator] / "wolfy" / "combo.json"
     raise HTTPException(404, f"Pas de combinaisons pour « {emulator} »")
 
 
@@ -59,7 +60,7 @@ def write(emulator: str, data: dict) -> dict:
 
 def ensure_hooks() -> None:
     """Create/refresh every combo file with the current hook (token, port) at startup."""
-    for emulator in ("eden", "retroarch"):
+    for emulator in ("eden", "retroarch", "steam"):
         p = path(emulator)
         if not p.parent.parent.exists():
             continue

@@ -5,7 +5,7 @@ import { act, api } from '../api'
 
 const props = defineProps({ emulator: { type: String, default: 'eden' } })
 const isEden = computed(() => props.emulator === 'eden')
-const menuName = computed(() => (isEden.value ? 'menu HOME' : 'menu RetroArch'))
+const menuName = computed(() => ({ eden: 'menu HOME', retroarch: 'menu RetroArch', steam: 'menu Steam' })[props.emulator])
 const saved = ref(null)
 const form = ref(null)
 
@@ -80,7 +80,7 @@ onMounted(load)
       <template v-if="form.enabled">
         <b>{{ modLabel }} + {{ btnLabel }}</b>, puis relâcher : ouvre le {{ menuName }}.
         Lettres telles qu'imprimées sur une manette Xbox.
-        <template v-if="form.modifier === 'guide' && !isEden">Guide seul ouvre déjà le menu RetroArch.</template>
+        <template v-if="form.modifier === 'guide' && !isEden">Guide seul ouvre déjà le {{ menuName }}.</template>
         <template v-if="form.modifier === 'guide' && isEden">
           Guide seul ouvre déjà le menu HOME dans Eden ; le raccourci Eden « Home + {{ { a: 'B', b: 'A', x: 'Y', y: 'X' }[form.button] }} »
           est désactivé dans les sessions pour ne pas se déclencher en même temps.
@@ -94,7 +94,7 @@ onMounted(load)
     <div class="row between">
       <div>
         <h2 style="margin:0">⏏️ Quitter l'émulateur</h2>
-        <div class="muted small">Combinaison maintenue qui ferme {{ isEden ? 'Eden' : 'RetroArch' }} et termine proprement la session Moonlight.</div>
+        <div class="muted small">Combinaison maintenue qui ferme {{ ({ eden: 'Eden', retroarch: 'RetroArch', steam: 'Steam' })[emulator] }} et termine proprement la session Moonlight.</div>
       </div>
       <label class="switch" title="Activer"><input v-model="form.quit_enabled" type="checkbox" /><span></span></label>
     </div>

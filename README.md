@@ -42,6 +42,8 @@ navigateur ──► Wolfy (FastAPI + Vue 3, port 8420)
   du RetroArch flatpak du PC (sauvegardes dans `wolfy-backups/`), refusé si RetroArch est ouvert sur le PC.
 - Le catalogue d'émulateurs est dans `backend/wolfy/emulators.py`. Les images locales sont construites
   depuis `images/<émulateur>/` : `images/eden` = `wolfy-eden` (Switch, voir son README),
+  `images/steam` = `wolfy-steam` (Steam, sur l'image officielle GoW : verrou de session, bibliothèques
+  enregistrées dans `libraryfolders.vdf`, options de démarrage — `steam-setup.py`) ;
   `images/retroarch` = `wolfy-retroarch` (PlayStation) : cœurs LRPS2 / PPSSPP intégrés à l'image
   (`/opt/wolfy/cores`, dernières versions du buildbot libretro à la construction, liste dans
   `/opt/wolfy/cores/VERSIONS`) ; les playlists partagées sont copiées dans la session avec ces cœurs et
@@ -55,7 +57,7 @@ Une seule pile Docker (`compose.yaml`, projet `wolfy`) :
 |---|---|
 | `wolf` | Wolf (image officielle `ghcr.io/games-on-whales/wolf:stable`), réseau hôte, GPU NVIDIA |
 | `wolfy` | cette interface, construite depuis le dépôt, port 8420 |
-| `wolfy-eden`, `wolfy-retroarch` | images des applis Switch / PlayStation (profil `images`, construction seulement : Wolf les lance à chaque session) |
+| `wolfy-eden`, `wolfy-retroarch`, `wolfy-steam` | images des applis Switch / PlayStation / Steam (profil `images`, construction seulement : Wolf les lance à chaque session) |
 
 ```bash
 cd ~/Bureau/wolfy
@@ -73,6 +75,8 @@ Interface : <http://192.168.1.85:8420>
   `config/switch/users` (profils `system/save` + sauvegardes `user/save`),
   `config/playstation/bios` (dossier « system » de RetroArch : BIOS PS2 dans `pcsx2/bios`, PS1, fichiers PPSSPP),
   `config/playstation/saves`, `config/playstation/states` ;
+  `config/steam/data` (le `~/.steam` des sessions : installation, compte, réglages — une seule session
+  Steam à la fois), `config/steam/wolfy/steam.json` (options de session) ;
   `config/<système>/wolfy/combo.json` : combinaisons de manette (menu / quitter).
   Eden sur le PC utilise les mêmes dossiers (`~/.local/share/eden/keys` est un lien vers
   `config/switch/keys`, la NAND et les sauvegardes sont réglées dans `~/.config/eden/qt-config.ini`).
