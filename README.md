@@ -60,13 +60,45 @@ Une seule pile Docker (`compose.yaml`, projet `wolfy`) :
 | `wolfy-eden`, `wolfy-retroarch`, `wolfy-steam` | images des applis Switch / PlayStation / Steam (profil `images`, construction seulement : Wolf les lance à chaque session) |
 
 ```bash
-cd ~/Bureau/wolfy
-cp .env.example .env                      # puis WOLFY_ADMIN_PASSWORD, WOLFY_DIR, HOST_HOME, WOLFY_GAMES_DIR
+git clone https://github.com/RM4Y/wolfy.git && cd wolfy
+cp .env.example .env                      # puis remplir les variables ci-dessous
 docker compose up -d --build              # Wolf + Wolfy
 docker compose --profile images build     # images des émulateurs (ou Wolfy > Émulateurs)
 ```
 
 Interface : `http://<ip-du-serveur>:8420`
+
+### Configuration (`.env`)
+
+À renseigner :
+
+| Variable | Rôle | Exemple |
+|---|---|---|
+| `WOLFY_ADMIN_PASSWORD` | mot de passe de l'interface | |
+| `WOLFY_DIR` | chemin du projet sur l'hôte (les données des émulateurs sont dans `<WOLFY_DIR>/config`, montées au même chemin dans les sessions) | `/home/utilisateur/wolfy` |
+| `HOST_HOME` | dossier personnel de l'utilisateur du PC : RetroArch flatpak (`.var/app/org.libretro.RetroArch`) et Eden (`.config/eden`, `.local/share/eden`), partagés avec les sessions | `/home/utilisateur` |
+| `WOLFY_GAMES_DIR` | disque des jeux : dossiers de ROMs proposés par défaut (`<WOLFY_GAMES_DIR>/ROMS/switch`, `…/ROMS/ps2`, `psp`, `psx`) et bibliothèque Steam (`<WOLFY_GAMES_DIR>/SteamLibrary`) | `/mnt/jeux` |
+
+`docker compose` refuse de démarrer si `WOLFY_DIR` ou `HOST_HOME` manque. Les dossiers de ROMs et les
+bibliothèques Steam se changent ensuite dans Wolfy (page Émulateurs, bouton de chaque émulateur :
+« Clés, firmware, jeux », « BIOS, jeux, sauvegardes », « Bibliothèques, compte »).
+
+Facultatif (valeurs par défaut entre parenthèses) :
+
+| Variable | Rôle |
+|---|---|
+| `WOLFY_SESSION_HOURS` | durée de la connexion à l'interface, en heures (`168`) |
+| `WOLFY_PUBLIC_PORT` | port de Wolfy appelé par les sessions (combo quitter) (`8420`) |
+| `WOLF_CONTAINER`, `WOLF_SOCKET`, `WOLF_STATE_DIR` | conteneur, socket d'API et dossier d'état de Wolf (`wolf`, `/var/run/wolf/wolf.sock`, `/opt/stacks/config/wolf`) |
+| `WOLF_DEFAULT_PROFILE` | profil Wolf des applis vues par Moonlight (`moonlight-profile-id`) |
+| `RETROARCH_DIR` | configuration du RetroArch du PC (`<HOST_HOME>/.var/app/org.libretro.RetroArch/config/retroarch`) |
+| `RETROARCH_CORES_DIR` | cœurs du RetroArch flatpak, montés dans les sessions PlayStation (`<HOST_HOME>/.local/share/flatpak/app/org.libretro.RetroArch/current/active/files/share/libretro`) |
+| `EDEN_CONFIG_DIR`, `EDEN_DATA_DIR` | configuration et données d'Eden sur le PC (`<HOST_HOME>/.config/eden`, `<HOST_HOME>/.local/share/eden`) |
+
+Si `RETROARCH_DIR` ou les dossiers d'Eden sont ailleurs que sous `HOST_HOME`, adapter aussi les
+montages correspondants du service `wolfy` dans `compose.yaml`.
+
+### Données
 
 - État de Wolf (config.toml, jaquettes, appareils appairés) : `/opt/stacks/config/wolf`, inchangé.
 - Données des émulateurs dans `config/` (jamais versionné) :
