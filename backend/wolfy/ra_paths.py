@@ -30,7 +30,7 @@ DEFAULTS = {
     "bios": f"{PS_DIR}/bios",
     "saves": f"{PS_DIR}/saves",
     "states": f"{PS_DIR}/states",
-    "roms": ["/mnt/Jeux/ROMS/ps2", "/mnt/Jeux/ROMS/psp", "/mnt/Jeux/ROMS/psx"],
+    "roms": [f"{settings.GAMES_DIR}/ROMS/{s}" for s in ("ps2", "psp", "psx")],
 }
 CFG_KEYS = {"bios": "system_directory", "saves": "savefile_directory", "states": "savestate_directory"}
 GAME_EXT = (".iso", ".bin", ".cue", ".chd", ".cso", ".pbp", ".elf", ".m3u", ".img", ".mdf", ".zso")
@@ -44,7 +44,7 @@ PS2_COMPANIONS = (".nvm", ".mec", ".rom1", ".rom2", ".erom")
 
 def _expand(value: str) -> str:
     # "~" is the host user's home for the flatpak RetroArch
-    return str(Path("/home/remy") / value[2:]) if value.startswith("~/") else value
+    return str(Path(settings.HOST_HOME) / value[2:]) if value.startswith("~/") else value
 
 
 def read_cfg() -> dict[str, str]:
@@ -164,7 +164,7 @@ def apply(paths: dict, restart_wolf) -> dict:
     cfg_changed = write_cfg({CFG_KEYS[k]: paths[k] for k in CFG_KEYS})
     previous = store.get("emulator_paths").get("retroarch", {})
     old_mounts = set(previous.get("mounts") or _session_mounts(before))
-    old_mounts |= {"/mnt/Jeux/ROMS:/mnt/Jeux/ROMS:ro"}  # original PlayStation app mount
+    old_mounts |= {f"{settings.GAMES_DIR}/ROMS:{settings.GAMES_DIR}/ROMS:ro"}  # original PlayStation app mount
     new_mounts = _session_mounts(paths)
     store.put("emulator_paths", "retroarch", {"roms": paths["roms"], "mounts": new_mounts})
     changed = update_app_mounts("retroarch", old_mounts, new_mounts, restart_wolf, "chemins-playstation")

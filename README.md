@@ -61,12 +61,12 @@ Une seule pile Docker (`compose.yaml`, projet `wolfy`) :
 
 ```bash
 cd ~/Bureau/wolfy
-cp .env.example .env                      # puis choisir WOLFY_ADMIN_PASSWORD
+cp .env.example .env                      # puis WOLFY_ADMIN_PASSWORD, WOLFY_DIR, HOST_HOME, WOLFY_GAMES_DIR
 docker compose up -d --build              # Wolf + Wolfy
 docker compose --profile images build     # images des émulateurs (ou Wolfy > Émulateurs)
 ```
 
-Interface : <http://192.168.1.85:8420>
+Interface : `http://<ip-du-serveur>:8420`
 
 - État de Wolf (config.toml, jaquettes, appareils appairés) : `/opt/stacks/config/wolf`, inchangé.
 - Données des émulateurs dans `config/` (jamais versionné) :

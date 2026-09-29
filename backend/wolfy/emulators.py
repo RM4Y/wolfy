@@ -3,6 +3,7 @@
 `build_dir` is a folder of settings.WOLF_IMAGES_DIR holding the image's Dockerfile
 (custom images built locally); images without it are pulled from their registry.
 """
+from . import settings
 
 GOW_ENV = ["GOW_REQUIRED_DEVICES=/dev/input/* /dev/dri/* /dev/nvidia*"]
 
@@ -16,7 +17,8 @@ BASE_CREATE_JSON = """{
 }
 """
 
-RA_HOST = "/home/remy/.var/app/org.libretro.RetroArch/config/retroarch"
+RA_HOST = settings.RETROARCH_DIR
+GAMES = settings.GAMES_DIR
 
 EMULATORS = [
     {
@@ -29,11 +31,11 @@ EMULATORS = [
         "build_dir": "eden",
         "settings_page": "eden",
         "paths_page": "eden",
-        "rom_dir": "/mnt/Jeux/ROMS/switch",
+        "rom_dir": f"{GAMES}/ROMS/switch",
         "mounts": [
-            "/home/remy/.local/share/eden:/home/remy/.local/share/eden:rw",
-            "/home/remy/.local/share/eden:/home/retro/.local/share/eden:rw",
-            "/home/remy/.config/eden:/eden-config-host:ro",
+            f"{settings.EDEN_DATA_DIR}:{settings.EDEN_DATA_DIR}:rw",
+            f"{settings.EDEN_DATA_DIR}:/home/retro/.local/share/eden:rw",
+            f"{settings.EDEN_CONFIG_DIR}:/eden-config-host:ro",
         ],
         "env": ["RUN_SWAY=1", *GOW_ENV],
         "multi_session": True,
@@ -48,14 +50,13 @@ EMULATORS = [
         "build_dir": "retroarch",
         "settings_page": "retroarch",
         "paths_page": "retroarch",
-        "rom_dir": "/mnt/Jeux/ROMS",
+        "rom_dir": f"{GAMES}/ROMS",
         "mounts": [
             f"{RA_HOST}:/home/retro/.var/app/org.libretro.RetroArch/config/retroarch:rw",
             f"{RA_HOST}:{RA_HOST}:rw",
-            "/home/remy/.local/share/flatpak/app/org.libretro.RetroArch/current/active/files/"
-            "share/libretro:/app/share/libretro:ro",
+            f"{settings.RETROARCH_CORES_DIR}:/app/share/libretro:ro",
         ],
-        "env": ["RUN_SWAY=1", *GOW_ENV],
+        "env": ["RUN_SWAY=1", f"HOST_HOME={settings.HOST_HOME}", *GOW_ENV],
         "multi_session": True,
     },
     {
@@ -66,7 +67,7 @@ EMULATORS = [
                        "peuvent servir qu'à une session à la fois.",
         "image": "wolf-dolphin:latest",
         "build_dir": "dolphin",
-        "rom_dir": "/mnt/Jeux/ROMS/wii",
+        "rom_dir": f"{GAMES}/ROMS/wii",
         "mounts": [],
         "env": ["RUN_SWAY=1", *GOW_ENV],
         "multi_session": False,
@@ -78,7 +79,7 @@ EMULATORS = [
         "description": "Image officielle Games on Whales, sans configuration partagée.",
         "image": "ghcr.io/games-on-whales/retroarch:edge",
         "build_dir": None,
-        "rom_dir": "/mnt/Jeux/ROMS",
+        "rom_dir": f"{GAMES}/ROMS",
         "mounts": [],
         "env": ["RUN_SWAY=true", *GOW_ENV],
         "multi_session": True,

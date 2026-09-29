@@ -22,16 +22,25 @@ WOLF_COVERS_DIR = Path(_env("WOLF_COVERS_DIR", str(WOLF_STATE_DIR / "covers")))
 # images/ folder first, then the Wolf stack's
 WOLFY_IMAGES_DIR = Path(_env("WOLFY_IMAGES_DIR", str(Path(__file__).resolve().parents[2] / "images")))
 WOLF_IMAGES_DIR = Path(_env("WOLF_IMAGES_DIR", "/opt/stacks/wolf/images"))
+# home of the host user running the PC's emulators (flatpak RetroArch, Eden)
+HOST_HOME = _env("HOST_HOME", str(Path.home()))
+# games disk: default ROM folders and Steam library
+GAMES_DIR = _env("WOLFY_GAMES_DIR", "/mnt/games")
 # emulator configs shared by the host and every Wolf session
 # the host's flatpak RetroArch (retroarch.cfg shared with the PlayStation sessions)
-RETROARCH_DIR = _env("RETROARCH_DIR", "/home/remy/.var/app/org.libretro.RetroArch/config/retroarch")
-EDEN_DATA_DIR = _env("EDEN_DATA_DIR", "/home/remy/.local/share/eden")
-EDEN_CONFIG = Path(_env("EDEN_CONFIG", "/home/remy/.config/eden/qt-config.ini"))
+RETROARCH_DIR = _env("RETROARCH_DIR", f"{HOST_HOME}/.var/app/org.libretro.RetroArch/config/retroarch")
+# the flatpak RetroArch's cores, mounted read-only in the PlayStation sessions
+RETROARCH_CORES_DIR = _env(
+    "RETROARCH_CORES_DIR",
+    f"{HOST_HOME}/.local/share/flatpak/app/org.libretro.RetroArch/current/active/files/share/libretro")
+EDEN_DATA_DIR = _env("EDEN_DATA_DIR", f"{HOST_HOME}/.local/share/eden")
+EDEN_CONFIG_DIR = _env("EDEN_CONFIG_DIR", f"{HOST_HOME}/.config/eden")
+EDEN_CONFIG = Path(_env("EDEN_CONFIG", f"{EDEN_CONFIG_DIR}/qt-config.ini"))
 # Moonlight clients only see this profile
 DEFAULT_PROFILE = _env("WOLF_DEFAULT_PROFILE", "moonlight-profile-id")
 
 # host path of this project (emulator data lives in <it>/config, mounted at the same path)
-WOLFY_HOST_DIR = _env("WOLFY_DIR", "/home/remy/Bureau/wolfy")
+WOLFY_HOST_DIR = _env("WOLFY_DIR", str(Path(__file__).resolve().parents[2]))
 
 # read-only view of the host filesystem (emulator paths: checks and folder picker)
 HOST_ROOT = Path(_env("WOLFY_HOST_ROOT", "/host"))

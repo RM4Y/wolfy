@@ -132,7 +132,7 @@ async function save() {
 
         <div class="field">
           <label>Dossier des ROMs (monté en lecture seule, même chemin)</label>
-          <input v-model="form.rom_dir" class="mono" placeholder="/mnt/Jeux/ROMS/…" />
+          <input v-model="form.rom_dir" class="mono" placeholder="/mnt/…/ROMS/…" />
         </div>
 
         <div class="field">
@@ -168,7 +168,7 @@ async function save() {
       <div v-show="tab === 'volumes'">
         <div class="field">
           <label>Montages supplémentaires <span class="mono">hôte:conteneur:mode</span></label>
-          <ListEditor v-model="form.mounts" placeholder="/home/remy/…:/home/retro/…:rw" />
+          <ListEditor v-model="form.mounts" placeholder="/home/…:/home/retro/…:rw" />
           <div class="help">Le dossier des ROMs (onglet Général) est ajouté automatiquement.</div>
         </div>
         <div class="field">

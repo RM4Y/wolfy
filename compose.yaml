@@ -54,7 +54,8 @@ services:
     env_file: .env
     environment:
       - WOLFY_IMAGES_DIR=/app/images
-      - WOLFY_DIR=${WOLFY_DIR:-/home/remy/Bureau/wolfy}
+      - WOLFY_DIR=${WOLFY_DIR:?WOLFY_DIR manquant dans .env}
+      - HOST_HOME=${HOST_HOME:?HOST_HOME manquant dans .env}
     ports:
       - "8420:8420"
     volumes:
@@ -67,13 +68,13 @@ services:
       - ./images:/app/images:ro
       # emulator data (config/switch/keys, nand, users), at its host path: the Wolf
       # sessions mount the same paths
-      - ./config:${WOLFY_DIR:-/home/remy/Bureau/wolfy}/config
+      - ./config:${WOLFY_DIR}/config
       # Eden settings shared by the host and the Wolf sessions, and Eden's data dir
       # (its keys/ is a link to config/switch/keys)
-      - /home/remy/.config/eden:/home/remy/.config/eden
-      - /home/remy/.local/share/eden:/home/remy/.local/share/eden
+      - ${HOST_HOME}/.config/eden:${HOST_HOME}/.config/eden
+      - ${HOST_HOME}/.local/share/eden:${HOST_HOME}/.local/share/eden
       # the PC's flatpak RetroArch (retroarch.cfg, core options), shared with the PlayStation sessions
-      - /home/remy/.var/app/org.libretro.RetroArch/config/retroarch:/home/remy/.var/app/org.libretro.RetroArch/config/retroarch
+      - ${HOST_HOME}/.var/app/org.libretro.RetroArch/config/retroarch:${HOST_HOME}/.var/app/org.libretro.RetroArch/config/retroarch
       # read-only view of the host (emulator paths: checks + folder picker)
       - /:/host:ro
       - wolf-api:/var/run/wolf

@@ -166,7 +166,7 @@ onMounted(load)
     </div>
   </div>
 
-  <FolderPicker v-if="picking" :start="picking.field === 'roms' ? (form.roms[picking.index] || '/mnt/Jeux/ROMS') : form[picking.field]"
+  <FolderPicker v-if="picking" :start="picking.field === 'roms' ? (form.roms[picking.index] || defaults.roms?.[0] || '/') : form[picking.field]"
                 @pick="pick" @close="picking = null" />
 </template>
 

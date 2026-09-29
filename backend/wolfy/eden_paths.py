@@ -34,7 +34,7 @@ SWITCH_DIR = f"{settings.WOLFY_HOST_DIR}/config/switch"
 DEFAULTS = {
     "keys": f"{SWITCH_DIR}/keys",
     "firmware": f"{SWITCH_DIR}/nand",
-    "roms": ["/mnt/Jeux/ROMS/switch"],
+    "roms": [f"{settings.GAMES_DIR}/ROMS/switch"],
     "users": f"{SWITCH_DIR}/users",
 }
 GAME_EXT = (".xci", ".nsp", ".nca", ".nro", ".nso", ".xcz", ".nsz")

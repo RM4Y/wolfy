@@ -10,6 +10,7 @@ back to the shared playlists with the PC's core paths.
     playlist-sync.py watch   write session changes back, every few seconds (background)
 """
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -18,12 +19,9 @@ RA = Path(os.environ.get("RA_DIR", Path.home() / ".var/app/org.libretro.RetroArc
 SHARED = RA / "playlists"
 SESSION = Path.home() / ".config/retroarch/playlists"
 IMAGE_CORES = "/opt/wolfy/cores/"
-# how the PC's RetroArch writes its cores dir in playlists (first one is used when writing back)
-PC_CORES = [
-    "/home/remy/.var/app/org.libretro.RetroArch/config/retroarch/cores/",
-    "~/.var/app/org.libretro.RetroArch/config/retroarch/cores/",
-    "/home/retro/.var/app/org.libretro.RetroArch/config/retroarch/cores/",
-]
+# how the PC's RetroArch writes its cores dir in playlists: /home/<user>/.var/app/... or ~/.var/app/...
+PC_CORES = re.compile(r'(?:/home/[^/"]+|~)/\.var/app/org\.libretro\.RetroArch/config/retroarch/cores/')
+PC_CORES_DEFAULT = os.environ.get("HOST_HOME", "~") + "/.var/app/org.libretro.RetroArch/config/retroarch/cores/"
 
 
 def log(msg):
@@ -31,13 +29,16 @@ def log(msg):
 
 
 def to_session(text: str) -> str:
-    for prefix in PC_CORES:
-        text = text.replace(prefix, IMAGE_CORES)
-    return text
+    return PC_CORES.sub(IMAGE_CORES, text)
 
 
-def to_shared(text: str) -> str:
-    return text.replace(IMAGE_CORES, PC_CORES[0])
+def to_shared(text: str, dest: Path) -> str:
+    """Back to the PC's form, reusing the cores dir the shared playlist already had."""
+    try:
+        found = [m for m in PC_CORES.findall(dest.read_text(errors="replace")) if not m.startswith("/home/retro/")]
+    except OSError:
+        found = []
+    return text.replace(IMAGE_CORES, found[0] if found else PC_CORES_DEFAULT)
 
 
 def copy_in() -> dict[Path, float]:
@@ -63,7 +64,7 @@ def watch(mtimes: dict[Path, float]) -> None:
             try:
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 tmp = dest.with_suffix(".lpl.session-tmp")
-                tmp.write_text(to_shared(path.read_text(errors="replace")))
+                tmp.write_text(to_shared(path.read_text(errors="replace"), dest))
                 tmp.replace(dest)
                 log(f"saved {dest.relative_to(SHARED)}")
             except OSError as exc:

@@ -17,12 +17,12 @@ set_ui() { set_key UI "$1" "$2"; }
 set_ui 'Multiplayer\nickname' "$NICK"
 # reach the host's room through the container's gateway (docker0 IP): the host
 # answers from that address, and Eden drops replies coming from another IP than
-# the one it dialled (192.168.1.85 -> "Unable to connect to the host")
+# the one it dialled (host LAN IP -> "Unable to connect to the host")
 G=$(awk '$2 == "00000000" {print $3; exit}' /proc/net/route)  # little-endian hex
 [ -n "$G" ] && GW=$(printf '%d.%d.%d.%d' 0x${G:6:2} 0x${G:4:2} 0x${G:2:2} 0x${G:0:2})
-set_ui 'Multiplayer\ip' "${EDEN_ROOM_HOST:-${GW:-192.168.1.85}}"
+set_ui 'Multiplayer\ip' "${EDEN_ROOM_HOST:-${GW:-172.17.0.1}}"
 set_ui 'Multiplayer\port' "${EDEN_ROOM_PORT:-24872}"
-# the host's NIC (enp5s0) doesn't exist here: use the container's default route
+# the host's NIC doesn't exist here: use the container's default route
 # interface, else Eden reports "no network / airplane mode"
 IFACE=$(awk '$2 == "00000000" {print $1; exit}' /proc/net/route)
 set_key Services network_interface "${IFACE:-eth0}"

@@ -19,7 +19,7 @@ from .eden_paths import _chown_like, _clean, host, update_app_mounts
 STEAM_DIR = f"{settings.WOLFY_HOST_DIR}/config/steam"
 DATA = f"{STEAM_DIR}/data"
 OPTIONS = Path(STEAM_DIR) / "wolfy" / "steam.json"
-DEFAULT = {"libraries": ["/mnt/Jeux/SteamLibrary"], "startup_mode": "bigpicture", "compositor": "sway",
+DEFAULT = {"libraries": [f"{settings.GAMES_DIR}/SteamLibrary"], "startup_mode": "bigpicture", "compositor": "sway",
            "mangohud": False, "proton_log": False, "extra_flags": ""}
 
 # settings page (EmulatorSettings): one tab, typed items
@@ -143,7 +143,7 @@ def status(libraries: list[str]) -> dict:
 
 
 def current() -> dict:
-    return {"libraries": read_options()["libraries"], "data": DATA}
+    return {"libraries": read_options()["libraries"], "data": DATA, "games_dir": settings.GAMES_DIR}
 
 
 def apply(libraries: list[str], restart_wolf) -> dict:

@@ -9,6 +9,7 @@ const saved = ref(null)
 const libs = ref(null)
 const status = ref(null)
 const dataPath = ref('')
+const gamesDir = ref('/')
 const picking = ref(null)
 let checkTimer
 
@@ -19,6 +20,7 @@ async function load() {
   saved.value = r.paths.libraries
   libs.value = [...r.paths.libraries]
   dataPath.value = r.paths.data
+  gamesDir.value = r.paths.games_dir || '/'
   status.value = r.status
 }
 
@@ -100,7 +102,7 @@ onMounted(load)
     </div>
   </div>
 
-  <FolderPicker v-if="picking" :start="picking.index !== undefined ? libs[picking.index] : '/mnt/Jeux'"
+  <FolderPicker v-if="picking" :start="picking.index !== undefined ? libs[picking.index] : gamesDir"
                 @pick="pick" @close="picking = null" />
 </template>
 
