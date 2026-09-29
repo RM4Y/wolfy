@@ -129,3 +129,8 @@ cd frontend && npm install && npm run dev
 ```
 
 Documentation interactive de l'API de Wolfy : `/api/docs`.
+
+## Licence
+
+[GPL-3.0](LICENSE). Les réglages et traductions de `backend/wolfy/emulator_settings/` sont générés
+depuis les sources d'Eden et de RetroArch, elles aussi sous GPL-3.0.
