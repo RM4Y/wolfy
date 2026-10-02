@@ -1,0 +1,54 @@
+#!/bin/bash
+# ps-launch EMU GAME: a PS3 / PS Vita game picked in the RetroArch XMB (started by the launcher
+# core, launcher-core.c, in its own process group). Runs the standalone emulator fullscreen above
+# RetroArch, then gives RetroArch the screen back when it exits; the core then closes the content.
+#   rpcs3   GAME = .../PS3_GAME/USRDIR/EBOOT.BIN (disc folder) or dev_hdd0/game/<ID>/USRDIR/EBOOT.BIN
+#   vita3k  GAME = <Vita3K>/fs/ux0/app/<TITLE ID>/eboot.bin
+# The HOME combo (home-combo.py) stops the emulator through /tmp/wolfy-external.pid.
+EMU=$1
+GAME=$2
+RA_PID=$PPID
+LOG="$HOME/.var/app/org.libretro.RetroArch/config/retroarch/logs/wolf-session-${WOLF_SESSION_ID: -4}-$EMU.log"
+mkdir -p "$(dirname "$LOG")"
+exec >>"$LOG" 2>&1
+echo "=== $(date '+%F %T') $EMU $GAME"
+
+case "$EMU" in
+    rpcs3)
+        NAME="wolf-${WOLF_SESSION_ID: -4}"
+        python3 /opt/wolfy/bin/rpcs3-pads.py "$HOME/.config/rpcs3/input_configs/global/$NAME.yml"
+        CMD=(/opt/rpcs3/AppRun --no-gui --fullscreen --input-config "$NAME" "$GAME")
+        ;;
+    vita3k)
+        TITLE_ID=$(basename "$(dirname "$GAME")")
+        CMD=(/opt/vita3k/usr/bin/Vita3K --fullscreen --installed-path "$TITLE_ID")
+        ;;
+    *)
+        echo "unknown emulator $EMU"
+        exit 1
+        ;;
+esac
+
+echo $$ > /tmp/wolfy-external.pid
+"${CMD[@]}" &
+EMU_PID=$!
+# fullscreen above RetroArch (sway keeps one fullscreen window per workspace)
+swaymsg "for_window [pid=$EMU_PID] fullscreen enable, focus" >/dev/null
+running() {  # exited = gone or zombie (not reaped yet: the signal interrupted wait)
+    local state
+    state=$(awk '{print $3}' "/proc/$EMU_PID/stat" 2>/dev/null)
+    [ -n "$state" ] && [ "$state" != Z ]
+}
+stop() {  # Vita3K ignores SIGTERM: SIGKILL after 3 s
+    kill -TERM "$EMU_PID" 2>/dev/null
+    for _ in $(seq 30); do running || return; sleep 0.1; done
+    echo "--- $EMU still running, killed"
+    kill -KILL "$EMU_PID" 2>/dev/null
+}
+trap stop TERM INT
+wait "$EMU_PID"
+# a signal interrupts the first wait: let the emulator finish quitting
+while kill -0 "$EMU_PID" 2>/dev/null; do wait "$EMU_PID"; done
+echo "--- $EMU exited"
+rm -f /tmp/wolfy-external.pid
+swaymsg "[pid=$RA_PID] fullscreen enable, focus" >/dev/null

@@ -31,9 +31,13 @@ sed -i -E 's/^(input_player[0-9]+_[a-z0-9_]+_(btn|axis)) = .*/\1 = "nul"/' "$CFG
 set_cfg video_threaded false
 # playlists: session copy with the image's core paths, changes written back to the PC's
 python3 /opt/gow/playlist-sync.py in
+# PS3 / PS Vita: emulator settings for the session, playlists of the installed games
+python3 /opt/wolfy/bin/ps-session-setup.py || true
+python3 /opt/wolfy/bin/ps-playlists.py "$PL" || true
 python3 /opt/gow/playlist-sync.py watch &
 
-# gamepad combos (Wolfy > PlayStation > Configurer): Guide = RetroArch menu
+# gamepad combos (Wolfy > PlayStation > Configurer): Guide = RetroArch menu, or quits the
+# running PS3 / PS Vita game (back to the XMB)
 python3 /opt/gow/home-combo.py &
 
 source /opt/gow/launch-comp.sh

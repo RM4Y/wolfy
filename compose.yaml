@@ -75,6 +75,8 @@ services:
       - ${HOST_HOME}/.local/share/eden:${HOST_HOME}/.local/share/eden
       # the PC's flatpak RetroArch (retroarch.cfg, core options), shared with the PlayStation sessions
       - ${HOST_HOME}/.var/app/org.libretro.RetroArch/config/retroarch:${HOST_HOME}/.var/app/org.libretro.RetroArch/config/retroarch
+      # the PC's flatpak Dolphin config (Dolphin.ini, GFX.ini…), copied by the Wii sessions
+      - ${HOST_HOME}/.var/app/org.DolphinEmu.dolphin-emu/config/dolphin-emu:${HOST_HOME}/.var/app/org.DolphinEmu.dolphin-emu/config/dolphin-emu
       # read-only view of the host (emulator paths: checks + folder picker)
       - /:/host:ro
       - wolf-api:/var/run/wolf
@@ -102,6 +104,13 @@ services:
       context: images
       dockerfile: steam/Dockerfile
     image: wolfy-steam:latest
+    profiles: [images]
+
+  wolfy-dolphin:
+    build:
+      context: images
+      dockerfile: dolphin/Dockerfile
+    image: wolfy-dolphin:latest
     profiles: [images]
 
 volumes:

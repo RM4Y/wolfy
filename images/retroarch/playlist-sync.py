@@ -19,6 +19,8 @@ RA = Path(os.environ.get("RA_DIR", Path.home() / ".var/app/org.libretro.RetroArc
 SHARED = RA / "playlists"
 SESSION = Path.home() / ".config/retroarch/playlists"
 IMAGE_CORES = "/opt/wolfy/cores/"
+# made by ps-playlists.py at each session start (PS3 / Vita games), not written back to the PC
+SESSION_ONLY = {"Sony - PlayStation 3.lpl", "Sony - PlayStation Vita.lpl"}
 # how the PC's RetroArch writes its cores dir in playlists: /home/<user>/.var/app/... or ~/.var/app/...
 PC_CORES = re.compile(r'(?:/home/[^/"]+|~)/\.var/app/org\.libretro\.RetroArch/config/retroarch/cores/')
 PC_CORES_DEFAULT = os.environ.get("HOST_HOME", "~") + "/.var/app/org.libretro.RetroArch/config/retroarch/cores/"
@@ -44,6 +46,8 @@ def to_shared(text: str, dest: Path) -> str:
 def copy_in() -> dict[Path, float]:
     mtimes = {}
     for src in SHARED.rglob("*.lpl"):
+        if src.name in SESSION_ONLY:
+            continue
         dest = SESSION / src.relative_to(SHARED)
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(to_session(src.read_text(errors="replace")))
@@ -60,6 +64,8 @@ def watch(mtimes: dict[Path, float]) -> None:
             if mtimes.get(path) == mtime:
                 continue
             mtimes[path] = mtime
+            if path.name in SESSION_ONLY:
+                continue
             dest = SHARED / path.relative_to(SESSION)
             try:
                 dest.parent.mkdir(parents=True, exist_ok=True)

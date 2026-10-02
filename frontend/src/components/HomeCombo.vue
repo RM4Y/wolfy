@@ -5,7 +5,7 @@ import { act, api } from '../api'
 
 const props = defineProps({ emulator: { type: String, default: 'eden' } })
 const isEden = computed(() => props.emulator === 'eden')
-const menuName = computed(() => ({ eden: 'menu HOME', retroarch: 'menu RetroArch', steam: 'menu Steam' })[props.emulator])
+const menuName = computed(() => ({ eden: 'menu HOME', retroarch: 'menu RetroArch', steam: 'menu Steam', dolphin: 'bouton HOME de la Wiimote' })[props.emulator])
 const saved = ref(null)
 const form = ref(null)
 

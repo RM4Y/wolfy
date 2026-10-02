@@ -6181,6 +6181,4063 @@
   "MENU_ENUM_LABEL_VALUE_TURBO_DEADZONE_LIST": "Turbo/Deadzone"
  },
  "cores": {
+  "Beetle PSX HW": {
+   "categories": {
+    "system": "Système",
+    "video": "Vidéo",
+    "pgxp": "PGXP (géométrie précise)",
+    "osd": "Affichage à l'écran",
+    "input": "Entrées",
+    "memcards": "Memory cards",
+    "hacks": "Hacks"
+   },
+   "options": {
+    "beetle_psx_hw_cpu_freq_scale": {
+     "label": "CPU Frequency Scaling (Overclock)",
+     "help": "Overclock (or underclock) the emulated PSX CPU. Overclocking can eliminate slowdown and improve frame rates in certain games at the expense of increased performance requirements. Note that some games have an internal frame rate limiter and may not benefit from overclocking. May cause certain effects to animate faster than intended in some titles when overclocked.",
+     "category": "system",
+     "values": [
+      {
+       "value": "50%",
+       "label": "50%"
+      },
+      {
+       "value": "60%",
+       "label": "60%"
+      },
+      {
+       "value": "70%",
+       "label": "70%"
+      },
+      {
+       "value": "80%",
+       "label": "80%"
+      },
+      {
+       "value": "90%",
+       "label": "90%"
+      },
+      {
+       "value": "100%",
+       "label": "100% (Native)"
+      },
+      {
+       "value": "110%",
+       "label": "110%"
+      },
+      {
+       "value": "120%",
+       "label": "120%"
+      },
+      {
+       "value": "130%",
+       "label": "130%"
+      },
+      {
+       "value": "140%",
+       "label": "140%"
+      },
+      {
+       "value": "150%",
+       "label": "150%"
+      },
+      {
+       "value": "160%",
+       "label": "160%"
+      },
+      {
+       "value": "170%",
+       "label": "170%"
+      },
+      {
+       "value": "180%",
+       "label": "180%"
+      },
+      {
+       "value": "190%",
+       "label": "190%"
+      },
+      {
+       "value": "200%",
+       "label": "200%"
+      },
+      {
+       "value": "210%",
+       "label": "210%"
+      },
+      {
+       "value": "220%",
+       "label": "220%"
+      },
+      {
+       "value": "230%",
+       "label": "230%"
+      },
+      {
+       "value": "240%",
+       "label": "240%"
+      },
+      {
+       "value": "250%",
+       "label": "250%"
+      },
+      {
+       "value": "260%",
+       "label": "260%"
+      },
+      {
+       "value": "270%",
+       "label": "270%"
+      },
+      {
+       "value": "280%",
+       "label": "280%"
+      },
+      {
+       "value": "290%",
+       "label": "290%"
+      },
+      {
+       "value": "300%",
+       "label": "300%"
+      },
+      {
+       "value": "310%",
+       "label": "310%"
+      },
+      {
+       "value": "320%",
+       "label": "320%"
+      },
+      {
+       "value": "330%",
+       "label": "330%"
+      },
+      {
+       "value": "340%",
+       "label": "340%"
+      },
+      {
+       "value": "350%",
+       "label": "350%"
+      },
+      {
+       "value": "360%",
+       "label": "360%"
+      },
+      {
+       "value": "370%",
+       "label": "370%"
+      },
+      {
+       "value": "380%",
+       "label": "380%"
+      },
+      {
+       "value": "390%",
+       "label": "390%"
+      },
+      {
+       "value": "400%",
+       "label": "400%"
+      },
+      {
+       "value": "410%",
+       "label": "410%"
+      },
+      {
+       "value": "420%",
+       "label": "420%"
+      },
+      {
+       "value": "430%",
+       "label": "430%"
+      },
+      {
+       "value": "440%",
+       "label": "440%"
+      },
+      {
+       "value": "450%",
+       "label": "450%"
+      },
+      {
+       "value": "460%",
+       "label": "460%"
+      },
+      {
+       "value": "470%",
+       "label": "470%"
+      },
+      {
+       "value": "480%",
+       "label": "480%"
+      },
+      {
+       "value": "490%",
+       "label": "490%"
+      },
+      {
+       "value": "500%",
+       "label": "500%"
+      },
+      {
+       "value": "510%",
+       "label": "510%"
+      },
+      {
+       "value": "520%",
+       "label": "520%"
+      },
+      {
+       "value": "530%",
+       "label": "530%"
+      },
+      {
+       "value": "540%",
+       "label": "540%"
+      },
+      {
+       "value": "550%",
+       "label": "550%"
+      },
+      {
+       "value": "560%",
+       "label": "560%"
+      },
+      {
+       "value": "570%",
+       "label": "570%"
+      },
+      {
+       "value": "580%",
+       "label": "580%"
+      },
+      {
+       "value": "590%",
+       "label": "590%"
+      },
+      {
+       "value": "600%",
+       "label": "600%"
+      },
+      {
+       "value": "610%",
+       "label": "610%"
+      },
+      {
+       "value": "620%",
+       "label": "620%"
+      },
+      {
+       "value": "630%",
+       "label": "630%"
+      },
+      {
+       "value": "640%",
+       "label": "640%"
+      },
+      {
+       "value": "650%",
+       "label": "650%"
+      },
+      {
+       "value": "660%",
+       "label": "660%"
+      },
+      {
+       "value": "670%",
+       "label": "670%"
+      },
+      {
+       "value": "680%",
+       "label": "680%"
+      },
+      {
+       "value": "690%",
+       "label": "690%"
+      },
+      {
+       "value": "700%",
+       "label": "700%"
+      },
+      {
+       "value": "710%",
+       "label": "710%"
+      },
+      {
+       "value": "720%",
+       "label": "720%"
+      },
+      {
+       "value": "730%",
+       "label": "730%"
+      },
+      {
+       "value": "740%",
+       "label": "740%"
+      },
+      {
+       "value": "750%",
+       "label": "750%"
+      }
+     ],
+     "default": "100%"
+    },
+    "beetle_psx_hw_gpu_overclock": {
+     "label": "GPU Rasterizer Overclock",
+     "help": "Enable overclocking of the 2D rasterizer contained within the emulated PSX's GPU. Does not improve 3D rendering, and in general has little effect.",
+     "category": "system",
+     "values": [
+      {
+       "value": "1x(native)",
+       "label": "1x (Native)"
+      },
+      {
+       "value": "2x",
+       "label": "2x"
+      },
+      {
+       "value": "4x",
+       "label": "4x"
+      },
+      {
+       "value": "8x",
+       "label": "8x"
+      },
+      {
+       "value": "16x",
+       "label": "16x"
+      },
+      {
+       "value": "32x",
+       "label": "32x"
+      }
+     ],
+     "default": "1x(native)"
+    },
+    "beetle_psx_hw_gte_overclock": {
+     "label": "GTE Overclock",
+     "help": "Lower all emulated GTE (CPU coprocessor for 3D graphics) operations to a constant one-cycle latency. For games that make heavy use of the GTE, this can greatly improve frame rate and frame time stability.",
+     "category": "system",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_cd_access_method": {
+     "label": "CD Access Method",
+     "help": "'Synchronous' mimics original hardware. 'Asynchronous' can reduce stuttering on devices with slow storage. 'Pre-Cache' loads the entire disk image into memory when launching content, which may improve in-game loading times at the cost of an initial delay at startup. 'Pre-Cache' may cause issues on systems with low RAM, and will fall back to 'Synchronous' for physical media. Restart required.",
+     "category": "system",
+     "values": [
+      {
+       "value": "sync",
+       "label": "Synchronous"
+      },
+      {
+       "value": "async",
+       "label": "Asynchronous"
+      },
+      {
+       "value": "precache",
+       "label": "Pre-Cache"
+      }
+     ],
+     "default": "sync"
+    },
+    "beetle_psx_hw_cd_fastload": {
+     "label": "CD Loading Speed",
+     "help": "Values higher than '2x (Native)' can greatly reduce in-game loading times, but may introduce timing errors. Some games may not function properly above a certain value.",
+     "category": "system",
+     "values": [
+      {
+       "value": "2x(native)",
+       "label": "2x (Native)"
+      },
+      {
+       "value": "4x",
+       "label": "4x"
+      },
+      {
+       "value": "6x",
+       "label": "6x"
+      },
+      {
+       "value": "8x",
+       "label": "8x"
+      },
+      {
+       "value": "10x",
+       "label": "10x"
+      },
+      {
+       "value": "12x",
+       "label": "12x"
+      },
+      {
+       "value": "14x",
+       "label": "14x"
+      }
+     ],
+     "default": "2x(native)"
+    },
+    "beetle_psx_hw_skip_bios": {
+     "label": "Skip BIOS",
+     "help": "Skip the PlayStation BIOS boot animation normally displayed when loading content. Note: Enabling this causes compatibility issues with a number of games (PAL copy protected games, Saga Frontier, etc.).",
+     "category": "system",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_override_bios": {
+     "label": "Override BIOS",
+     "help": "Override the standard region specific BIOS with a region-free one if found. Restart required.",
+     "category": "system",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "psxonpsp",
+       "label": "PSP PS1 BIOS"
+      },
+      {
+       "value": "ps1_rom",
+       "label": "PS3 PS1 BIOS"
+      },
+      {
+       "value": "openbios",
+       "label": "OpenBIOS"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_region": {
+     "label": "System Region",
+     "help": "Sets the fallback region used when content cannot be auto-detected (e.g. raw PS-X EXE files). Disc-based games still use the region embedded on the disc. Restart required.",
+     "category": "system",
+     "values": [
+      {
+       "value": "auto",
+       "label": "Auto"
+      },
+      {
+       "value": "ntsc-j",
+       "label": "NTSC-J (Japan)"
+      },
+      {
+       "value": "ntsc-u",
+       "label": "NTSC-U (North America)"
+      },
+      {
+       "value": "pal",
+       "label": "PAL (Europe)"
+      }
+     ],
+     "default": "auto"
+    },
+    "beetle_psx_hw_internal_resolution": {
+     "label": "Internal GPU Resolution",
+     "help": "Resolutions higher than '1x (Native)' improve fidelity of 3D models at the expense of increased performance requirements. 2D elements are generally unaffected by this setting.",
+     "category": "video",
+     "values": [
+      {
+       "value": "1x(native)",
+       "label": "1x (Native)"
+      },
+      {
+       "value": "2x",
+       "label": "2x"
+      },
+      {
+       "value": "4x",
+       "label": "4x"
+      },
+      {
+       "value": "8x",
+       "label": "8x"
+      },
+      {
+       "value": "16x",
+       "label": "16x"
+      }
+     ],
+     "default": "1x(native)"
+    },
+    "beetle_psx_hw_renderer": {
+     "label": "Renderer",
+     "help": "The software renderer is the most accurate but has steep performance requirements when running at increased internal GPU resolutions. The hardware renderers, while less accurate, improve performance over the software renderer at increased internal resolutions and enable various graphical enhancements. 'Hardware (Auto)' automatically selects the Vulkan or OpenGL renderer, depending upon the current libretro frontend video driver. If the provided video driver is not Vulkan or OpenGL 3.3-compatible, then the core will fall back to the software renderer. Restart required.",
+     "category": "video",
+     "values": [
+      {
+       "value": "hardware",
+       "label": "Hardware (Auto)"
+      },
+      {
+       "value": "hardware_gl",
+       "label": "Hardware (OpenGL)"
+      },
+      {
+       "value": "hardware_vk",
+       "label": "Hardware (Vulkan)"
+      },
+      {
+       "value": "software",
+       "label": "Software"
+      }
+     ],
+     "default": "hardware"
+    },
+    "beetle_psx_hw_renderer_software_fb": {
+     "label": "Software Framebuffer",
+     "help": "Enable accurate emulation of framebuffer effects (e.g. motion blur, FF7 battle swirl) when using hardware renderers by running a copy of the software renderer at native resolution in the background. If disabled, these operations are omitted (OpenGL) or rendered on the GPU (Vulkan). Disabling can improve performance but may cause severe graphical errors. Leave enabled if unsure.",
+     "category": "video",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "enabled"
+    },
+    "beetle_psx_hw_color_format": {
+     "label": "Color Format",
+     "help": "Selects the output color depth. '24-bit (Standard)' is the historical 8-bit-per-channel output. '30-bit Color (HDR)' outputs 10-bit-per-channel, PQ-encoded Rec.2020 (HDR10) for display on an HDR-capable screen: the renderer already carries more than 8 bits of internal precision, so this both reduces banding on upscaled gradients and lets emissive content sit above SDR white. Takes effect with the Vulkan and OpenGL hardware renderers and requires frontend HDR support; it falls back to 24-bit on the Software renderer or when the frontend cannot present HDR10. Restart required.",
+     "category": "video",
+     "values": [
+      {
+       "value": "24bit",
+       "label": "24-bit (Standard)"
+      },
+      {
+       "value": "30bit_hdr",
+       "label": "30-bit Color (HDR)"
+      }
+     ],
+     "default": "24bit"
+    },
+    "beetle_psx_hw_hdr_shoulder": {
+     "label": "HDR Highlight Roll-Off",
+     "help": "Selects how additive highlights that rise above SDR white are compressed toward the HDR peak, when 'Color Format' is set to '30-bit Color (HDR)'. 'Reinhard (Soft Knee)' is a gentle, gradual roll-off. 'ACES (Filmic)' uses a shoulder that rises faster and reaches the peak sooner, giving punchier highlights. Only affects over-white emissive/additive content on the hardware-renderer HDR path; ordinary colour and everything in the standard range are identical either way. Has no effect on the Software renderer or in 24-bit mode.",
+     "category": "video",
+     "values": [
+      {
+       "value": "reinhard",
+       "label": "Reinhard (Soft Knee)"
+      },
+      {
+       "value": "aces",
+       "label": "ACES (Filmic)"
+      }
+     ],
+     "default": "reinhard"
+    },
+    "beetle_psx_hw_src_primaries": {
+     "label": "Source Colour Primaries",
+     "help": "Selects the chromaticities the game's colours are interpreted against. PSX content was not authored on a modern Rec.709 display, and which real colours a given RGB value stands for depends on the monitor it was made on. This is independent of 'Analog Video Cable' - primaries belong to the authoring display, not the wire - so it applies to RGB output as well. 'Rec.709' (default) leaves the picture matching the 24-bit path. 'SMPTE-C' is the NTSC-era studio standard and shifts colour by around 6%. 'EBU' is the PAL equivalent and differs from Rec.709 in green alone, by about 4%. 'NTSC 1953' is the original FCC standard, dramatically wider - its green sits 40% outside Rec.709 and is only representable at all on a wide-gamut HDR display. 'Auto' picks SMPTE-C or EBU from the disc region. Works in 24-bit mode too, though every option maps some colours outside Rec.709 and a standard display clips those - 'NTSC 1953' in particular only shows properly on a wide-gamut HDR screen.",
+     "category": "video",
+     "values": [
+      {
+       "value": "off",
+       "label": "Désactivé"
+      },
+      {
+       "value": "auto",
+       "label": "Auto"
+      },
+      {
+       "value": "smptec",
+       "label": "SMPTE-C (NTSC Studio)"
+      },
+      {
+       "value": "ebu",
+       "label": "EBU (PAL)"
+      },
+      {
+       "value": "ntsc1953",
+       "label": "NTSC 1953 (Wide)"
+      }
+     ],
+     "default": "off"
+    },
+    "beetle_psx_hw_black_setup": {
+     "label": "NTSC Black Setup",
+     "help": "Simulates a mismatch in where black sits in the signal. NTSC-M, as used in North America, places black 7.5 IRE above blanking; NTSC-J in Japan and PAL everywhere else place it at 0. A console and television from the same market cancel out and look correct, so this does nothing by default - it only matters when a disc crossed between them, which is the better documented difference between NTSC-J and NTSC-M hardware. 'Lifted' reads a North American signal without the compensation, raising black to about 7.5% so the picture looks washed out. 'Crushed' reads a Japanese signal as though it carried the pedestal, clipping everything below 7.5% to black and raising contrast. Only affects 'Analog Video Cable' modes other than RGB, which carries no pedestal, and has no effect on PAL discs.",
+     "category": "video",
+     "values": [
+      {
+       "value": "off",
+       "label": "Désactivé"
+      },
+      {
+       "value": "lifted",
+       "label": "Lifted (NTSC-M Signal, 0 IRE Display)"
+      },
+      {
+       "value": "crushed",
+       "label": "Crushed (NTSC-J Signal, 7.5 IRE Display)"
+      }
+     ],
+     "default": "off"
+    },
+    "beetle_psx_hw_phase_error": {
+     "label": "Analog Carrier Phase Error",
+     "help": "Misaligns the decoder's colour carrier by the given number of degrees, as a mistuned or drifting television would be. Zero on a direct cable; a real effect over RF, where the modulator and channel introduce it. The two systems fail very differently, which is the point: on NTSC the whole picture shifts hue and stays shifted, while on PAL the error lands opposite on alternate lines and the decoder's delay line averages most of it back out, trading a little saturation for it. Only affects 'Analog Video Cable' modes other than RGB.",
+     "category": "video",
+     "values": [
+      {
+       "value": "0",
+       "label": "Off"
+      },
+      {
+       "value": "5",
+       "label": "5 degrees"
+      },
+      {
+       "value": "10",
+       "label": "10 degrees"
+      },
+      {
+       "value": "25",
+       "label": "25 degrees"
+      },
+      {
+       "value": "45",
+       "label": "45 degrees"
+      }
+     ],
+     "default": "0"
+    },
+    "beetle_psx_hw_video_cable": {
+     "label": "Analog Video Cable",
+     "help": "Simulates the cable between the console and the television, including the colour encoding and the television's decoder. 'No Simulation' switches the chain off entirely and hands the framebuffer straight to the display (default). 'RGB (SCART)' is the sharpest output the PSX could produce: the multi-out carries analog RGB, so nothing is modulated and none of the encoding artifacts below can occur - but it is still an analog wire, so it is band-limited by the console's video amplifier and the set's input stage rather than being infinitely sharp. 'S-Video' band-limits colour heavily but keeps luma and colour on separate wires, so fine detail stays clean. 'Composite' sums them onto one wire, which the decoder then has to pull apart again, costing luma detail and adding colour smearing and rainbow fringing on fine patterns. 'RF' models an external modulator - the console itself has none, only a DC jack to power one - narrowing luma further and adding the beat pattern the sound carrier makes against the colour subcarrier, which is strongest on saturated colour. Works at any internal resolution: the extra samples are resolved down before the signal is generated, so higher settings act as supersampling into the cable rather than a wider signal, and the output still carries the sub-pixel detail the decoder produces. Supported by the Vulkan and OpenGL renderers, and ignored by the Software renderer. On OpenGL the filter that removes 'hanging dots' - the fine dotted pattern along horizontal colour edges - needs GL 4.3 or GLES 3.1; on an older driver the simulation still runs, but 'Composite' and 'RF' will show those dots. Applies immediately; no restart needed.",
+     "category": "video",
+     "values": [
+      {
+       "value": "off",
+       "label": "Désactivé"
+      },
+      {
+       "value": "rgb",
+       "label": "RGB (SCART)"
+      },
+      {
+       "value": "svideo",
+       "label": "S-Video"
+      },
+      {
+       "value": "composite",
+       "label": "Composite"
+      },
+      {
+       "value": "rf",
+       "label": "RF"
+      }
+     ],
+     "default": "off"
+    },
+    "beetle_psx_hw_hdr_sdr_gamma": {
+     "label": "Reference Display Gamma",
+     "help": "Selects the display gamma the console's output is assumed to be viewed through. Used in two places: to linearise the picture before re-encoding it for HDR, and to decide what 'average' means when supersampled or multisampled samples are combined - those estimate how much light a pixel emits, so they are averaged as light rather than as stored values. This decides whether HDR lands at the same brightness the standard path did on your screen - it does not change accuracy, only the match between the two. 'BT.1886 (Gamma 2.4)' is the default and matches the frontend's own SDR-to-HDR conversion and a TV-like reference. 'Gamma 2.2' suits a PC monitor tracking sRGB's nominal gamma. 'sRGB (Piecewise)' matches how Windows composites standard content onto an HDR desktop and lifts shadow detail. If HDR looks dimmer or more contrasty than 24-bit on the same display, try 'Gamma 2.2' or 'sRGB (Piecewise)'. Has no effect on the Software renderer.",
+     "category": "video",
+     "values": [
+      {
+       "value": "bt1886",
+       "label": "BT.1886 (Gamma 2.4)"
+      },
+      {
+       "value": "gamma22",
+       "label": "Gamma 2.2"
+      },
+      {
+       "value": "srgb",
+       "label": "sRGB (Piecewise)"
+      }
+     ],
+     "default": "bt1886"
+    },
+    "beetle_psx_hw_hdr_overbright": {
+     "label": "HDR Additive Overbright",
+     "help": "Controls whether additive and subtractive blend sources may exceed reference white on the hardware-renderer HDR path, when 'Color Format' is set to '30-bit Color (HDR)'. On the OpenGL renderer this affects additive sources only. 'Off' clamps each source to reference white before blending (matching real hardware), so highlights only rise above white where translucent layers stack - accurate and controlled. 'On' lets bright modulated sources push additive/subtractive effects roughly twice as hard for punchier single-layer glow (lasers, lightning, flames), at the cost of accuracy. Opaque surfaces are clamped either way. No effect on the Software renderer or in 24-bit mode.",
+     "category": "video",
+     "values": [
+      {
+       "value": "clamped",
+       "label": "Off (Reference White Sources)"
+      },
+      {
+       "value": "hot",
+       "label": "On (Boosted Sources)"
+      }
+     ],
+     "default": "clamped"
+    },
+    "beetle_psx_hw_hdr_multipass": {
+     "label": "HDR True Multi-Pass Blending",
+     "help": "Selects how subtractive semi-transparency is blended on the Vulkan HDR path, when 'Color Format' is set to '30-bit Color (HDR)'. Both settings floor the result at zero exactly as real hardware does. 'Off' uses fixed-function blending followed by a single cheap floor pass per batch - hardware-accurate at almost no cost. 'On' instead routes every subtractive primitive through the same per-primitive programmable blend path used for mask-tested draws; this additionally lets 'HDR Additive Overbright' boost subtractive sources (deeper single-layer cuts), at a per-primitive synchronisation cost that can add up in subtractive-heavy scenes such as drop shadows and screen fades. No effect on the OpenGL/Software renderers or in 24-bit mode.",
+     "category": "video",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_depth": {
+     "label": "Internal Color Depth",
+     "help": "Higher color depth can reduce color banding effects without the use of dithering. 16 bpp emulates original hardware but may have visible banding if dithering is not enabled. 'Dithering Pattern' is recommended to be disabled when this option is set to 32 bpp.",
+     "category": "video",
+     "values": [
+      {
+       "value": "16bpp(native)",
+       "label": "16 bpp (Native)"
+      },
+      {
+       "value": "32bpp",
+       "label": "32 bpp"
+      }
+     ],
+     "default": "16bpp(native)"
+    },
+    "beetle_psx_hw_dither_mode": {
+     "label": "Dithering Pattern",
+     "help": "'1x (Native)' emulates native low resolution dithering used by original hardware to smooth out color banding artifacts visible at native color depth. 'Internal Resolution' scales dithering granularity to the configured internal resolution for cleaner results. Recommended to be disabled when running at 32 bpp color depth. Note: On Vulkan, enabling this will force downsampling to native color depth, while disabling will automatically enable output at higher color depth.",
+     "category": "video",
+     "values": [
+      {
+       "value": "1x(native)",
+       "label": "1x (Native)"
+      },
+      {
+       "value": "internal resolution",
+       "label": "Internal Resolution"
+      },
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      }
+     ],
+     "default": "1x(native)"
+    },
+    "beetle_psx_hw_native_color": {
+     "label": "Native 15-bit Color Rendering",
+     "help": "Vulkan renderer only. Stores every GPU write at the PlayStation's native 15-bit color depth inside the framebuffer, quantizing each draw at write time exactly as the original hardware does, instead of rendering at 24-bit and only reducing color depth for display. Fixes brightness seams and framebuffer-feedback artifacts in some games (e.g. Silent Hill's intro logos), at the cost of visible banding on upscaled gradients and texture filtering, and reduced batching of semi-transparent primitives. Has no effect when 'Color Format' is set to '30-bit Color (HDR)' and HDR output is active.",
+     "category": "video",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_scaled_uv_offset": {
+     "label": "Texture UV Offset",
+     "help": "Sample textures for 3D polygons at an offset for higher than 1x internal resolution. Reduces texture seams but may cause unintended graphical glitches.",
+     "category": "video",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "enabled"
+    },
+    "beetle_psx_hw_filter": {
+     "label": "Texture Filtering",
+     "help": "'Nearest' emulates original hardware. 'Bilinear' and '3-Point' are smoothing filters, which reduce pixelation via blurring. 'SABR', 'xBR', and 'JINC2' are upscaling filters that may improve texture fidelity/sharpness at the expense of increased performance requirements. Only supported by the hardware renderers.",
+     "category": "video",
+     "values": [
+      {
+       "value": "nearest",
+       "label": "Nearest"
+      },
+      {
+       "value": "SABR",
+       "label": "SABR"
+      },
+      {
+       "value": "xBR",
+       "label": "xBR"
+      },
+      {
+       "value": "bilinear",
+       "label": "Bilinear"
+      },
+      {
+       "value": "3-point",
+       "label": "3-Point"
+      },
+      {
+       "value": "JINC2",
+       "label": "JINC2"
+      }
+     ],
+     "default": "nearest"
+    },
+    "beetle_psx_hw_filter_exclude_sprite": {
+     "label": "Exclude Sprites from Filtering",
+     "help": "Do not apply texture filtering to sprites. Prevents seams in various games with 2D sprite-rendered backgrounds. Use together with Adaptive Smoothing or another post-processing filter for best effect.",
+     "category": "video",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "opaque",
+       "label": "Opaque Only"
+      },
+      {
+       "value": "all",
+       "label": "Opaque and Semi-Transparent"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_filter_exclude_2d_polygon": {
+     "label": "Exclude 2D Polygons from Filtering",
+     "help": "Do not apply texture filtering to 2D polygons. 2D polygons are detected with a heuristic and there may be glitches. Use together with Adaptive Smoothing or another post-processing filter for best effect.",
+     "category": "video",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "opaque",
+       "label": "Opaque Only"
+      },
+      {
+       "value": "all",
+       "label": "Opaque and Semi-Transparent"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_adaptive_smoothing": {
+     "label": "Adaptive Smoothing",
+     "help": "Smooth out 2D artwork and UI elements without blurring 3D rendered objects. Only supported by the Vulkan renderer.",
+     "category": "video",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_super_sampling": {
+     "label": "Supersampling (Downsample to Native Resolution)",
+     "help": "Downsample rendered content from upscaled internal resolution down to native resolution. Combining this with higher internal resolution multipliers allows for games to be displayed with anti-aliased 3D objects at native low resolution. Produces best results when applied to titles that mix 2D and 3D elements (e.g. 3D characters on pre-rendered backgrounds), and works well in conjunction with CRT shaders. Only supported by the Vulkan renderer. Note: 'Dithering Pattern' is recommended to be disabled when enabling this option.",
+     "category": "video",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_msaa": {
+     "label": "Multi-Sampled Anti Aliasing",
+     "help": "MSAA improves the appearance of 3D objects. Only supported by the Vulkan renderer.",
+     "category": "video",
+     "values": [
+      {
+       "value": "1x",
+       "label": "1x"
+      },
+      {
+       "value": "2x",
+       "label": "2x"
+      },
+      {
+       "value": "4x",
+       "label": "4x"
+      },
+      {
+       "value": "8x",
+       "label": "8x"
+      },
+      {
+       "value": "16x",
+       "label": "16x"
+      }
+     ],
+     "default": "1x"
+    },
+    "beetle_psx_hw_mdec_yuv": {
+     "label": "MDEC YUV Chroma Filter",
+     "help": "Improve the quality of FMV playback by reducing 'macroblocking' artifacts (squares/jagged edges). Only supported by the Vulkan renderer.",
+     "category": "video",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_track_textures": {
+     "label": "Track Textures",
+     "help": "Prerequisite for texture dumping and replacement. Will probably crash in most games.",
+     "category": "video",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_dump_textures": {
+     "label": "Dump Textures",
+     "help": "Dump used textures to <cd>-texture-dump/",
+     "category": "video",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_hd_dump_mode": {
+     "label": "HD Dump Mode",
+     "help": "How dumped textures are laid out (experimental). 'Upload-rect' (default) dumps each tracked upload to <cd>-texture-dump/ (matches stock Beetle). 'Page-aligned' dumps whole VRAM texture pages to <cd>-texture-dump-pages/ for cleaner tiles. 'Both' dumps to both folders simultaneously, so a single playthrough collects both pack types (folders stay separate; pick which to edit afterwards). Page packs are NOT interchangeable with upload-rect packs (the hash covers a different region).",
+     "category": "video",
+     "values": [
+      {
+       "value": "upload_rect",
+       "label": "Upload-rect (match master)"
+      },
+      {
+       "value": "page_aligned",
+       "label": "Page-aligned (experimental)"
+      },
+      {
+       "value": "both",
+       "label": "Both (dump to both folders)"
+      }
+     ],
+     "default": "upload_rect"
+    },
+    "beetle_psx_hw_replace_textures": {
+     "label": "Replace Textures",
+     "help": "Replace textures using HD versions from <cd>-texture-replacements/",
+     "category": "video",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_texture_directory": {
+     "label": "HD Texture Folder",
+     "help": "Where texture dump and replacement folders are kept. 'Content directory' (default) keeps them next to the game image (current behaviour). 'System directory' / 'Save directory' put them under RetroArch's configured System or Save folder instead - one central location for every game's packs (set those paths in Settings > Directory). Each game still gets its own '<name>-texture-dump' / '-replacements' subfolder, so games never collide. Changing this re-scans replacements from the new folder.",
+     "category": "video",
+     "values": [
+      {
+       "value": "content",
+       "label": "Content directory (default)"
+      },
+      {
+       "value": "system",
+       "label": "System directory"
+      },
+      {
+       "value": "save",
+       "label": "Save directory"
+      }
+     ],
+     "default": "content"
+    },
+    "beetle_psx_hw_hd_replacement_mode": {
+     "label": "HD Replacement Mode",
+     "help": "Where replacement textures are looked up (experimental). 'Upload-rect' (default) matches per-upload textures from <cd>-texture-replacements/ (matches stock Beetle). 'Page-aligned' matches whole VRAM pages from <cd>-texture-replacements-pages/. Independent of HD Dump Mode; page packs are NOT interchangeable with upload-rect packs.",
+     "category": "video",
+     "values": [
+      {
+       "value": "upload_rect",
+       "label": "Upload-rect (match master)"
+      },
+      {
+       "value": "page_aligned",
+       "label": "Page-aligned (experimental)"
+      }
+     ],
+     "default": "upload_rect"
+    },
+    "beetle_psx_hw_hd_replacement_fallback": {
+     "label": "HD Replacement Cross-Mode Fallback",
+     "help": "On an HD texture miss in the active HD Replacement Mode, also check the OTHER mode's folder before falling back to native. Works both ways: an upload-rect pack can fill gaps from a page-aligned pack and vice-versa, without converting packs. Best with the Lazy caching method.",
+     "category": "video",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_reduce_palette_range": {
+     "label": "HD Reduce Palette Range",
+     "help": "Opt-in. When dumping/replacing HD textures, hash only the palette (CLUT) entries the texture actually uses instead of the whole CLUT. This makes a texture's hash ignore unused palette entries that games often leave as garbage or rewrite over time, so one replacement keeps matching across those variations - fewer dumps and far better match coverage (most useful for 8bpp textures). Filenames are unchanged in format and remain loadable; old full-palette packs still match with this enabled (the matcher falls back to the full-palette hash when no reduced file is present). Applies to both the upload-rect and page-aligned paths. Re-dump a game to benefit.",
+     "category": "video",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_hd_caching_method": {
+     "label": "HD Texture Caching Method",
+     "help": "How HD replacement textures are loaded. 'Eager' prefetches all palette variants of a texture when it is uploaded (matches stock Beetle). 'Lazy' loads each texture+palette only when first drawn, in the background (leaner; brief pop-in possible on first use). 'Lazy (synchronous)' also loads on first use but blocks the renderer until ready (no pop-in, but may briefly stutter when many new textures appear at once). Both use the VRAM/RAM caches and budgets below.",
+     "category": "video",
+     "values": [
+      {
+       "value": "eager",
+       "label": "Eager (match master)"
+      },
+      {
+       "value": "lazy",
+       "label": "Lazy (async, on demand)"
+      },
+      {
+       "value": "lazy_sync",
+       "label": "Lazy (synchronous, no pop-in)"
+      }
+     ],
+     "default": "eager"
+    },
+    "beetle_psx_hw_hd_cache_vram_budget": {
+     "label": "HD Texture VRAM Cache Budget",
+     "help": "Maximum VRAM used to keep uploaded HD replacement textures resident. Higher keeps more textures ready (smoother) but can exhaust VRAM on smaller GPUs and cause slowdown; lower it if you see stutter. Only used with Replace Textures.",
+     "category": "video",
+     "values": [
+      {
+       "value": "256",
+       "label": "256 MB"
+      },
+      {
+       "value": "512",
+       "label": "512 MB"
+      },
+      {
+       "value": "1024",
+       "label": "1 GB"
+      },
+      {
+       "value": "1536",
+       "label": "1.5 GB"
+      },
+      {
+       "value": "2048",
+       "label": "2 GB"
+      },
+      {
+       "value": "3072",
+       "label": "3 GB"
+      },
+      {
+       "value": "4096",
+       "label": "4 GB"
+      },
+      {
+       "value": "6144",
+       "label": "6 GB"
+      },
+      {
+       "value": "8192",
+       "label": "8 GB"
+      }
+     ],
+     "default": "3072"
+    },
+    "beetle_psx_hw_hd_cache_ram_budget": {
+     "label": "HD Texture RAM Cache Budget",
+     "help": "Maximum system RAM used to keep decoded HD replacement textures, so they don't have to be re-read from disk. Only used with Replace Textures.",
+     "category": "video",
+     "values": [
+      {
+       "value": "256",
+       "label": "256 MB"
+      },
+      {
+       "value": "512",
+       "label": "512 MB"
+      },
+      {
+       "value": "1024",
+       "label": "1 GB"
+      },
+      {
+       "value": "2048",
+       "label": "2 GB"
+      },
+      {
+       "value": "4096",
+       "label": "4 GB"
+      },
+      {
+       "value": "8192",
+       "label": "8 GB"
+      }
+     ],
+     "default": "2048"
+    },
+    "beetle_psx_hw_pgxp_mode": {
+     "label": "PGXP Operation Mode",
+     "help": "Render 3D objects with subpixel precision, minimizing distortion and jitter of 3D objects seen on original hardware due to the usage of fixed point vertex coordinates. 'Memory Only' mode has minimal compatibility issues and is recommended for general use. 'Memory + CPU (Buggy)' mode can reduce jitter even further but has high performance requirements and may cause various geometry errors.",
+     "category": "pgxp",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "memory only",
+       "label": "Memory Only"
+      },
+      {
+       "value": "memory + CPU",
+       "label": "Memory + CPU (Buggy)"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_pgxp_2d_tol": {
+     "label": "PGXP 2D Geometry Tolerance",
+     "help": "Hide more glaring errors in PGXP operations: the value specifies the tolerance in which PGXP values will be kept in case of geometries without proper depth information.",
+     "category": "pgxp",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "0px",
+       "label": "0px"
+      },
+      {
+       "value": "1px",
+       "label": "1px"
+      },
+      {
+       "value": "2px",
+       "label": "2px"
+      },
+      {
+       "value": "3px",
+       "label": "3px"
+      },
+      {
+       "value": "4px",
+       "label": "4px"
+      },
+      {
+       "value": "5px",
+       "label": "5px"
+      },
+      {
+       "value": "6px",
+       "label": "6px"
+      },
+      {
+       "value": "7px",
+       "label": "7px"
+      },
+      {
+       "value": "8px",
+       "label": "8px"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_pgxp_nclip": {
+     "label": "PGXP Primitive Culling",
+     "help": "Use PGXP's NCLIP implementation. Improves appearance by reducing holes in geometries with PGXP coordinates. Known to cause some games to lock up in various circumstances.",
+     "category": "pgxp",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_pgxp_vertex": {
+     "label": "PGXP Vertex Cache",
+     "help": "Cache PGXP-enhanced vertex positions for re-use across polygon draws. Can potentially improve object alignment and reduce visible seams when rendering textures, but false positives when querying the cache may produce graphical glitches. It is currently recommended to leave this option disabled. This option is applied only when PGXP Operation Mode is enabled. Only supported by the hardware renderers.",
+     "category": "pgxp",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_pgxp_texture": {
+     "label": "PGXP Perspective Correct Texturing",
+     "help": "Replace native PSX affine texture mapping with perspective correct texture mapping. Eliminates position-dependent distortion and warping of textures, resulting in properly aligned textures. This option is applied only when PGXP Operation Mode is enabled. Supported by the hardware renderers and the software renderer.",
+     "category": "pgxp",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_display_internal_fps": {
+     "label": "Display Internal FPS",
+     "help": "Display the internal frame rate at which the emulated PlayStation system is rendering content. Note: Requires onscreen notifications to be enabled in the libretro frontend.",
+     "category": "osd",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_display_osd": {
+     "label": "Display OSD Messages",
+     "help": "Display OSD messages generated by the core.",
+     "category": "osd",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "enabled"
+    },
+    "beetle_psx_hw_display_vram": {
+     "label": "Display Full VRAM (Debug)",
+     "help": "Visualize the entire emulated console's VRAM. Only supported by the OpenGL and Vulkan hardware renderers. Note: This is for debugging purposes, and should normally be disabled.",
+     "category": "osd",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_analog_calibration": {
+     "label": "Analog Self-Calibration",
+     "help": "Enable dynamic calibration of analog inputs when the device is set to DualShock, Analog Controller, Analog Joystick, or neGcon. Maximum registered input values are monitored in real time and used to scale analog coordinates passed to the emulator. This should be used for games such as Mega Man Legends 2 that expect larger values than what modern controllers provide. For best results, analog sticks should be rotated at full extent to tune the calibration algorithm each time content is loaded.",
+     "category": "input",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_analog_toggle": {
+     "label": "DualShock Analog Mode Toggle",
+     "help": "When the input device type is DualShock, this option allows the emulated DualShock to be toggled between DIGITAL and ANALOG mode like original hardware. Mode can also be toggled by using the selected button combination.",
+     "category": "input",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      },
+      {
+       "value": "enabled-analog",
+       "label": "Default-Analog"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_analog_toggle_combo": {
+     "label": "DualShock Analog Mode Combo",
+     "help": "The button combination that will be used to toggle between DIGITAL and ANALOG mode for the emulated DualShock.",
+     "category": "input",
+     "values": [
+      {
+       "value": "l1+l2+r1+r2+start+select",
+       "label": "L1 + L2 + R1 + R2 + Start + Select"
+      },
+      {
+       "value": "l1+r1+select",
+       "label": "L1 + R1 + Select"
+      },
+      {
+       "value": "l1+r1+start",
+       "label": "L1 + R1 + Start"
+      },
+      {
+       "value": "l1+r1+l3",
+       "label": "L1 + R1 + L3"
+      },
+      {
+       "value": "l1+r1+r3",
+       "label": "L1 + R1 + R3"
+      },
+      {
+       "value": "l2+r2+select",
+       "label": "L2 + R2 + Select"
+      },
+      {
+       "value": "l2+r2+start",
+       "label": "L2 + R2 + Start"
+      },
+      {
+       "value": "l2+r2+l3",
+       "label": "L2 + R2 + L3"
+      },
+      {
+       "value": "l2+r2+r3",
+       "label": "L2 + R2 + R3"
+      },
+      {
+       "value": "l3+r3",
+       "label": "L3 + R3"
+      }
+     ],
+     "default": "l1+r1+select"
+    },
+    "beetle_psx_hw_analog_toggle_hold": {
+     "label": "DualShock Analog Mode Combo Hold Delay",
+     "help": "Hold time for the analog mode combo buttons.",
+     "category": "input",
+     "values": [
+      {
+       "value": "0",
+       "label": "0 Second Delay"
+      },
+      {
+       "value": "1",
+       "label": "1 Second Delay"
+      },
+      {
+       "value": "2",
+       "label": "2 Second Delay"
+      },
+      {
+       "value": "3",
+       "label": "3 Second Delay"
+      },
+      {
+       "value": "4",
+       "label": "4 Second Delay"
+      },
+      {
+       "value": "5",
+       "label": "5 Second Delay"
+      }
+     ],
+     "default": "1"
+    },
+    "beetle_psx_hw_enable_multitap_port1": {
+     "label": "Multitap on Port 1",
+     "help": "Enable multitap functionality on port 1.",
+     "category": "input",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_enable_multitap_port2": {
+     "label": "Multitap on Port 2",
+     "help": "Enable multitap functionality on port 2.",
+     "category": "input",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_gun_input_mode": {
+     "label": "Gun Input Mode",
+     "help": "Use mouse-controlled 'Light Gun' or 'Touchscreen' input when device type is set to 'Guncon/G-Con 45' or 'Justifier'.",
+     "category": "input",
+     "values": [
+      {
+       "value": "lightgun",
+       "label": "Light Gun"
+      },
+      {
+       "value": "touchscreen",
+       "label": "Touchscreen"
+      }
+     ],
+     "default": "lightgun"
+    },
+    "beetle_psx_hw_gun_cursor": {
+     "label": "Gun Cursor",
+     "help": "Draw a cursor on screen while using the 'Guncon/G-Con 45' and 'Justifier' input device types.",
+     "category": "input",
+     "values": [
+      {
+       "value": "off",
+       "label": "Désactivé"
+      },
+      {
+       "value": "cross",
+       "label": "Cross"
+      },
+      {
+       "value": "dot",
+       "label": "Dot"
+      }
+     ],
+     "default": "cross"
+    },
+    "beetle_psx_hw_crosshair_color_p1": {
+     "label": "Gun Crosshair Color: Port 1",
+     "help": "Light gun crosshair color for port 1.",
+     "category": "input",
+     "values": [
+      {
+       "value": "red",
+       "label": "Red"
+      },
+      {
+       "value": "blue",
+       "label": "Blue"
+      },
+      {
+       "value": "green",
+       "label": "Green"
+      },
+      {
+       "value": "orange",
+       "label": "Orange"
+      },
+      {
+       "value": "yellow",
+       "label": "Yellow"
+      },
+      {
+       "value": "cyan",
+       "label": "Cyan"
+      },
+      {
+       "value": "pink",
+       "label": "Pink"
+      },
+      {
+       "value": "purple",
+       "label": "Purple"
+      },
+      {
+       "value": "black",
+       "label": "Black"
+      },
+      {
+       "value": "white",
+       "label": "White"
+      }
+     ],
+     "default": "red"
+    },
+    "beetle_psx_hw_crosshair_color_p2": {
+     "label": "Gun Crosshair Color: Port 2",
+     "help": "Light gun crosshair color for port 2.",
+     "category": "input",
+     "values": [
+      {
+       "value": "blue",
+       "label": "Blue"
+      },
+      {
+       "value": "red",
+       "label": "Red"
+      },
+      {
+       "value": "green",
+       "label": "Green"
+      },
+      {
+       "value": "orange",
+       "label": "Orange"
+      },
+      {
+       "value": "yellow",
+       "label": "Yellow"
+      },
+      {
+       "value": "cyan",
+       "label": "Cyan"
+      },
+      {
+       "value": "pink",
+       "label": "Pink"
+      },
+      {
+       "value": "purple",
+       "label": "Purple"
+      },
+      {
+       "value": "black",
+       "label": "Black"
+      },
+      {
+       "value": "white",
+       "label": "White"
+      }
+     ],
+     "default": "blue"
+    },
+    "beetle_psx_hw_mouse_sensitivity": {
+     "label": "Mouse Sensitivity",
+     "help": "Responsiveness of the 'Mouse' input device type.",
+     "category": "input",
+     "values": [
+      {
+       "value": "5%",
+       "label": "5%"
+      },
+      {
+       "value": "10%",
+       "label": "10%"
+      },
+      {
+       "value": "15%",
+       "label": "15%"
+      },
+      {
+       "value": "20%",
+       "label": "20%"
+      },
+      {
+       "value": "25%",
+       "label": "25%"
+      },
+      {
+       "value": "30%",
+       "label": "30%"
+      },
+      {
+       "value": "35%",
+       "label": "35%"
+      },
+      {
+       "value": "40%",
+       "label": "40%"
+      },
+      {
+       "value": "45%",
+       "label": "45%"
+      },
+      {
+       "value": "50%",
+       "label": "50%"
+      },
+      {
+       "value": "55%",
+       "label": "55%"
+      },
+      {
+       "value": "60%",
+       "label": "60%"
+      },
+      {
+       "value": "65%",
+       "label": "65%"
+      },
+      {
+       "value": "70%",
+       "label": "70%"
+      },
+      {
+       "value": "75%",
+       "label": "75%"
+      },
+      {
+       "value": "80%",
+       "label": "80%"
+      },
+      {
+       "value": "85%",
+       "label": "85%"
+      },
+      {
+       "value": "90%",
+       "label": "90%"
+      },
+      {
+       "value": "95%",
+       "label": "95%"
+      },
+      {
+       "value": "100%",
+       "label": "100%"
+      },
+      {
+       "value": "105%",
+       "label": "105%"
+      },
+      {
+       "value": "110%",
+       "label": "110%"
+      },
+      {
+       "value": "115%",
+       "label": "115%"
+      },
+      {
+       "value": "120%",
+       "label": "120%"
+      },
+      {
+       "value": "125%",
+       "label": "125%"
+      },
+      {
+       "value": "130%",
+       "label": "130%"
+      },
+      {
+       "value": "135%",
+       "label": "135%"
+      },
+      {
+       "value": "140%",
+       "label": "140%"
+      },
+      {
+       "value": "145%",
+       "label": "145%"
+      },
+      {
+       "value": "150%",
+       "label": "150%"
+      },
+      {
+       "value": "155%",
+       "label": "155%"
+      },
+      {
+       "value": "160%",
+       "label": "160%"
+      },
+      {
+       "value": "165%",
+       "label": "165%"
+      },
+      {
+       "value": "170%",
+       "label": "170%"
+      },
+      {
+       "value": "175%",
+       "label": "175%"
+      },
+      {
+       "value": "180%",
+       "label": "180%"
+      },
+      {
+       "value": "185%",
+       "label": "185%"
+      },
+      {
+       "value": "190%",
+       "label": "190%"
+      },
+      {
+       "value": "195%",
+       "label": "195%"
+      },
+      {
+       "value": "200%",
+       "label": "200%"
+      }
+     ],
+     "default": "100%"
+    },
+    "beetle_psx_hw_negcon_response": {
+     "label": "neGcon Twist Response",
+     "help": "Left analog stick response type when simulating the 'twist' action of emulated 'neGcon' input devices. Analog stick displacement may be mapped to neGcon rotation angle either linearly, quadratically or cubically. 'Quadratic' allows for greater precision than 'Linear' when making small movements. 'Cubic' further increases small movement precision, but 'exaggerates' larger movements. Note: 'Linear' is only recommended when using racing wheel peripherals. Conventional controllers implement analog input in a manner fundamentally different from the neGcon 'twist' mechanism, such that linear mapping over-amplifies small movements, impairing fine control. In most cases, 'Quadratic' provides the closest approximation of real hardware.",
+     "category": "input",
+     "values": [
+      {
+       "value": "linear",
+       "label": "Linear"
+      },
+      {
+       "value": "quadratic",
+       "label": "Quadratic"
+      },
+      {
+       "value": "cubic",
+       "label": "Cubic"
+      }
+     ],
+     "default": "linear"
+    },
+    "beetle_psx_hw_negcon_deadzone": {
+     "label": "neGcon Twist Deadzone",
+     "help": "Left analog stick deadzone when simulating the 'twist' action of emulated 'neGcon' input devices. Used to eliminate controller drift. Note: Most neGcon-compatible titles provide in-game options for setting a 'twist' deadzone value. To avoid loss of precision, the in-game deadzone should *always* be set to zero. Any required adjustments should *only* be applied via this core option. This is particularly important when 'neGcon Twist Response' is set to 'Quadratic' or 'Cubic'.",
+     "category": "input",
+     "values": [
+      {
+       "value": "0%",
+       "label": "0%"
+      },
+      {
+       "value": "5%",
+       "label": "5%"
+      },
+      {
+       "value": "10%",
+       "label": "10%"
+      },
+      {
+       "value": "15%",
+       "label": "15%"
+      },
+      {
+       "value": "20%",
+       "label": "20%"
+      },
+      {
+       "value": "25%",
+       "label": "25%"
+      },
+      {
+       "value": "30%",
+       "label": "30%"
+      }
+     ],
+     "default": "0%"
+    },
+    "beetle_psx_hw_use_mednafen_memcard0_method": {
+     "label": "Memory Card Method",
+     "help": "Save data format used for the left memory card slot. 'Mednafen' may be used for compatibility with the stand-alone version of Mednafen. When used with Beetle PSX, Libretro (.srm) and Mednafen (.mcr) saves have internally identical formats and can be converted between one another via renaming. Restart required.",
+     "category": "memcards",
+     "values": [
+      {
+       "value": "libretro",
+       "label": "Libretro"
+      },
+      {
+       "value": "mednafen",
+       "label": "Mednafen"
+      }
+     ],
+     "default": "libretro"
+    },
+    "beetle_psx_hw_enable_memcard1": {
+     "label": "Memory Card Slot 2",
+     "help": "Emulate a second memory card in the right memory card slot. Note: Some games require this option to be disabled for correct operation (e.g. Codename Tenka). Note: Memory Card Slot 2 uses the Mednafen (.mcr) save format. Restart required.",
+     "category": "memcards",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_shared_memory_cards": {
+     "label": "Shared Memory Cards",
+     "help": "Use shared memory cards instead of separate cards for each content. Note: if 'Memory Card Method' is set to 'Libretro', only memory card slot 2 will be affected. Restart required.",
+     "category": "memcards",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_memcard_left_index": {
+     "label": "Memory Card Slot 1 Index",
+     "help": "Memory card currently loaded in the left slot. This option will only work if Memory Card Method is set to Mednafen.",
+     "category": "memcards",
+     "values": [
+      {
+       "value": "0",
+       "label": "0 (Default)"
+      },
+      {
+       "value": "1",
+       "label": "1"
+      },
+      {
+       "value": "2",
+       "label": "2"
+      },
+      {
+       "value": "3",
+       "label": "3"
+      },
+      {
+       "value": "4",
+       "label": "4"
+      },
+      {
+       "value": "5",
+       "label": "5"
+      },
+      {
+       "value": "6",
+       "label": "6"
+      },
+      {
+       "value": "7",
+       "label": "7"
+      },
+      {
+       "value": "8",
+       "label": "8"
+      },
+      {
+       "value": "9",
+       "label": "9"
+      },
+      {
+       "value": "10",
+       "label": "10"
+      },
+      {
+       "value": "11",
+       "label": "11"
+      },
+      {
+       "value": "12",
+       "label": "12"
+      },
+      {
+       "value": "13",
+       "label": "13"
+      },
+      {
+       "value": "14",
+       "label": "14"
+      },
+      {
+       "value": "15",
+       "label": "15"
+      },
+      {
+       "value": "16",
+       "label": "16"
+      },
+      {
+       "value": "17",
+       "label": "17"
+      },
+      {
+       "value": "18",
+       "label": "18"
+      },
+      {
+       "value": "19",
+       "label": "19"
+      },
+      {
+       "value": "20",
+       "label": "20"
+      },
+      {
+       "value": "21",
+       "label": "21"
+      },
+      {
+       "value": "22",
+       "label": "22"
+      },
+      {
+       "value": "23",
+       "label": "23"
+      },
+      {
+       "value": "24",
+       "label": "24"
+      },
+      {
+       "value": "25",
+       "label": "25"
+      },
+      {
+       "value": "26",
+       "label": "26"
+      },
+      {
+       "value": "27",
+       "label": "27"
+      },
+      {
+       "value": "28",
+       "label": "28"
+      },
+      {
+       "value": "29",
+       "label": "29"
+      },
+      {
+       "value": "30",
+       "label": "30"
+      },
+      {
+       "value": "31",
+       "label": "31"
+      },
+      {
+       "value": "32",
+       "label": "32"
+      },
+      {
+       "value": "33",
+       "label": "33"
+      },
+      {
+       "value": "34",
+       "label": "34"
+      },
+      {
+       "value": "35",
+       "label": "35"
+      },
+      {
+       "value": "36",
+       "label": "36"
+      },
+      {
+       "value": "37",
+       "label": "37"
+      },
+      {
+       "value": "38",
+       "label": "38"
+      },
+      {
+       "value": "39",
+       "label": "39"
+      },
+      {
+       "value": "40",
+       "label": "40"
+      },
+      {
+       "value": "41",
+       "label": "41"
+      },
+      {
+       "value": "42",
+       "label": "42"
+      },
+      {
+       "value": "43",
+       "label": "43"
+      },
+      {
+       "value": "44",
+       "label": "44"
+      },
+      {
+       "value": "45",
+       "label": "45"
+      },
+      {
+       "value": "46",
+       "label": "46"
+      },
+      {
+       "value": "47",
+       "label": "47"
+      },
+      {
+       "value": "48",
+       "label": "48"
+      },
+      {
+       "value": "49",
+       "label": "49"
+      },
+      {
+       "value": "50",
+       "label": "50"
+      },
+      {
+       "value": "51",
+       "label": "51"
+      },
+      {
+       "value": "52",
+       "label": "52"
+      },
+      {
+       "value": "53",
+       "label": "53"
+      },
+      {
+       "value": "54",
+       "label": "54"
+      },
+      {
+       "value": "55",
+       "label": "55"
+      },
+      {
+       "value": "56",
+       "label": "56"
+      },
+      {
+       "value": "57",
+       "label": "57"
+      },
+      {
+       "value": "58",
+       "label": "58"
+      },
+      {
+       "value": "59",
+       "label": "59"
+      },
+      {
+       "value": "60",
+       "label": "60"
+      },
+      {
+       "value": "61",
+       "label": "61"
+      },
+      {
+       "value": "62",
+       "label": "62"
+      },
+      {
+       "value": "63",
+       "label": "63"
+      }
+     ],
+     "default": "0"
+    },
+    "beetle_psx_hw_memcard_right_index": {
+     "label": "Memory Card Slot 2 Index",
+     "help": "Memory card currently loaded in the right slot. This option will only work if Memory Card Slot 2 is enabled.",
+     "category": "memcards",
+     "values": [
+      {
+       "value": "0",
+       "label": "0"
+      },
+      {
+       "value": "1",
+       "label": "1 (Default)"
+      },
+      {
+       "value": "2",
+       "label": "2"
+      },
+      {
+       "value": "3",
+       "label": "3"
+      },
+      {
+       "value": "4",
+       "label": "4"
+      },
+      {
+       "value": "5",
+       "label": "5"
+      },
+      {
+       "value": "6",
+       "label": "6"
+      },
+      {
+       "value": "7",
+       "label": "7"
+      },
+      {
+       "value": "8",
+       "label": "8"
+      },
+      {
+       "value": "9",
+       "label": "9"
+      },
+      {
+       "value": "10",
+       "label": "10"
+      },
+      {
+       "value": "11",
+       "label": "11"
+      },
+      {
+       "value": "12",
+       "label": "12"
+      },
+      {
+       "value": "13",
+       "label": "13"
+      },
+      {
+       "value": "14",
+       "label": "14"
+      },
+      {
+       "value": "15",
+       "label": "15"
+      },
+      {
+       "value": "16",
+       "label": "16"
+      },
+      {
+       "value": "17",
+       "label": "17"
+      },
+      {
+       "value": "18",
+       "label": "18"
+      },
+      {
+       "value": "19",
+       "label": "19"
+      },
+      {
+       "value": "20",
+       "label": "20"
+      },
+      {
+       "value": "21",
+       "label": "21"
+      },
+      {
+       "value": "22",
+       "label": "22"
+      },
+      {
+       "value": "23",
+       "label": "23"
+      },
+      {
+       "value": "24",
+       "label": "24"
+      },
+      {
+       "value": "25",
+       "label": "25"
+      },
+      {
+       "value": "26",
+       "label": "26"
+      },
+      {
+       "value": "27",
+       "label": "27"
+      },
+      {
+       "value": "28",
+       "label": "28"
+      },
+      {
+       "value": "29",
+       "label": "29"
+      },
+      {
+       "value": "30",
+       "label": "30"
+      },
+      {
+       "value": "31",
+       "label": "31"
+      },
+      {
+       "value": "32",
+       "label": "32"
+      },
+      {
+       "value": "33",
+       "label": "33"
+      },
+      {
+       "value": "34",
+       "label": "34"
+      },
+      {
+       "value": "35",
+       "label": "35"
+      },
+      {
+       "value": "36",
+       "label": "36"
+      },
+      {
+       "value": "37",
+       "label": "37"
+      },
+      {
+       "value": "38",
+       "label": "38"
+      },
+      {
+       "value": "39",
+       "label": "39"
+      },
+      {
+       "value": "40",
+       "label": "40"
+      },
+      {
+       "value": "41",
+       "label": "41"
+      },
+      {
+       "value": "42",
+       "label": "42"
+      },
+      {
+       "value": "43",
+       "label": "43"
+      },
+      {
+       "value": "44",
+       "label": "44"
+      },
+      {
+       "value": "45",
+       "label": "45"
+      },
+      {
+       "value": "46",
+       "label": "46"
+      },
+      {
+       "value": "47",
+       "label": "47"
+      },
+      {
+       "value": "48",
+       "label": "48"
+      },
+      {
+       "value": "49",
+       "label": "49"
+      },
+      {
+       "value": "50",
+       "label": "50"
+      },
+      {
+       "value": "51",
+       "label": "51"
+      },
+      {
+       "value": "52",
+       "label": "52"
+      },
+      {
+       "value": "53",
+       "label": "53"
+      },
+      {
+       "value": "54",
+       "label": "54"
+      },
+      {
+       "value": "55",
+       "label": "55"
+      },
+      {
+       "value": "56",
+       "label": "56"
+      },
+      {
+       "value": "57",
+       "label": "57"
+      },
+      {
+       "value": "58",
+       "label": "58"
+      },
+      {
+       "value": "59",
+       "label": "59"
+      },
+      {
+       "value": "60",
+       "label": "60"
+      },
+      {
+       "value": "61",
+       "label": "61"
+      },
+      {
+       "value": "62",
+       "label": "62"
+      },
+      {
+       "value": "63",
+       "label": "63"
+      }
+     ],
+     "default": "1"
+    },
+    "beetle_psx_hw_line_render": {
+     "label": "Line-to-Quad Hack",
+     "help": "Some games (e.g. Doom, Hexen, Soul Blade, etc.) draw horizontal lines by stretching single-pixel-high triangles across the screen, which are rasterized as a row of pixels on original hardware. This hack detects these small triangles and converts them to quads as required, allowing them to be displayed properly on the hardware renderers and at upscaled internal resolutions. 'Aggressive' is required for some titles (e.g. Dark Forces, Duke Nukem) but may otherwise introduce graphical glitches. Leave at 'Default' if unsure.",
+     "category": "hacks",
+     "values": [
+      {
+       "value": "default",
+       "label": "Default"
+      },
+      {
+       "value": "aggressive",
+       "label": "Aggressive"
+      },
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      }
+     ],
+     "default": "default"
+    },
+    "beetle_psx_hw_widescreen_hack": {
+     "label": "Widescreen Mode Hack",
+     "help": "Render 3D content anamorphically and output the emulated framebuffer at a widescreen aspect ratio. Produces best results with fully 3D games. 2D elements will be horizontally stretched and may be misaligned.",
+     "category": "hacks",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_widescreen_hack_aspect_ratio": {
+     "label": "Widescreen Mode Hack Aspect Ratio",
+     "help": "Aspect ratio to be used by the Widescreen Mode Hack.",
+     "category": "hacks",
+     "values": [
+      {
+       "value": "16:9",
+       "label": "16:9"
+      },
+      {
+       "value": "16:10",
+       "label": "16:10"
+      },
+      {
+       "value": "18:9",
+       "label": "18:9"
+      },
+      {
+       "value": "19:9",
+       "label": "19:9"
+      },
+      {
+       "value": "20:9",
+       "label": "20:9"
+      },
+      {
+       "value": "21:9",
+       "label": "21:9"
+      },
+      {
+       "value": "32:9",
+       "label": "32:9"
+      }
+     ],
+     "default": "16:9"
+    },
+    "beetle_psx_hw_spu_silent_voice": {
+     "label": "SPU Silent Voice Optimization",
+     "help": "Skip the per-sample processing of voices whose envelope has fully released. Audio output is identical; the optimization automatically disables itself while the SPU IRQ is in use. Saves roughly 5-10% of frame time. Disable for fully accurate SPU register state.",
+     "category": "hacks",
+     "values": [
+      {
+       "value": "enabled",
+       "label": "Activé"
+      },
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      }
+     ],
+     "default": "enabled"
+    },
+    "beetle_psx_hw_cpu_dynarec": {
+     "label": "CPU Dynarec",
+     "help": "Dynamically recompile CPU instructions to native instructions. Much faster than interpreter, but CPU timing is less accurate, and may have bugs.",
+     "category": "hacks",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "execute",
+       "label": "Max Performance"
+      },
+      {
+       "value": "run_interpreter",
+       "label": "Lightrec Interpreter"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_dynarec_invalidate": {
+     "label": "Dynarec Code Invalidation",
+     "help": "Some games require 'Full' invalidation, some require 'DMA Only'.",
+     "category": "hacks",
+     "values": [
+      {
+       "value": "full",
+       "label": "Full"
+      },
+      {
+       "value": "dma",
+       "label": "DMA Only (Slightly Faster)"
+      }
+     ],
+     "default": "full"
+    },
+    "beetle_psx_hw_dynarec_op_cycles": {
+     "label": "Dynarec Cycles Per Instruction",
+     "help": "Cycles the dynarec charges per CPU instruction. '2' is faster, but the emulated CPU appears half-speed to games that pace themselves against it - set '1' for games whose CD streaming stalls or hangs under the dynarec (e.g. Parasite Eve 2). The '1' setting charges memory accesses two cycles and everything else one, close to the real CPU.",
+     "category": "hacks",
+     "values": [
+      {
+       "value": "2",
+       "label": "2 (Default)"
+      },
+      {
+       "value": "1",
+       "label": "1 (Accurate, Fixes Parasite Eve 2 etc.)"
+      }
+     ],
+     "default": "2"
+    },
+    "beetle_psx_hw_dynarec_eventcycles": {
+     "label": "Dynarec DMA/GPU/MDEC/Timer Event Cycles",
+     "help": "Max cycles run by CPU before a GPU/DMA/MDEC/Timer Update is checked, higher number will be faster, has much less impact on beetle interpreter than dynarec.",
+     "category": "hacks",
+     "values": [
+      {
+       "value": "128",
+       "label": "128 (Default)"
+      },
+      {
+       "value": "256",
+       "label": "256"
+      },
+      {
+       "value": "384",
+       "label": "384"
+      },
+      {
+       "value": "512",
+       "label": "512"
+      },
+      {
+       "value": "640",
+       "label": "640"
+      },
+      {
+       "value": "768",
+       "label": "768"
+      },
+      {
+       "value": "896",
+       "label": "896"
+      },
+      {
+       "value": "1024",
+       "label": "1024"
+      },
+      {
+       "value": "1152",
+       "label": "1152"
+      },
+      {
+       "value": "1280",
+       "label": "1280"
+      },
+      {
+       "value": "1408",
+       "label": "1408"
+      },
+      {
+       "value": "1536",
+       "label": "1536"
+      },
+      {
+       "value": "1664",
+       "label": "1664"
+      },
+      {
+       "value": "1792",
+       "label": "1792"
+      },
+      {
+       "value": "1920",
+       "label": "1920"
+      },
+      {
+       "value": "2048",
+       "label": "2048"
+      }
+     ],
+     "default": "128"
+    },
+    "beetle_psx_hw_dynarec_spu_samples": {
+     "label": "Dynarec SPU Samples",
+     "help": "Max SPU samples to run before a SPU Update is checked, higher number will be faster, but will cause sound glitches in some games with anything other than 1.",
+     "category": "hacks",
+     "values": [
+      {
+       "value": "1",
+       "label": "1 (Default)"
+      },
+      {
+       "value": "4",
+       "label": "4"
+      },
+      {
+       "value": "16",
+       "label": "16"
+      }
+     ],
+     "default": "1"
+    },
+    "beetle_psx_hw_dynarec_spgp_opt": {
+     "label": "Dynarec SP GP Hit RAM Optimization",
+     "help": "Enabled will generate faster code, but potentially crash, by assuming sp and gp registers always point to ram, disabled is more widely compatible",
+     "category": "hacks",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_compatibility_settings": {
+     "label": "Compatibility Settings",
+     "help": "Apply compatibility settings per game and per setting. Disable to allow user-selected settings to override them.",
+     "category": "hacks",
+     "values": [
+      {
+       "value": "enabled",
+       "label": "Activé"
+      },
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      }
+     ],
+     "default": "enabled"
+    },
+    "beetle_psx_hw_core_timing_fps": {
+     "label": "Core-Reported FPS Timing",
+     "help": "Automatic Toggling allows the core to switch between progressive and interlaced rates.",
+     "category": "video",
+     "values": [
+      {
+       "value": "auto_toggle",
+       "label": "Automatic Toggling"
+      },
+      {
+       "value": "force_progressive",
+       "label": "Force Progressive Rate"
+      },
+      {
+       "value": "force_interlaced",
+       "label": "Force Interlaced Rate"
+      }
+     ],
+     "default": "auto_toggle"
+    },
+    "beetle_psx_hw_deinterlacer": {
+     "label": "Deinterlace Method",
+     "help": "'Weave' shows both fields on the same frame for full high resolution still image, 'Bob' sacrificies resolution clarity for motion clarity. 'Bob (Offset)' is Bob with the current field doubled into the full surface height with a one-line offset between fields, preserving the libretro output resolution while keeping Bob-style smooth motion. 'FastMAD (Motion Adaptive)' weaves still pixels and vertically-interpolates moving pixels per-pixel, full output height with neither weave's comb on motion nor bob's halved resolution. 'Off' makes the software renderer match the hardware (Vulkan/OpenGL) renderer behaviour by rasterising to all VRAM lines every frame and deferring scanout to the end of the frame, eliminating comb-on-motion in interlaced games. Note: programs that DMA to VRAM during scanout (some demos using >512-line PAL framebuffer-wrap tricks), or that update moving sprites via CPU-to-VRAM image transfers tied to the displayed field (e.g. Pro Pinball), may show stale rows or sprite ghosting under 'Off'; use 'Weave', 'Bob', 'Bob (Offset)', or 'FastMAD' for those.",
+     "category": "video",
+     "values": [
+      {
+       "value": "weave",
+       "label": "Weave"
+      },
+      {
+       "value": "bob",
+       "label": "Bob"
+      },
+      {
+       "value": "bob_offset",
+       "label": "Bob (Offset)"
+      },
+      {
+       "value": "fastmad",
+       "label": "FastMAD (Motion Adaptive)"
+      },
+      {
+       "value": "off",
+       "label": "Désactivé"
+      }
+     ],
+     "default": "weave"
+    },
+    "beetle_psx_hw_frame_duping": {
+     "label": "Frame Duping",
+     "help": "Repeat the previous frame if the core has nothing new to display.",
+     "category": "video",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_pal_video_timing_override": {
+     "label": "PAL Video Timing Override",
+     "help": "Due to different standards, PAL games often appear slowed down compared to the American or Japanese NTSC releases. This option can be used to override PAL timings in order to attempt to run these games with the NTSC framerate.",
+     "category": "video",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "enabled",
+       "label": "Activé"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_aspect_ratio": {
+     "label": "Core Aspect Ratio",
+     "help": "This setting is ignored when the Widescreen Mode Hack or Display Full VRAM options are enabled.",
+     "category": "video",
+     "values": [
+      {
+       "value": "corrected",
+       "label": "Corrected"
+      },
+      {
+       "value": "uncorrected",
+       "label": "Uncorrected"
+      },
+      {
+       "value": "4:3",
+       "label": "Force 4:3"
+      },
+      {
+       "value": "ntsc",
+       "label": "Force NTSC"
+      },
+      {
+       "value": "16:9",
+       "label": "Force 16:9"
+      }
+     ],
+     "default": "corrected"
+    },
+    "beetle_psx_hw_crop_overscan": {
+     "label": "Crop Overscan",
+     "help": "Full native image or no borders.",
+     "category": "video",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "static",
+       "label": "Horizontal"
+      },
+      {
+       "value": "smart",
+       "label": "Horizontal + Vertical"
+      }
+     ],
+     "default": "smart"
+    },
+    "beetle_psx_hw_image_crop": {
+     "label": "Additional Cropping",
+     "help": "Reduce the width of the cropped image by the specified number of pixels.",
+     "category": "video",
+     "values": [
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "1px",
+       "label": "1px"
+      },
+      {
+       "value": "2px",
+       "label": "2px"
+      },
+      {
+       "value": "3px",
+       "label": "3px"
+      },
+      {
+       "value": "4px",
+       "label": "4px"
+      },
+      {
+       "value": "5px",
+       "label": "5px"
+      },
+      {
+       "value": "6px",
+       "label": "6px"
+      },
+      {
+       "value": "7px",
+       "label": "7px"
+      },
+      {
+       "value": "8px",
+       "label": "8px"
+      },
+      {
+       "value": "9px",
+       "label": "9px"
+      },
+      {
+       "value": "10px",
+       "label": "10px"
+      },
+      {
+       "value": "11px",
+       "label": "11px"
+      },
+      {
+       "value": "12px",
+       "label": "12px"
+      },
+      {
+       "value": "13px",
+       "label": "13px"
+      },
+      {
+       "value": "14px",
+       "label": "14px"
+      },
+      {
+       "value": "15px",
+       "label": "15px"
+      },
+      {
+       "value": "16px",
+       "label": "16px"
+      },
+      {
+       "value": "17px",
+       "label": "17px"
+      },
+      {
+       "value": "18px",
+       "label": "18px"
+      },
+      {
+       "value": "19px",
+       "label": "19px"
+      },
+      {
+       "value": "20px",
+       "label": "20px"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_image_offset": {
+     "label": "Offset Cropped Image",
+     "help": "Offset horizontally to the right (positive) or left (negative) by the specified number of pixels. May be used to correct alignment issues. Only supported by the software renderer.",
+     "category": "video",
+     "values": [
+      {
+       "value": "-12px",
+       "label": "-12px"
+      },
+      {
+       "value": "-11px",
+       "label": "-11px"
+      },
+      {
+       "value": "-10px",
+       "label": "-10px"
+      },
+      {
+       "value": "-9px",
+       "label": "-9px"
+      },
+      {
+       "value": "-8px",
+       "label": "-8px"
+      },
+      {
+       "value": "-7px",
+       "label": "-7px"
+      },
+      {
+       "value": "-6px",
+       "label": "-6px"
+      },
+      {
+       "value": "-5px",
+       "label": "-5px"
+      },
+      {
+       "value": "-4px",
+       "label": "-4px"
+      },
+      {
+       "value": "-3px",
+       "label": "-3px"
+      },
+      {
+       "value": "-2px",
+       "label": "-2px"
+      },
+      {
+       "value": "-1px",
+       "label": "-1px"
+      },
+      {
+       "value": "disabled",
+       "label": "Désactivé"
+      },
+      {
+       "value": "+1px",
+       "label": "+1px"
+      },
+      {
+       "value": "+2px",
+       "label": "+2px"
+      },
+      {
+       "value": "+3px",
+       "label": "+3px"
+      },
+      {
+       "value": "+4px",
+       "label": "+4px"
+      },
+      {
+       "value": "+5px",
+       "label": "+5px"
+      },
+      {
+       "value": "+6px",
+       "label": "+6px"
+      },
+      {
+       "value": "+7px",
+       "label": "+7px"
+      },
+      {
+       "value": "+8px",
+       "label": "+8px"
+      },
+      {
+       "value": "+9px",
+       "label": "+9px"
+      },
+      {
+       "value": "+10px",
+       "label": "+10px"
+      },
+      {
+       "value": "+11px",
+       "label": "+11px"
+      },
+      {
+       "value": "+12px",
+       "label": "+12px"
+      }
+     ],
+     "default": "disabled"
+    },
+    "beetle_psx_hw_image_offset_cycles": {
+     "label": "Horizontal Image Offset (GPU Cycles)",
+     "help": "Positive values move image to the right, negative values move image to the left. Only supported by the hardware renderers.",
+     "category": "video",
+     "values": [
+      {
+       "value": "-40",
+       "label": "-40"
+      },
+      {
+       "value": "-39",
+       "label": "-39"
+      },
+      {
+       "value": "-38",
+       "label": "-38"
+      },
+      {
+       "value": "-37",
+       "label": "-37"
+      },
+      {
+       "value": "-36",
+       "label": "-36"
+      },
+      {
+       "value": "-35",
+       "label": "-35"
+      },
+      {
+       "value": "-34",
+       "label": "-34"
+      },
+      {
+       "value": "-33",
+       "label": "-33"
+      },
+      {
+       "value": "-32",
+       "label": "-32"
+      },
+      {
+       "value": "-31",
+       "label": "-31"
+      },
+      {
+       "value": "-30",
+       "label": "-30"
+      },
+      {
+       "value": "-29",
+       "label": "-29"
+      },
+      {
+       "value": "-28",
+       "label": "-28"
+      },
+      {
+       "value": "-27",
+       "label": "-27"
+      },
+      {
+       "value": "-26",
+       "label": "-26"
+      },
+      {
+       "value": "-25",
+       "label": "-25"
+      },
+      {
+       "value": "-24",
+       "label": "-24"
+      },
+      {
+       "value": "-23",
+       "label": "-23"
+      },
+      {
+       "value": "-22",
+       "label": "-22"
+      },
+      {
+       "value": "-21",
+       "label": "-21"
+      },
+      {
+       "value": "-20",
+       "label": "-20"
+      },
+      {
+       "value": "-19",
+       "label": "-19"
+      },
+      {
+       "value": "-18",
+       "label": "-18"
+      },
+      {
+       "value": "-17",
+       "label": "-17"
+      },
+      {
+       "value": "-16",
+       "label": "-16"
+      },
+      {
+       "value": "-15",
+       "label": "-15"
+      },
+      {
+       "value": "-14",
+       "label": "-14"
+      },
+      {
+       "value": "-13",
+       "label": "-13"
+      },
+      {
+       "value": "-12",
+       "label": "-12"
+      },
+      {
+       "value": "-11",
+       "label": "-11"
+      },
+      {
+       "value": "-10",
+       "label": "-10"
+      },
+      {
+       "value": "-9",
+       "label": "-9"
+      },
+      {
+       "value": "-8",
+       "label": "-8"
+      },
+      {
+       "value": "-7",
+       "label": "-7"
+      },
+      {
+       "value": "-6",
+       "label": "-6"
+      },
+      {
+       "value": "-5",
+       "label": "-5"
+      },
+      {
+       "value": "-4",
+       "label": "-4"
+      },
+      {
+       "value": "-3",
+       "label": "-3"
+      },
+      {
+       "value": "-2",
+       "label": "-2"
+      },
+      {
+       "value": "-1",
+       "label": "-1"
+      },
+      {
+       "value": "0",
+       "label": "0"
+      },
+      {
+       "value": "+1",
+       "label": "+1"
+      },
+      {
+       "value": "+2",
+       "label": "+2"
+      },
+      {
+       "value": "+3",
+       "label": "+3"
+      },
+      {
+       "value": "+4",
+       "label": "+4"
+      },
+      {
+       "value": "+5",
+       "label": "+5"
+      },
+      {
+       "value": "+6",
+       "label": "+6"
+      },
+      {
+       "value": "+7",
+       "label": "+7"
+      },
+      {
+       "value": "+8",
+       "label": "+8"
+      },
+      {
+       "value": "+9",
+       "label": "+9"
+      },
+      {
+       "value": "+10",
+       "label": "+10"
+      },
+      {
+       "value": "+11",
+       "label": "+11"
+      },
+      {
+       "value": "+12",
+       "label": "+12"
+      },
+      {
+       "value": "+13",
+       "label": "+13"
+      },
+      {
+       "value": "+14",
+       "label": "+14"
+      },
+      {
+       "value": "+15",
+       "label": "+15"
+      },
+      {
+       "value": "+16",
+       "label": "+16"
+      },
+      {
+       "value": "+17",
+       "label": "+17"
+      },
+      {
+       "value": "+18",
+       "label": "+18"
+      },
+      {
+       "value": "+19",
+       "label": "+19"
+      },
+      {
+       "value": "+20",
+       "label": "+20"
+      },
+      {
+       "value": "+21",
+       "label": "+21"
+      },
+      {
+       "value": "+22",
+       "label": "+22"
+      },
+      {
+       "value": "+23",
+       "label": "+23"
+      },
+      {
+       "value": "+24",
+       "label": "+24"
+      },
+      {
+       "value": "+25",
+       "label": "+25"
+      },
+      {
+       "value": "+26",
+       "label": "+26"
+      },
+      {
+       "value": "+27",
+       "label": "+27"
+      },
+      {
+       "value": "+28",
+       "label": "+28"
+      },
+      {
+       "value": "+29",
+       "label": "+29"
+      },
+      {
+       "value": "+30",
+       "label": "+30"
+      },
+      {
+       "value": "+31",
+       "label": "+31"
+      },
+      {
+       "value": "+32",
+       "label": "+32"
+      },
+      {
+       "value": "+33",
+       "label": "+33"
+      },
+      {
+       "value": "+34",
+       "label": "+34"
+      },
+      {
+       "value": "+35",
+       "label": "+35"
+      },
+      {
+       "value": "+36",
+       "label": "+36"
+      },
+      {
+       "value": "+37",
+       "label": "+37"
+      },
+      {
+       "value": "+38",
+       "label": "+38"
+      },
+      {
+       "value": "+39",
+       "label": "+39"
+      },
+      {
+       "value": "+40",
+       "label": "+40"
+      }
+     ],
+     "default": "0"
+    },
+    "beetle_psx_hw_initial_scanline": {
+     "label": "Initial Scan Line - NTSC",
+     "help": "First displayed scan line when running NTSC content. Values greater than zero will reduce the height of output images by cropping pixels from the topmost edge. May be used to counteract letterboxing.",
+     "category": "video",
+     "values": [
+      {
+       "value": "0",
+       "label": "0 (Default)"
+      },
+      {
+       "value": "1",
+       "label": "1"
+      },
+      {
+       "value": "2",
+       "label": "2"
+      },
+      {
+       "value": "3",
+       "label": "3"
+      },
+      {
+       "value": "4",
+       "label": "4"
+      },
+      {
+       "value": "5",
+       "label": "5"
+      },
+      {
+       "value": "6",
+       "label": "6"
+      },
+      {
+       "value": "7",
+       "label": "7"
+      },
+      {
+       "value": "8",
+       "label": "8"
+      },
+      {
+       "value": "9",
+       "label": "9"
+      },
+      {
+       "value": "10",
+       "label": "10"
+      },
+      {
+       "value": "11",
+       "label": "11"
+      },
+      {
+       "value": "12",
+       "label": "12"
+      },
+      {
+       "value": "13",
+       "label": "13"
+      },
+      {
+       "value": "14",
+       "label": "14"
+      },
+      {
+       "value": "15",
+       "label": "15"
+      },
+      {
+       "value": "16",
+       "label": "16"
+      },
+      {
+       "value": "17",
+       "label": "17"
+      },
+      {
+       "value": "18",
+       "label": "18"
+      },
+      {
+       "value": "19",
+       "label": "19"
+      },
+      {
+       "value": "20",
+       "label": "20"
+      },
+      {
+       "value": "21",
+       "label": "21"
+      },
+      {
+       "value": "22",
+       "label": "22"
+      },
+      {
+       "value": "23",
+       "label": "23"
+      },
+      {
+       "value": "24",
+       "label": "24"
+      },
+      {
+       "value": "25",
+       "label": "25"
+      },
+      {
+       "value": "26",
+       "label": "26"
+      },
+      {
+       "value": "27",
+       "label": "27"
+      },
+      {
+       "value": "28",
+       "label": "28"
+      },
+      {
+       "value": "29",
+       "label": "29"
+      },
+      {
+       "value": "30",
+       "label": "30"
+      },
+      {
+       "value": "31",
+       "label": "31"
+      },
+      {
+       "value": "32",
+       "label": "32"
+      },
+      {
+       "value": "33",
+       "label": "33"
+      },
+      {
+       "value": "34",
+       "label": "34"
+      },
+      {
+       "value": "35",
+       "label": "35"
+      },
+      {
+       "value": "36",
+       "label": "36"
+      },
+      {
+       "value": "37",
+       "label": "37"
+      },
+      {
+       "value": "38",
+       "label": "38"
+      },
+      {
+       "value": "39",
+       "label": "39"
+      },
+      {
+       "value": "40",
+       "label": "40"
+      }
+     ],
+     "default": "0"
+    },
+    "beetle_psx_hw_last_scanline": {
+     "label": "Last Scan Line - NTSC",
+     "help": "Last displayed scan line when running NTSC content. Values less than 239 will reduce the height of output images by cropping pixels from the bottommost edge. May be used to counteract letterboxing.",
+     "category": "video",
+     "values": [
+      {
+       "value": "210",
+       "label": "210"
+      },
+      {
+       "value": "211",
+       "label": "211"
+      },
+      {
+       "value": "212",
+       "label": "212"
+      },
+      {
+       "value": "213",
+       "label": "213"
+      },
+      {
+       "value": "214",
+       "label": "214"
+      },
+      {
+       "value": "215",
+       "label": "215"
+      },
+      {
+       "value": "216",
+       "label": "216"
+      },
+      {
+       "value": "217",
+       "label": "217"
+      },
+      {
+       "value": "218",
+       "label": "218"
+      },
+      {
+       "value": "219",
+       "label": "219"
+      },
+      {
+       "value": "220",
+       "label": "220"
+      },
+      {
+       "value": "221",
+       "label": "221"
+      },
+      {
+       "value": "222",
+       "label": "222"
+      },
+      {
+       "value": "223",
+       "label": "223"
+      },
+      {
+       "value": "224",
+       "label": "224"
+      },
+      {
+       "value": "225",
+       "label": "225"
+      },
+      {
+       "value": "226",
+       "label": "226"
+      },
+      {
+       "value": "227",
+       "label": "227"
+      },
+      {
+       "value": "228",
+       "label": "228"
+      },
+      {
+       "value": "229",
+       "label": "229"
+      },
+      {
+       "value": "230",
+       "label": "230"
+      },
+      {
+       "value": "231",
+       "label": "231"
+      },
+      {
+       "value": "232",
+       "label": "232"
+      },
+      {
+       "value": "233",
+       "label": "233"
+      },
+      {
+       "value": "234",
+       "label": "234"
+      },
+      {
+       "value": "235",
+       "label": "235"
+      },
+      {
+       "value": "236",
+       "label": "236"
+      },
+      {
+       "value": "237",
+       "label": "237"
+      },
+      {
+       "value": "238",
+       "label": "238"
+      },
+      {
+       "value": "239",
+       "label": "239 (Default)"
+      }
+     ],
+     "default": "239"
+    },
+    "beetle_psx_hw_initial_scanline_pal": {
+     "label": "Initial Scan Line - PAL",
+     "help": "First displayed scan line when running PAL content. Values greater than zero will reduce the height of output images by cropping pixels from the topmost edge. May be used to counteract letterboxing.",
+     "category": "video",
+     "values": [
+      {
+       "value": "0",
+       "label": "0 (Default)"
+      },
+      {
+       "value": "1",
+       "label": "1"
+      },
+      {
+       "value": "2",
+       "label": "2"
+      },
+      {
+       "value": "3",
+       "label": "3"
+      },
+      {
+       "value": "4",
+       "label": "4"
+      },
+      {
+       "value": "5",
+       "label": "5"
+      },
+      {
+       "value": "6",
+       "label": "6"
+      },
+      {
+       "value": "7",
+       "label": "7"
+      },
+      {
+       "value": "8",
+       "label": "8"
+      },
+      {
+       "value": "9",
+       "label": "9"
+      },
+      {
+       "value": "10",
+       "label": "10"
+      },
+      {
+       "value": "11",
+       "label": "11"
+      },
+      {
+       "value": "12",
+       "label": "12"
+      },
+      {
+       "value": "13",
+       "label": "13"
+      },
+      {
+       "value": "14",
+       "label": "14"
+      },
+      {
+       "value": "15",
+       "label": "15"
+      },
+      {
+       "value": "16",
+       "label": "16"
+      },
+      {
+       "value": "17",
+       "label": "17"
+      },
+      {
+       "value": "18",
+       "label": "18"
+      },
+      {
+       "value": "19",
+       "label": "19"
+      },
+      {
+       "value": "20",
+       "label": "20"
+      },
+      {
+       "value": "21",
+       "label": "21"
+      },
+      {
+       "value": "22",
+       "label": "22"
+      },
+      {
+       "value": "23",
+       "label": "23"
+      },
+      {
+       "value": "24",
+       "label": "24"
+      },
+      {
+       "value": "25",
+       "label": "25"
+      },
+      {
+       "value": "26",
+       "label": "26"
+      },
+      {
+       "value": "27",
+       "label": "27"
+      },
+      {
+       "value": "28",
+       "label": "28"
+      },
+      {
+       "value": "29",
+       "label": "29"
+      },
+      {
+       "value": "30",
+       "label": "30"
+      },
+      {
+       "value": "31",
+       "label": "31"
+      },
+      {
+       "value": "32",
+       "label": "32"
+      },
+      {
+       "value": "33",
+       "label": "33"
+      },
+      {
+       "value": "34",
+       "label": "34"
+      },
+      {
+       "value": "35",
+       "label": "35"
+      },
+      {
+       "value": "36",
+       "label": "36"
+      },
+      {
+       "value": "37",
+       "label": "37"
+      },
+      {
+       "value": "38",
+       "label": "38"
+      },
+      {
+       "value": "39",
+       "label": "39"
+      },
+      {
+       "value": "40",
+       "label": "40"
+      }
+     ],
+     "default": "0"
+    },
+    "beetle_psx_hw_last_scanline_pal": {
+     "label": "Last Scan Line - PAL",
+     "help": "Last displayed scan line when running PAL content. Values below 287 will reduce the height of output images by cropping pixels from the bottommost edge. May be used to counteract letterboxing.",
+     "category": "video",
+     "values": [
+      {
+       "value": "230",
+       "label": "230"
+      },
+      {
+       "value": "231",
+       "label": "231"
+      },
+      {
+       "value": "232",
+       "label": "232"
+      },
+      {
+       "value": "233",
+       "label": "233"
+      },
+      {
+       "value": "234",
+       "label": "234"
+      },
+      {
+       "value": "235",
+       "label": "235"
+      },
+      {
+       "value": "236",
+       "label": "236"
+      },
+      {
+       "value": "237",
+       "label": "237"
+      },
+      {
+       "value": "238",
+       "label": "238"
+      },
+      {
+       "value": "239",
+       "label": "239"
+      },
+      {
+       "value": "240",
+       "label": "240"
+      },
+      {
+       "value": "241",
+       "label": "241"
+      },
+      {
+       "value": "242",
+       "label": "242"
+      },
+      {
+       "value": "243",
+       "label": "243"
+      },
+      {
+       "value": "244",
+       "label": "244"
+      },
+      {
+       "value": "245",
+       "label": "245"
+      },
+      {
+       "value": "246",
+       "label": "246"
+      },
+      {
+       "value": "247",
+       "label": "247"
+      },
+      {
+       "value": "248",
+       "label": "248"
+      },
+      {
+       "value": "249",
+       "label": "249"
+      },
+      {
+       "value": "250",
+       "label": "250"
+      },
+      {
+       "value": "251",
+       "label": "251"
+      },
+      {
+       "value": "252",
+       "label": "252"
+      },
+      {
+       "value": "253",
+       "label": "253"
+      },
+      {
+       "value": "254",
+       "label": "254"
+      },
+      {
+       "value": "255",
+       "label": "255"
+      },
+      {
+       "value": "256",
+       "label": "256"
+      },
+      {
+       "value": "257",
+       "label": "257"
+      },
+      {
+       "value": "258",
+       "label": "258"
+      },
+      {
+       "value": "259",
+       "label": "259"
+      },
+      {
+       "value": "260",
+       "label": "260"
+      },
+      {
+       "value": "261",
+       "label": "261"
+      },
+      {
+       "value": "262",
+       "label": "262"
+      },
+      {
+       "value": "263",
+       "label": "263"
+      },
+      {
+       "value": "264",
+       "label": "264"
+      },
+      {
+       "value": "265",
+       "label": "265"
+      },
+      {
+       "value": "266",
+       "label": "266"
+      },
+      {
+       "value": "267",
+       "label": "267"
+      },
+      {
+       "value": "268",
+       "label": "268"
+      },
+      {
+       "value": "269",
+       "label": "269"
+      },
+      {
+       "value": "270",
+       "label": "270"
+      },
+      {
+       "value": "271",
+       "label": "271"
+      },
+      {
+       "value": "272",
+       "label": "272"
+      },
+      {
+       "value": "273",
+       "label": "273"
+      },
+      {
+       "value": "274",
+       "label": "274"
+      },
+      {
+       "value": "275",
+       "label": "275"
+      },
+      {
+       "value": "276",
+       "label": "276"
+      },
+      {
+       "value": "277",
+       "label": "277"
+      },
+      {
+       "value": "278",
+       "label": "278"
+      },
+      {
+       "value": "279",
+       "label": "279"
+      },
+      {
+       "value": "280",
+       "label": "280"
+      },
+      {
+       "value": "281",
+       "label": "281"
+      },
+      {
+       "value": "282",
+       "label": "282"
+      },
+      {
+       "value": "283",
+       "label": "283"
+      },
+      {
+       "value": "284",
+       "label": "284"
+      },
+      {
+       "value": "285",
+       "label": "285"
+      },
+      {
+       "value": "286",
+       "label": "286"
+      },
+      {
+       "value": "287",
+       "label": "287 (Default)"
+      }
+     ],
+     "default": "287"
+    }
+   }
+  },
   "LRPS2": {
    "categories": {
     "system": "Système",
@@ -6353,14 +10410,6 @@
       {
        "value": "OpenGL",
        "label": "OpenGL"
-      },
-      {
-       "value": "D3D11",
-       "label": "D3D11"
-      },
-      {
-       "value": "D3D12",
-       "label": "D3D12"
       },
       {
        "value": "Vulkan",
@@ -7109,17 +11158,9 @@
       {
        "value": "disabled",
        "label": "Désactivé"
-      },
-      {
-       "value": "disabled",
-       "label": "Désactivé"
-      },
-      {
-       "value": "enabled",
-       "label": "Activé"
       }
      ],
-     "default": "enableddisabled"
+     "default": "enabled"
     },
     "pcsx2_instant_vu1": {
      "label": "Instant VU1 (Restart)",
@@ -8006,10 +12047,6 @@
       {
        "value": "vulkan",
        "label": "Vulkan"
-      },
-      {
-       "value": "d3d11",
-       "label": "D3D11"
       },
       {
        "value": "none",

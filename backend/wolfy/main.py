@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import auth, combos, docker_ops, eden_config, eden_paths, ra_config, ra_paths, steam, emulators, settings, store, wolf_api, wolf_config
+from . import auth, combos, dolphin_config, docker_ops, eden_config, eden_paths, ps_paths, ra_config, ra_paths, steam, emulators, settings, store, wolf_api, wolf_config
 
 app = FastAPI(title="Wolfy", docs_url="/api/docs", openapi_url="/api/openapi.json")
 public = APIRouter(prefix="/api")
@@ -294,6 +294,35 @@ async def upload_ra_bios(files: list[UploadFile] = File(...)):
     return {**result, "status": ra_paths.status(ra_paths.current())}
 
 
+@api.get("/emulators/retroarch/ps")
+def get_ps_status():
+    return ps_paths.status(ra_paths.current()["roms"])
+
+
+class PsInstall(BaseModel):
+    path: str
+    zrif: str = ""
+
+
+@api.post("/emulators/retroarch/ps/install")
+def install_ps(body: PsInstall):
+    job = ps_paths.install(body.path, body.zrif, ra_paths.current()["roms"])
+    return {"job": job.as_dict()}
+
+
+@api.post("/emulators/retroarch/ps/firmware/{system}")
+async def upload_ps_firmware(system: str, file: UploadFile = File(...)):
+    tmp = await run_in_threadpool(ps_paths.upload_tmp)
+    try:
+        with open(tmp, "wb") as out:
+            while chunk := await file.read(1 << 20):
+                out.write(chunk)
+        job = await run_in_threadpool(ps_paths.upload_firmware, system, tmp)
+    finally:
+        Path(tmp).unlink(missing_ok=True)
+    return {"job": job.as_dict()}
+
+
 @api.get("/emulators/steam/paths")
 def get_steam_paths():
     cur = steam.current()
@@ -327,7 +356,7 @@ def emulator_catalog():
         info = docker_ops.image_info(emu["image"]) if emu["image"] else {"present": False}
         ctx = docker_ops.build_context(emu["build_dir"])
         out.append({**emu, "image_info": info, "buildable": ctx is not None,
-                    "pullable": ctx is None and "/" in emu["image"]})
+                    "pullable": ctx is None and "/" in emu["image"], "icon": emulators.cover_path(emu)})
     return {"emulators": out, "base_create_json": emulators.BASE_CREATE_JSON}
 
 
@@ -462,6 +491,44 @@ def update_retroarch_settings(body: SettingsUpdate):
 def restore_retroarch_settings(name: str):
     ra_config.restore(name)
     return {"ok": True}
+
+
+@api.get("/emulator-settings/dolphin")
+def dolphin_settings():
+    return dolphin_config.read()
+
+
+@api.put("/emulator-settings/dolphin")
+def update_dolphin_settings(body: SettingsUpdate):
+    changes = [c.model_dump(exclude_none=True) for c in body.changes]
+    return {"changed": dolphin_config.write(changes, body.mtime)}
+
+
+@api.post("/emulator-settings/dolphin/backups/{name}/restore")
+def restore_dolphin_settings(name: str):
+    dolphin_config.restore(name)
+    return {"ok": True}
+
+
+class DolphinWolfy(BaseModel):
+    wiimotes: list[str]
+    nunchuk: bool = True
+    host_pads: list[dict | None] = []
+
+
+@api.get("/emulator-settings/dolphin/wolfy")
+def get_wolfy_dolphin():
+    return dolphin_config.read_wolfy()
+
+
+@api.put("/emulator-settings/dolphin/wolfy")
+def set_wolfy_dolphin(body: DolphinWolfy):
+    return dolphin_config.write_wolfy(body.wiimotes, body.nunchuk, body.host_pads)
+
+
+@api.get("/emulator-settings/dolphin/host-pads")
+def dolphin_host_pads():
+    return {"pads": dolphin_config.host_pads()}
 
 
 # ------------------------------------------------------------------- covers
@@ -604,6 +671,17 @@ try:
     combos.ensure_hooks()
 except Exception as exc:  # Eden config not mounted: the quit combo just stays off
     print(f"hook not written: {exc}", flush=True)
+
+try:  # default app covers (Switch, PlayStation, Wii, Steam) in Wolf's covers folder
+    emulators.install_default_covers()
+except Exception as exc:
+    print(f"default covers not installed: {exc}", flush=True)
+
+try:  # PS3 / PS Vita: data folders and the ROM folders list read by the sessions
+    ps_paths.ensure_dirs()
+    ra_paths.write_ps_dirs(ra_paths.current()["roms"])
+except Exception as exc:
+    print(f"PlayStation folders not prepared: {exc}", flush=True)
 
 
 # ------------------------------------------------------------------- frontend (built SPA)

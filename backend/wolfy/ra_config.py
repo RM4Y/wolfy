@@ -1,8 +1,10 @@
-"""RetroArch settings for the PlayStation sessions: every key of the shared retroarch.cfg and the
-core options (LRPS2 = PS2, PPSSPP = PSP), described with the schema generated from the sources
-(emulator_settings/retroarch.json, tools/gen_retroarch_schema.py).
+"""Core options of the PlayStation sessions (Beetle PSX HW = PS1, LRPS2 = PS2, PPSSPP = PSP),
+described with the schema generated from the sources (emulator_settings/retroarch.json,
+tools/gen_retroarch_schema.py), and the settings of the standalone PS3 / PS Vita emulators
+(ps_config.py). RetroArch's own settings (retroarch.cfg) are not shown.
 
-Each Wolf session copies retroarch.cfg when it starts: changes apply to the next sessions.
+Each core's options live in config/<core>/<core>.opt of the shared flatpak RetroArch: used by
+RetroArch on the PC and by every Wolf session (changes apply to the next sessions).
 """
 import json
 import os
@@ -14,57 +16,13 @@ from pathlib import Path
 
 from fastapi import HTTPException
 
-from . import ra_paths
+from . import ps_config, ra_paths
+from .eden_paths import _chown_like
 
 SCHEMA_FILE = Path(__file__).parent / "emulator_settings" / "retroarch.json"
-CORES = {"LRPS2": "Cœur PS2 (LRPS2)", "PPSSPP": "Cœur PSP (PPSSPP)"}
-
-# Settings stored as numbers or names whose choices are only in RetroArch's C code
-CHOICES = {
-    "menu_driver": [("xmb", "XMB (PS3/PSP)"), ("ozone", "Ozone"), ("rgui", "RGUI"), ("glui", "Material UI")],
-    "video_driver": [("vulkan", "Vulkan"), ("glcore", "OpenGL Core"), ("gl", "OpenGL"), ("sdl2", "SDL2")],
-    "audio_driver": [("pulse", "PulseAudio"), ("pipewire", "PipeWire"), ("alsa", "ALSA"), ("sdl2", "SDL2"), ("null", "Aucun")],
-    "input_joypad_driver": [("udev", "udev"), ("sdl2", "SDL2"), ("linuxraw", "linuxraw")],
-    "video_rotation": [(0, "0°"), (1, "90°"), (2, "180°"), (3, "270°")],
-    "screen_orientation": [(0, "0°"), (1, "90°"), (2, "180°"), (3, "270°")],
-    "input_menu_toggle_gamepad_combo": [
-        (0, "Aucune"), (1, "Bas + Y + L1 + R1"), (2, "L3 + R3"), (3, "L1 + R1 + Start + Select"),
-        (4, "Start + Select"), (5, "L3 + R1"), (6, "L1 + R1"), (7, "Maintenir Start (2 s)"),
-        (8, "Maintenir Select (2 s)"), (9, "Bas + Select"), (10, "L2 + R2")],
-    "input_quit_gamepad_combo": [
-        (0, "Aucune"), (1, "Bas + Y + L1 + R1"), (2, "L3 + R3"), (3, "L1 + R1 + Start + Select"),
-        (4, "Start + Select"), (5, "L3 + R1"), (6, "L1 + R1"), (7, "Maintenir Start (2 s)"),
-        (8, "Maintenir Select (2 s)"), (9, "Bas + Select"), (10, "L2 + R2")],
-    "xmb_menu_color_theme": [
-        (0, "Vert pomme"), (1, "Violet foncé"), (2, "Bleu électrique"), (3, "Doré"), (4, "Rouge héritage"),
-        (5, "Bleu nuit"), (6, "Uni"), (7, "Sous-marin"), (8, "Rouge volcanique"), (9, "Lime"),
-        (10, "Pikachu jaune"), (11, "Gameboy violet"), (12, "Lune"), (13, "Soleil"), (14, "Ptérodactyle"),
-        (15, "Mer"), (16, "Wallpaper")],
-}
-
-# Tab of each RetroArch menu group (French group names from the schema); others by key prefix
-GROUP_TABS = {
-    "Vidéo": "video", "Résolution adaptée aux écrans CRT ": "video", "Limiteur d'images/s": "video",
-    "Compteur de temps par images": "video",
-    "Audio ": "audio", "Microphone": "audio", "MIDI": "audio", "Sons du menu": "audio",
-    "Apparence": "menu", "Interface utilisateur": "menu", "Visibilité": "menu", "Navigateur de fichiers": "menu",
-    "Affichage à l'écran": "osd", "Surimpression à l'écran": "osd", "Pistolet en surimpression": "osd",
-    "Souris en surimpression": "osd", "Clavier en surimpression": "osd",
-    "Sauvegarde": "saves", "Rembobinage": "saves", "Synchronisation avec le Cloud": "saves",
-    "Réseau": "network", "RetroSuccès (RetroAchievements)": "network", "Comptes Cheevos": "network",
-    "Dossiers": "dirs",
-    "Tir turbo": "input",
-}
-PREFIX_TABS = [
-    ("input_", "input"), ("video_", "video"), ("audio_", "audio"), ("microphone_", "audio"),
-    ("menu_", "menu"), ("xmb_", "menu"), ("ozone_", "menu"), ("rgui_", "menu"), ("materialui_", "menu"),
-    ("content_show_", "menu"), ("notification_", "osd"), ("savestate", "saves"), ("savefile", "saves"),
-    ("autosave", "saves"), ("rewind", "saves"), ("netplay_", "network"), ("cheevos_", "network"),
-    ("network_", "network"), ("cloud_sync", "saves"),
-]
-TABS = [("video", "Vidéo"), ("audio", "Audio"), ("input", "Entrées"), ("menu", "Menu & XMB"),
-        ("osd", "Affichage à l'écran"), ("saves", "Sauvegardes & états"), ("network", "Réseau & succès"),
-        ("dirs", "Dossiers"), ("other", "Autres")]
+CORES = {"Beetle PSX HW": "PS1 (Beetle PSX HW)", "LRPS2": "PS2 (LRPS2)", "PPSSPP": "PSP (PPSSPP)"}
+BACKUP_DIR = Path(ra_paths.RA_DIR) / "wolfy-backups"
+TAB_ORDER = ["core_Beetle PSX HW", "core_LRPS2", "ps_RPCS3", "core_PPSSPP", "ps_Vita3K"]  # PS1, PS2, PS3, PSP, Vita
 
 
 @lru_cache
@@ -86,99 +44,52 @@ def _read_kv(path: Path) -> dict[str, str]:
     return out
 
 
-def _typed(raw: str, kind: str):
-    try:
-        if kind == "bool":
-            return raw == "true"
-        if kind == "int":
-            return int(float(raw))
-        if kind == "float":
-            return float(raw)
-    except ValueError:
-        pass
-    return raw
-
-
-def _encode(value, kind: str) -> str:
-    if kind == "bool":
-        return "true" if value in (True, "true", 1) else "false"
-    if kind == "int":
-        return str(int(value))
-    if kind == "float":
-        return f"{float(value):.6f}"
+def _encode(value) -> str:
     text = str(value)
     if '"' in text or "\n" in text:
         raise HTTPException(400, "Guillemets et retours à la ligne interdits dans une valeur")
     return text
 
 
-def _tab(key: str, group_label: str | None) -> str:
-    if group_label in GROUP_TABS:
-        return GROUP_TABS[group_label]
-    if key.endswith("_directory") or key.endswith("_path") and "directory" in key:
-        return "dirs"
-    for prefix, tab in PREFIX_TABS:
-        if key.startswith(prefix):
-            return tab
-    return "other"
+def _mtime() -> float:
+    """Latest change of the cores' .opt files and emulators' config.yml (0 if none yet): detects
+    concurrent edits."""
+    opts = [_opt_path(c).stat().st_mtime for c in CORES if _opt_path(c).is_file()]
+    return max([*opts, ps_config.mtime()], default=0.0)
 
 
 def read() -> dict:
     sch = schema()
-    cfg = ra_paths.read_cfg()
     items = []
-    for key, raw in cfg.items():
-        s = sch["settings"].get(key)
-        kind = s["type"] if s else ("bool" if raw in ("true", "false") else "raw")
-        group = sch["groups"].get(s.get("group"), s.get("group")) if s else None
-        sub = sch["groups"].get(s.get("sub"), s.get("sub")) if s else None
-        item = {
-            "section": "retroarch.cfg", "key": key, "type": kind,
-            "tab": _tab(key, group), "value": _typed(raw, kind),
-            "label": (s or {}).get("label", "").strip(),
-            "help": (s or {}).get("help", ""),
-            "default": (s or {}).get("default"),
-            "category_label": group or "Sans catégorie",
-            "group": None,
-            "min": (s or {}).get("min"), "max": (s or {}).get("max"),
-            "options": None, "forced": None, "secret": "password" in key or key.endswith("_token"),
-        }
-        if key in CHOICES:
-            item["options"] = [{"value": v, "label": lbl} for v, lbl in CHOICES[key]]
-            item["type"] = "enum" if isinstance(CHOICES[key][0][0], int) else "choice"
-        if sub and sub not in ("State", group):
-            item["category_label"] = f"{group} › {sub}" if group else sub
-        m = re.match(r"input_player(\d+)_", key)
-        if m:  # 16 players × every button: one group per player
-            item.update(tab="input", category_label=f"Joueur {m.group(1)}", label=item["label"] or key[len(m.group(0)):])
-        elif key.startswith("input_") and re.search(r"_(btn|axis|mbtn)$", key) or (key.startswith("input_") and not s):
-            item.update(tab="input", category_label="Raccourcis (touches de fonction RetroArch)")
-        items.append(item)
-
-    for core, title in CORES.items():
+    for core in CORES:
         core_schema = sch["cores"].get(core, {})
+        options = core_schema.get("options", {})
         values = _read_kv(_opt_path(core))
-        for key, raw in values.items():
-            o = core_schema.get("options", {}).get(key)
-            item = {
+        # every option the core has (default value until RetroArch or Wolfy writes the .opt),
+        # then the keys of the file the schema doesn't know (older/newer core version)
+        for key in [*options, *(k for k in values if k not in options)]:
+            o = options.get(key)
+            items.append({
                 "section": core, "key": key, "tab": f"core_{core}", "type": "choice" if o else "raw",
-                "value": raw, "label": (o or {}).get("label", key), "help": (o or {}).get("help", ""),
+                "value": values.get(key, (o or {}).get("default")),
+                "label": (o or {}).get("label", key), "help": (o or {}).get("help", ""),
                 "default": (o or {}).get("default"),
                 "category_label": core_schema.get("categories", {}).get((o or {}).get("category"), "Options")
-                if o else "Options", "group": None, "min": None, "max": None, "forced": None, "secret": False,
+                if o else "Autres options (inconnues du schéma)",
+                "group": None, "min": None, "max": None, "forced": None, "secret": False,
                 "options": [{"value": v["value"], "label": v["label"]} for v in o["values"]] if o else None,
-            }
-            items.append(item)
+            })
 
-    tabs = [{"id": t, "label": label} for t, label in TABS]
-    tabs += [{"id": f"core_{c}", "label": title} for c, title in CORES.items() if _opt_path(c).is_file()]
+    items += ps_config.items()
     return {
-        "path": str(ra_paths.CFG),
-        "description": "Configuration RetroArch partagée : utilisée par RetroArch sur le PC et copiée au démarrage "
-                       "de chaque session PlayStation. Les changements s'appliquent aux prochaines sessions.",
-        "mtime": ra_paths.CFG.stat().st_mtime,
-        "version": f"RetroArch {sch.get('retroarch_tag', '')}",
-        "tabs": tabs,
+        "path": f"{Path(ra_paths.RA_DIR) / 'config'} · {ps_config.PS_DIR}",
+        "description": "Options des cœurs PlayStation (PS1, PS2, PSP : partagées avec RetroArch sur le PC) et "
+                       "réglages de RPCS3 (PS3) et Vita3K (PS Vita). Les changements s'appliquent aux "
+                       "prochaines sessions.",
+        "mtime": _mtime(),
+        "version": "les sources des cœurs et des émulateurs",
+        "tabs": sorted([{"id": f"core_{c}", "label": title} for c, title in CORES.items()] + ps_config.tabs(),
+                       key=lambda t: TAB_ORDER.index(t["id"])),
         "items": items,
         "backups": list_backups(),
         "host_running": ra_paths.host_retroarch_running(),
@@ -186,83 +97,79 @@ def read() -> dict:
 
 
 def write(changes: list[dict], mtime: float | None) -> int:
-    if mtime is not None and abs(ra_paths.CFG.stat().st_mtime - mtime) > 1e-6:
-        raise HTTPException(409, "retroarch.cfg a été modifié entre-temps : recharge la page.")
+    if mtime is not None and abs(_mtime() - mtime) > 1e-6:
+        raise HTTPException(409, "Les options des cœurs ont été modifiées entre-temps : recharge la page.")
     sch = schema()
-    cfg_changes: dict[str, str] = {}
     core_changes: dict[str, dict[str, str]] = {}
+    emulator_changes: dict[str, list[dict]] = {}
     for ch in changes:
         section, key = ch["section"], ch["key"]
-        if section == "retroarch.cfg":
-            s = sch["settings"].get(key)
-            kind = s["type"] if s else "raw"
-            if ch.get("reset"):
-                if not s or s.get("default") is None:
-                    raise HTTPException(400, f"Pas de valeur par défaut connue pour {key}")
-                cfg_changes[key] = _encode(s["default"], kind)
-            else:
-                value = ch.get("raw", ch.get("value"))
-                cfg_changes[key] = _encode(value, kind if kind != "raw" else "string")
-        elif section in CORES:
-            o = sch["cores"].get(section, {}).get("options", {}).get(key)
-            value = o["default"] if ch.get("reset") and o else ch.get("raw", ch.get("value"))
-            if o and o["values"] and value not in [v["value"] for v in o["values"]]:
-                raise HTTPException(400, f"Valeur invalide pour {key} : {value}")
-            core_changes.setdefault(section, {})[key] = _encode(value, "string")
-        else:
+        if section in ps_config.EMULATORS:
+            emulator_changes.setdefault(section, []).append(ch)
+            continue
+        if section not in CORES:
             raise HTTPException(400, f"Section inconnue : {section}")
+        o = sch["cores"].get(section, {}).get("options", {}).get(key)
+        if ch.get("reset") and not o:
+            raise HTTPException(400, f"Pas de valeur par défaut connue pour {key}")
+        value = o["default"] if ch.get("reset") else ch.get("raw", ch.get("value"))
+        if o and o["values"] and value not in [v["value"] for v in o["values"]]:
+            raise HTTPException(400, f"Valeur invalide pour {key} : {value}")
+        core_changes.setdefault(section, {})[key] = _encode(value)
 
-    if cfg_changes:
-        ra_paths.write_cfg(cfg_changes)
+    if core_changes and ra_paths.host_retroarch_running():
+        raise HTTPException(409, "RetroArch est ouvert sur le PC : ferme-le d'abord.")
     for core, kv in core_changes.items():
         _write_opt(core, kv)
+    for section, chs in emulator_changes.items():
+        ps_config.write(section, chs)
     return len(changes)
 
 
 def _write_opt(core: str, kv: dict[str, str]) -> None:
     path = _opt_path(core)
-    if ra_paths.host_retroarch_running():
-        raise HTTPException(409, "RetroArch est ouvert sur le PC : ferme-le d'abord.")
-    lines = path.read_text(errors="replace").split("\n")
+    config_dir = path.parent.parent
+    if path.is_file():
+        lines = path.read_text(errors="replace").split("\n")
+        BACKUP_DIR.mkdir(exist_ok=True)
+        shutil.copy2(path, BACKUP_DIR / f"{core}.opt.{datetime.now():%Y-%m-%d_%H-%M-%S}")
+        _chown_like(BACKUP_DIR, Path(ra_paths.RA_DIR))
+    else:  # core never started on the PC: RetroArch fills in the other options itself
+        path.parent.mkdir(parents=True, exist_ok=True)
+        _chown_like(path.parent, config_dir if config_dir.is_dir() else Path(ra_paths.RA_DIR))
+        lines = [""]
     todo = dict(kv)
     for i, line in enumerate(lines):
         m = re.match(r"^\s*([A-Za-z0-9_]+)\s*=", line)
         if m and m.group(1) in todo:
             lines[i] = f'{m.group(1)} = "{todo.pop(m.group(1))}"'
     lines[-1:-1] = [f'{k} = "{v}"' for k, v in todo.items()]
-    backup_dir = Path(ra_paths.RA_DIR) / "wolfy-backups"
-    backup_dir.mkdir(exist_ok=True)
-    shutil.copy2(path, backup_dir / f"{core}.opt.{datetime.now():%Y-%m-%d_%H-%M-%S}")
-    st = path.stat()
     tmp = path.with_suffix(".wolfy-tmp")
     tmp.write_text("\n".join(lines))
-    os.chown(tmp, st.st_uid, st.st_gid)
+    _chown_like(tmp, path if path.is_file() else path.parent)
     tmp.replace(path)
 
 
 def list_backups() -> list[dict]:
-    d = Path(ra_paths.RA_DIR) / "wolfy-backups"
-    if not d.exists():
-        return []
-    return [{"name": p.name, "mtime": p.stat().st_mtime}
-            for p in sorted(d.glob("*"), key=lambda p: p.stat().st_mtime, reverse=True)]
+    opts = [{"name": p.name, "mtime": p.stat().st_mtime} for p in BACKUP_DIR.glob("*.opt.*")
+            if p.name.split(".opt.")[0] in CORES] if BACKUP_DIR.exists() else []
+    return sorted(opts + ps_config.list_backups(), key=lambda b: b["mtime"], reverse=True)
 
 
 def restore(name: str) -> None:
-    d = Path(ra_paths.RA_DIR) / "wolfy-backups"
-    src = d / name
+    if ps_config.restore(name):
+        return
+    src = BACKUP_DIR / name
     if "/" in name or not src.is_file():
         raise HTTPException(404, "Sauvegarde introuvable")
+    core = name.split(".opt.")[0]
+    if core not in CORES:
+        raise HTTPException(400, "Sauvegarde inconnue")
     if ra_paths.host_retroarch_running():
         raise HTTPException(409, "RetroArch est ouvert sur le PC : ferme-le d'abord.")
-    if name.startswith("retroarch.cfg."):
-        dest = ra_paths.CFG
-    else:
-        core = name.split(".opt.")[0]
-        if core not in CORES:
-            raise HTTPException(400, "Sauvegarde inconnue")
-        dest = _opt_path(core)
-    shutil.copy2(dest, d / f"{dest.name}.{datetime.now():%Y-%m-%d_%H-%M-%S}")
-    st = dest.stat()
+    dest = _opt_path(core)
+    if dest.is_file():
+        shutil.copy2(dest, BACKUP_DIR / f"{dest.name}.{datetime.now():%Y-%m-%d_%H-%M-%S}")
+    dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(src, dest)
-    os.chown(dest, st.st_uid, st.st_gid)
+    _chown_like(dest, src)

@@ -2,7 +2,9 @@
 """Gamepad combos of the Wolf sessions (Switch: Eden, PlayStation: RetroArch), set from Wolfy.
 
 HOME combo: back to the emulator's menu (Switch HOME menu / RetroArch menu), by injecting
-a Guide press, which both emulators map to their menu.
+a Guide press, which both emulators map to their menu. In a PlayStation session running a
+PS3 / PS Vita game (standalone emulator, /tmp/wolfy-external.pid), it quits that game instead:
+back to the RetroArch XMB.
 Quit combo (held, e.g. Start+Guide 1 s): ask Wolfy to end this Moonlight session
 cleanly (Wolf API sessions/stop) instead of killing Eden, since Wolf crashes when
 Moonlight resumes a session whose container died.
@@ -27,11 +29,12 @@ import threading
 import urllib.request
 import re
 import select
+import signal
 import struct
 import sys
 import time
 
-# RetroArch sessions mount config/<system>/wolfy at /wolfy-config; Eden reads its
+# RetroArch, Steam and Dolphin sessions mount config/<system>/wolfy at /wolfy-config; Eden reads its
 # combo file from the shared Eden config dir
 SETTINGS = os.environ.get("HOME_COMBO_SETTINGS") or next(
     (p for p in ("/wolfy-config/combo.json", "/eden-config-host/wolfy-home-combo.json") if os.path.exists(p)),
@@ -70,7 +73,9 @@ def load_settings():
 
 
 def gateway():
-    """Docker gateway = the host, where Wolfy listens."""
+    """Docker gateway = the host, where Wolfy listens ($WOLFY_HOOK_HOST: apps in the host network)."""
+    if os.environ.get("WOLFY_HOOK_HOST"):
+        return os.environ["WOLFY_HOOK_HOST"]
     for line in open("/proc/net/route").read().splitlines()[1:]:
         f = line.split()
         if f[1] == "00000000":
@@ -129,6 +134,22 @@ def gamepads():
             if ev and os.path.exists("/dev/input/" + ev.group(0)):
                 nodes.add("/dev/input/" + ev.group(0))
     return nodes
+
+
+EXTERNAL_PID = "/tmp/wolfy-external.pid"
+
+
+def stop_external() -> bool:
+    """Quit the standalone emulator started from the XMB (ps-launch), if one is running."""
+    try:
+        pid = int(open(EXTERNAL_PID).read().strip())
+        if b"ps-launch" not in open(f"/proc/{pid}/cmdline", "rb").read():
+            return False  # stale file
+        os.kill(pid, signal.SIGTERM)
+    except (OSError, ValueError):
+        return False
+    log(f"HOME -> standalone emulator stopped (ps-launch {pid})")
+    return True
 
 
 def press_home(fd):
@@ -191,7 +212,8 @@ def watch():
                 if fd in pending and not held[fd]:
                     pending.discard(fd)
                     log(f"{settings['modifier']}+{settings['button']} -> HOME")
-                    press_home(fd)
+                    if not stop_external():
+                        press_home(fd)
         now = time.time()
         for fd in list(fds):
             if settings["quit_enabled"] and settings["quit_codes"] <= held.get(fd, set()):

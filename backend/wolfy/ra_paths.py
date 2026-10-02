@@ -8,8 +8,11 @@ Default layout, in the Wolfy project (config/ is not versioned):
 
 They are set in the shared retroarch.cfg of the host's flatpak RetroArch (which every Wolf
 session copies at start) and mounted at the same absolute path in the sessions. Cores, core
-options and playlists stay in RetroArch's own folder.
+options and playlists stay in RetroArch's own folder. The PS3 / PS Vita emulators' folders
+(ps_paths.py) are mounted too; the sessions look for PS3 games in every ROM folder
+(config/playstation/wolfy/ps-dirs.json, read by ps-playlists.py).
 """
+import json
 import io
 import os
 import re
@@ -20,7 +23,7 @@ from pathlib import Path
 
 from fastapi import HTTPException
 
-from . import settings, store
+from . import ps_paths, settings, store
 from .eden_paths import _chown_like, _clean, host, update_app_mounts
 
 RA_DIR = settings.RETROARCH_DIR
@@ -30,7 +33,7 @@ DEFAULTS = {
     "bios": f"{PS_DIR}/bios",
     "saves": f"{PS_DIR}/saves",
     "states": f"{PS_DIR}/states",
-    "roms": [f"{settings.GAMES_DIR}/ROMS/{s}" for s in ("ps2", "psp", "psx")],
+    "roms": [f"{settings.GAMES_DIR}/ROMS/{s}" for s in ("ps2", "psp", "psx", "ps3", "psvita")],
 }
 CFG_KEYS = {"bios": "system_directory", "saves": "savefile_directory", "states": "savestate_directory"}
 GAME_EXT = (".iso", ".bin", ".cue", ".chd", ".cso", ".pbp", ".elf", ".m3u", ".img", ".mdf", ".zso")
@@ -143,9 +146,17 @@ def status(paths: dict) -> dict:
 def _session_mounts(paths: dict) -> list[str]:
     mounts = [f"{paths[k]}:{paths[k]}:rw" for k in ("bios", "saves", "states")
               if paths[k] and not paths[k].startswith(RA_DIR + "/")]
-    # gamepad combos settings (combos.py), read live by the session watcher
+    # gamepad combos settings (combos.py), read live by the session watcher, and ps-dirs.json
     mounts.append(f"{PS_DIR}/wolfy:/wolfy-config:ro")
-    return mounts + [f"{d}:{d}:ro" for d in paths["roms"]]
+    return mounts + ps_paths.session_mounts() + [f"{d}:{d}:ro" for d in paths["roms"]]
+
+
+def write_ps_dirs(roms: list[str]) -> None:
+    """ROM folders where the sessions look for PS3 game folders (ps-playlists.py)."""
+    p = Path(PS_DIR) / "wolfy" / "ps-dirs.json"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps({"ps3": roms}, indent=2) + "\n")
+    _chown_like(p.parent, Path(PS_DIR))
 
 
 def apply(paths: dict, restart_wolf) -> dict:
@@ -167,6 +178,8 @@ def apply(paths: dict, restart_wolf) -> dict:
     old_mounts |= {f"{settings.GAMES_DIR}/ROMS:{settings.GAMES_DIR}/ROMS:ro"}  # original PlayStation app mount
     new_mounts = _session_mounts(paths)
     store.put("emulator_paths", "retroarch", {"roms": paths["roms"], "mounts": new_mounts})
+    ps_paths.ensure_dirs()
+    write_ps_dirs(paths["roms"])
     changed = update_app_mounts("retroarch", old_mounts, new_mounts, restart_wolf, "chemins-playstation")
     return {"paths": paths, "apps_updated": changed, "config_changed": cfg_changed}
 

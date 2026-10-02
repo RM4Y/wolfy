@@ -1,0 +1,792 @@
+{
+ "settings": {
+  "log-compat-warn": {
+   "type": "bool",
+   "default": false,
+   "label": "log-compat-warn",
+   "category": "Avancé",
+   "help": ""
+  },
+  "validation-layer": {
+   "type": "bool",
+   "default": true,
+   "label": "Couche de validation Vulkan",
+   "category": "Journaux",
+   "help": "Débogage uniquement : ralentit."
+  },
+  "pstv-mode": {
+   "type": "bool",
+   "default": false,
+   "label": "Mode PlayStation TV",
+   "category": "Système",
+   "help": ""
+  },
+  "stretch_the_display_area": {
+   "type": "bool",
+   "default": false,
+   "label": "Étirer la zone d'affichage",
+   "category": "Graphismes",
+   "help": ""
+  },
+  "fullscreen_hd_res_pixel_perfect": {
+   "type": "bool",
+   "default": false,
+   "label": "Plein écran au pixel près",
+   "category": "Graphismes",
+   "help": ""
+  },
+  "archive-log": {
+   "type": "bool",
+   "default": false,
+   "label": "Archiver le journal par jeu",
+   "category": "Journaux",
+   "help": ""
+  },
+  "backend-renderer": {
+   "type": "string",
+   "default": "Vulkan",
+   "label": "Moteur de rendu",
+   "category": "Graphismes",
+   "help": "",
+   "choices": [
+    {
+     "value": "Vulkan",
+     "label": "Vulkan"
+    },
+    {
+     "value": "OpenGL",
+     "label": "OpenGL"
+    }
+   ]
+  },
+  "turbo-mode": {
+   "type": "bool",
+   "default": false,
+   "label": "turbo-mode",
+   "category": "Avancé",
+   "help": ""
+  },
+  "high-accuracy": {
+   "type": "bool",
+   "default": false,
+   "label": "Haute précision",
+   "category": "Graphismes",
+   "help": "Rendu plus fidèle, plus lent."
+  },
+  "resolution-multiplier": {
+   "type": "float",
+   "default": 1.0,
+   "label": "Multiplicateur de résolution",
+   "category": "Graphismes",
+   "help": "",
+   "choices": [
+    {
+     "value": 0.5,
+     "label": "×0,5"
+    },
+    {
+     "value": 0.75,
+     "label": "×0,75"
+    },
+    {
+     "value": 1.0,
+     "label": "×1 (natif, 960×544)"
+    },
+    {
+     "value": 1.25,
+     "label": "×1,25"
+    },
+    {
+     "value": 1.5,
+     "label": "×1,5"
+    },
+    {
+     "value": 1.75,
+     "label": "×1,75"
+    },
+    {
+     "value": 2.0,
+     "label": "×2 (1920×1088)"
+    },
+    {
+     "value": 2.5,
+     "label": "×2,5"
+    },
+    {
+     "value": 3.0,
+     "label": "×3"
+    },
+    {
+     "value": 4.0,
+     "label": "×4"
+    },
+    {
+     "value": 5.0,
+     "label": "×5"
+    },
+    {
+     "value": 6.0,
+     "label": "×6"
+    },
+    {
+     "value": 8.0,
+     "label": "×8"
+    }
+   ]
+  },
+  "disable-surface-sync": {
+   "type": "bool",
+   "default": true,
+   "label": "Désactiver la synchronisation des surfaces",
+   "category": "Graphismes",
+   "help": "Plus rapide ; peut causer des défauts graphiques dans certains jeux."
+  },
+  "screen-filter": {
+   "type": "string",
+   "default": "Bilinear",
+   "label": "Filtre d'écran",
+   "category": "Graphismes",
+   "help": "",
+   "choices": [
+    {
+     "value": "Nearest",
+     "label": "Plus proche"
+    },
+    {
+     "value": "Bilinear",
+     "label": "Bilinéaire"
+    },
+    {
+     "value": "Bicubic",
+     "label": "Bicubique"
+    },
+    {
+     "value": "FXAA",
+     "label": "FXAA"
+    },
+    {
+     "value": "FSR",
+     "label": "AMD FSR"
+    }
+   ]
+  },
+  "v-sync": {
+   "type": "bool",
+   "default": true,
+   "label": "Synchronisation verticale (V-Sync)",
+   "category": "Graphismes",
+   "help": ""
+  },
+  "anisotropic-filtering": {
+   "type": "int",
+   "default": 1,
+   "label": "Filtrage anisotrope",
+   "category": "Graphismes",
+   "help": "",
+   "choices": [
+    {
+     "value": 1,
+     "label": "×1"
+    },
+    {
+     "value": 2,
+     "label": "×2"
+    },
+    {
+     "value": 4,
+     "label": "×4"
+    },
+    {
+     "value": 8,
+     "label": "×8"
+    },
+    {
+     "value": 16,
+     "label": "×16"
+    }
+   ]
+  },
+  "texture-cache": {
+   "type": "bool",
+   "default": true,
+   "label": "Cache de textures",
+   "category": "Graphismes",
+   "help": ""
+  },
+  "async-pipeline-compilation": {
+   "type": "bool",
+   "default": true,
+   "label": "Compilation asynchrone des pipelines",
+   "category": "Graphismes",
+   "help": "Moins de saccades pendant la compilation des shaders (objets parfois invisibles un instant)."
+  },
+  "show-compile-shaders": {
+   "type": "bool",
+   "default": true,
+   "label": "Afficher la compilation des shaders",
+   "category": "Graphismes",
+   "help": ""
+  },
+  "hashless-texture-cache": {
+   "type": "bool",
+   "default": false,
+   "label": "Cache de textures sans hachage",
+   "category": "Graphismes",
+   "help": ""
+  },
+  "import-textures": {
+   "type": "bool",
+   "default": false,
+   "label": "Importer des textures (packs HD)",
+   "category": "Graphismes",
+   "help": ""
+  },
+  "export-textures": {
+   "type": "bool",
+   "default": false,
+   "label": "Exporter les textures",
+   "category": "Graphismes",
+   "help": ""
+  },
+  "export-as-png": {
+   "type": "bool",
+   "default": true,
+   "label": "export-as-png",
+   "category": "Avancé",
+   "help": ""
+  },
+  "memory-mapping": {
+   "type": "string",
+   "default": "double-buffer",
+   "label": "Mappage mémoire",
+   "category": "Graphismes",
+   "help": "",
+   "choices": [
+    {
+     "value": "disabled",
+     "label": "Désactivé"
+    },
+    {
+     "value": "double-buffer",
+     "label": "Double tampon"
+    },
+    {
+     "value": "external-host",
+     "label": "Mémoire hôte externe"
+    },
+    {
+     "value": "page-table",
+     "label": "Table de pages"
+    },
+    {
+     "value": "native-buffer",
+     "label": "Tampon natif"
+    }
+   ]
+  },
+  "show-live-area-screen": {
+   "type": "bool",
+   "default": false,
+   "label": "Afficher l'écran LiveArea",
+   "category": "Interface",
+   "help": ""
+  },
+  "audio-backend": {
+   "type": "string",
+   "default": "SDL",
+   "label": "Moteur audio",
+   "category": "Audio",
+   "help": "",
+   "choices": [
+    {
+     "value": "SDL",
+     "label": "SDL"
+    },
+    {
+     "value": "Cubeb",
+     "label": "Cubeb"
+    }
+   ]
+  },
+  "audio-volume": {
+   "type": "int",
+   "default": 100,
+   "label": "Volume",
+   "category": "Audio",
+   "help": ""
+  },
+  "ngs-enable": {
+   "type": "bool",
+   "default": true,
+   "label": "Activer NGS (audio avancé)",
+   "category": "Audio",
+   "help": ""
+  },
+  "sys-button": {
+   "type": "int",
+   "default": 1,
+   "label": "Bouton de validation",
+   "category": "Système",
+   "help": "",
+   "choices": [
+    {
+     "value": 0,
+     "label": "Rond"
+    },
+    {
+     "value": 1,
+     "label": "Croix"
+    }
+   ]
+  },
+  "sys-lang": {
+   "type": "int",
+   "default": 1,
+   "label": "Langue de la console",
+   "category": "Système",
+   "help": "",
+   "choices": [
+    {
+     "value": 0,
+     "label": "Japonais"
+    },
+    {
+     "value": 1,
+     "label": "Anglais (US)"
+    },
+    {
+     "value": 2,
+     "label": "Français"
+    },
+    {
+     "value": 3,
+     "label": "Espagnol"
+    },
+    {
+     "value": 4,
+     "label": "Allemand"
+    },
+    {
+     "value": 5,
+     "label": "Italien"
+    },
+    {
+     "value": 6,
+     "label": "Néerlandais"
+    },
+    {
+     "value": 7,
+     "label": "Portugais (Portugal)"
+    },
+    {
+     "value": 8,
+     "label": "Russe"
+    },
+    {
+     "value": 9,
+     "label": "Coréen"
+    },
+    {
+     "value": 10,
+     "label": "Chinois traditionnel"
+    },
+    {
+     "value": 11,
+     "label": "Chinois simplifié"
+    },
+    {
+     "value": 12,
+     "label": "Finnois"
+    },
+    {
+     "value": 13,
+     "label": "Suédois"
+    },
+    {
+     "value": 14,
+     "label": "Danois"
+    },
+    {
+     "value": 15,
+     "label": "Norvégien"
+    },
+    {
+     "value": 16,
+     "label": "Polonais"
+    },
+    {
+     "value": 17,
+     "label": "Portugais (Brésil)"
+    },
+    {
+     "value": 18,
+     "label": "Anglais (UK)"
+    },
+    {
+     "value": 19,
+     "label": "Turc"
+    }
+   ]
+  },
+  "sys-date-format": {
+   "type": "int",
+   "default": 2,
+   "label": "Format de date",
+   "category": "Système",
+   "help": "",
+   "choices": [
+    {
+     "value": 0,
+     "label": "AAAA/MM/JJ"
+    },
+    {
+     "value": 1,
+     "label": "JJ/MM/AAAA"
+    },
+    {
+     "value": 2,
+     "label": "MM/JJ/AAAA"
+    }
+   ]
+  },
+  "sys-time-format": {
+   "type": "int",
+   "default": 0,
+   "label": "Format d'heure",
+   "category": "Système",
+   "help": "",
+   "choices": [
+    {
+     "value": 0,
+     "label": "12 heures"
+    },
+    {
+     "value": 1,
+     "label": "24 heures"
+    }
+   ]
+  },
+  "cpu-pool-size": {
+   "type": "int",
+   "default": 10,
+   "label": "cpu-pool-size",
+   "category": "Avancé",
+   "help": ""
+  },
+  "modules-mode": {
+   "type": "int",
+   "default": 0,
+   "label": "Modules du firmware (LLE)",
+   "category": "Système",
+   "help": "",
+   "choices": [
+    {
+     "value": 0,
+     "label": "Automatique"
+    },
+    {
+     "value": 1,
+     "label": "Automatique + manuel"
+    },
+    {
+     "value": 2,
+     "label": "Manuel"
+    }
+   ]
+  },
+  "log-level": {
+   "type": "int",
+   "default": 0,
+   "label": "Niveau de journal",
+   "category": "Journaux",
+   "help": "",
+   "choices": [
+    {
+     "value": 0,
+     "label": "Trace"
+    },
+    {
+     "value": 1,
+     "label": "Debug"
+    },
+    {
+     "value": 2,
+     "label": "Info"
+    },
+    {
+     "value": 3,
+     "label": "Avertissement"
+    },
+    {
+     "value": 4,
+     "label": "Erreur"
+    },
+    {
+     "value": 5,
+     "label": "Critique"
+    },
+    {
+     "value": 6,
+     "label": "Désactivé"
+    }
+   ]
+  },
+  "cpu-opt": {
+   "type": "bool",
+   "default": true,
+   "label": "Optimisations CPU",
+   "category": "Système",
+   "help": ""
+  },
+  "performance-overlay": {
+   "type": "bool",
+   "default": false,
+   "label": "Affichage des performances",
+   "category": "Affichage à l'écran",
+   "help": ""
+  },
+  "performance-overlay-detail": {
+   "type": "int",
+   "default": 0,
+   "label": "Détail de l'affichage des performances",
+   "category": "Affichage à l'écran",
+   "help": "",
+   "choices": [
+    {
+     "value": 0,
+     "label": "Minimum"
+    },
+    {
+     "value": 1,
+     "label": "Bas"
+    },
+    {
+     "value": 2,
+     "label": "Moyen"
+    },
+    {
+     "value": 3,
+     "label": "Maximum"
+    }
+   ]
+  },
+  "performance-overlay-position": {
+   "type": "int",
+   "default": 0,
+   "label": "Position de l'affichage des performances",
+   "category": "Affichage à l'écran",
+   "help": "",
+   "choices": [
+    {
+     "value": 0,
+     "label": "Haut gauche"
+    },
+    {
+     "value": 1,
+     "label": "Haut centre"
+    },
+    {
+     "value": 2,
+     "label": "Haut droite"
+    },
+    {
+     "value": 3,
+     "label": "Bas gauche"
+    },
+    {
+     "value": 4,
+     "label": "Bas centre"
+    },
+    {
+     "value": 5,
+     "label": "Bas droite"
+    }
+   ]
+  },
+  "screenshot-format": {
+   "type": "int",
+   "default": 1,
+   "label": "Format des captures d'écran",
+   "category": "Interface",
+   "help": "",
+   "choices": [
+    {
+     "value": 0,
+     "label": "Aucun"
+    },
+    {
+     "value": 1,
+     "label": "JPEG"
+    },
+    {
+     "value": 2,
+     "label": "PNG"
+    }
+   ]
+  },
+  "disable-motion": {
+   "type": "bool",
+   "default": false,
+   "label": "Désactiver les capteurs de mouvement",
+   "category": "Entrées",
+   "help": ""
+  },
+  "controller-analog-multiplier": {
+   "type": "float",
+   "default": 1.0,
+   "label": "Multiplicateur des sticks",
+   "category": "Entrées",
+   "help": ""
+  },
+  "warn-missing-firmware": {
+   "type": "bool",
+   "default": true,
+   "label": "warn-missing-firmware",
+   "category": "Avancé",
+   "help": ""
+  },
+  "file-loading-delay": {
+   "type": "int",
+   "default": 0,
+   "label": "Délai de chargement des fichiers (ms)",
+   "category": "Système",
+   "help": ""
+  },
+  "shader-cache": {
+   "type": "bool",
+   "default": true,
+   "label": "Cache de shaders",
+   "category": "Graphismes",
+   "help": ""
+  },
+  "spirv-shader": {
+   "type": "bool",
+   "default": false,
+   "label": "Shaders SPIR-V (OpenGL)",
+   "category": "Graphismes",
+   "help": ""
+  },
+  "fps-hack": {
+   "type": "bool",
+   "default": false,
+   "label": "Hack FPS",
+   "category": "Graphismes",
+   "help": "Débloque la cadence de certains jeux limités à 30 i/s."
+  },
+  "psn-signed-in": {
+   "type": "int",
+   "default": 0,
+   "label": "Connecté au PSN (simulé)",
+   "category": "Réseau",
+   "help": "",
+   "choices": [
+    {
+     "value": 0,
+     "label": "Non"
+    },
+    {
+     "value": 1,
+     "label": "Oui"
+    }
+   ]
+  },
+  "http-enable": {
+   "type": "bool",
+   "default": true,
+   "label": "HTTP activé",
+   "category": "Réseau",
+   "help": ""
+  },
+  "http-timeout-attempts": {
+   "type": "int",
+   "default": 50,
+   "label": "http-timeout-attempts",
+   "category": "Avancé",
+   "help": ""
+  },
+  "http-timeout-sleep-ms": {
+   "type": "int",
+   "default": 100,
+   "label": "http-timeout-sleep-ms",
+   "category": "Avancé",
+   "help": ""
+  },
+  "http-read-end-attempts": {
+   "type": "int",
+   "default": 10,
+   "label": "http-read-end-attempts",
+   "category": "Avancé",
+   "help": ""
+  },
+  "http-read-end-sleep-ms": {
+   "type": "int",
+   "default": 250,
+   "label": "http-read-end-sleep-ms",
+   "category": "Avancé",
+   "help": ""
+  },
+  "adhoc-addr": {
+   "type": "int",
+   "default": 0,
+   "label": "adhoc-addr",
+   "category": "Avancé",
+   "help": ""
+  },
+  "front-camera-type": {
+   "type": "int",
+   "default": 2,
+   "label": "front-camera-type",
+   "category": "Avancé",
+   "help": ""
+  },
+  "front-camera-id": {
+   "type": "string",
+   "default": "",
+   "label": "front-camera-id",
+   "category": "Avancé",
+   "help": ""
+  },
+  "front-camera-image": {
+   "type": "string",
+   "default": "",
+   "label": "front-camera-image",
+   "category": "Avancé",
+   "help": ""
+  },
+  "front-camera-color": {
+   "type": "int",
+   "default": 0,
+   "label": "front-camera-color",
+   "category": "Avancé",
+   "help": ""
+  },
+  "back-camera-type": {
+   "type": "int",
+   "default": 2,
+   "label": "back-camera-type",
+   "category": "Avancé",
+   "help": ""
+  },
+  "back-camera-id": {
+   "type": "string",
+   "default": "",
+   "label": "back-camera-id",
+   "category": "Avancé",
+   "help": ""
+  },
+  "back-camera-image": {
+   "type": "string",
+   "default": "",
+   "label": "back-camera-image",
+   "category": "Avancé",
+   "help": ""
+  },
+  "back-camera-color": {
+   "type": "int",
+   "default": 0,
+   "label": "back-camera-color",
+   "category": "Avancé",
+   "help": ""
+  }
+ }
+}

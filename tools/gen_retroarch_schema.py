@@ -5,7 +5,8 @@ RetroArch (tag given, default v1.22.2):
   configuration.c   every retroarch.cfg key, its type and default (macro from config.def.h)
   menu_setting.c    the menu entry of each setting: label id, group/sub-group, min/max/step
   intl/msg_hash_fr.h / msg_hash_us.h   labels and help texts (French, else English)
-Cores (libretro_core_options.h): LRPS2 (PS2) and PPSSPP (PSP) options, categories, values.
+Cores (libretro_core_options.h): Beetle PSX HW (PS1), LRPS2 (PS2) and PPSSPP (PSP) options,
+categories, values.
 
     python3 tools/gen_retroarch_schema.py v1.22.2
 """
@@ -18,6 +19,7 @@ from pathlib import Path
 TAG = sys.argv[1] if len(sys.argv) > 1 else "v1.22.2"
 RA = f"https://raw.githubusercontent.com/libretro/RetroArch/{TAG}"
 CORES = {
+    "Beetle PSX HW": "https://raw.githubusercontent.com/libretro/beetle-psx-libretro/master/libretro_core_options.h",
     "LRPS2": "https://raw.githubusercontent.com/libretro/ps2/libretroization/libretro/libretro_core_options.h",
     "PPSSPP": "https://raw.githubusercontent.com/hrydgard/ppsspp/master/libretro/libretro_core_options.h",
 }
@@ -236,7 +238,8 @@ VALUE_FR = {"disabled": "Désactivé", "enabled": "Activé", "auto": "Auto", "Au
 CATEGORY_FR = {"system": "Système", "video": "Vidéo", "audio": "Audio", "input": "Entrées",
                "emulation": "Émulation", "hacks": "Hacks", "network": "Réseau", "hotkey": "Raccourcis",
                "hw_hacks": "Hacks matériels", "gs": "Rendu (GS)", "texture_replacement": "Remplacement de textures",
-               "upscaling": "Mise à l'échelle", "performance": "Performances", "cheats": "Codes de triche"}
+               "upscaling": "Mise à l'échelle", "performance": "Performances", "cheats": "Codes de triche",
+               "osd": "Affichage à l'écran", "memcards": "Memory cards", "pgxp": "PGXP (géométrie précise)"}
 
 
 def block(src: str, decl: str) -> str:
@@ -283,8 +286,13 @@ def scalars(entry: str):
     return tokens, values
 
 
+# option keys written as a macro in some cores (Beetle PSX HW: BEETLE_OPT(cpu_freq_scale))
+KEY_MACROS = {r"BEETLE_OPT\(\s*(\w+)\s*\)": r'"beetle_psx_hw_\1"'}
+
 for core, url in CORES.items():
-    src = strip_comments(fetch(url))
+    src = preprocess(strip_comments(fetch(url)))
+    for macro, repl in KEY_MACROS.items():
+        src = re.sub(macro, repl, src)
     cats = {}
     if "option_cats_us[]" in src:
         for e in entries(block(src, "option_cats_us[]")):

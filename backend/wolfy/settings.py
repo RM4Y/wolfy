@@ -33,6 +33,8 @@ RETROARCH_DIR = _env("RETROARCH_DIR", f"{HOST_HOME}/.var/app/org.libretro.RetroA
 RETROARCH_CORES_DIR = _env(
     "RETROARCH_CORES_DIR",
     f"{HOST_HOME}/.local/share/flatpak/app/org.libretro.RetroArch/current/active/files/share/libretro")
+# the host's flatpak Dolphin (config copied into the Wii sessions, NAND / saves shared)
+DOLPHIN_DIR = _env("DOLPHIN_DIR", f"{HOST_HOME}/.var/app/org.DolphinEmu.dolphin-emu")
 EDEN_DATA_DIR = _env("EDEN_DATA_DIR", f"{HOST_HOME}/.local/share/eden")
 EDEN_CONFIG_DIR = _env("EDEN_CONFIG_DIR", f"{HOST_HOME}/.config/eden")
 EDEN_CONFIG = Path(_env("EDEN_CONFIG", f"{EDEN_CONFIG_DIR}/qt-config.ini"))

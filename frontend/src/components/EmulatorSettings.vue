@@ -1,14 +1,16 @@
 <script setup>
-// Every setting of an emulator (Eden: qt-config.ini, RetroArch: retroarch.cfg + core options),
+// Every setting of an emulator (Eden: qt-config.ini, RetroArch: core options,
+// Dolphin: Dolphin.ini, GFX.ini…),
 // grouped in tabs, with a draft of pending changes. First tab: Wolfy's own settings.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { act, api, toast } from '../api'
 import HomeCombo from './HomeCombo.vue'
 import SettingField from './SettingField.vue'
+import WolfyDolphin from './WolfyDolphin.vue'
 import WolfyEden from './WolfyEden.vue'
 
 const props = defineProps({ emulator: { type: String, required: true } })
-const NAMES = { eden: 'Eden', retroarch: 'RetroArch', steam: 'Steam' }
+const NAMES = { eden: 'Eden', retroarch: 'RetroArch', steam: 'Steam', dolphin: 'Dolphin' }
 const name = NAMES[props.emulator] || props.emulator
 const base = `/emulator-settings/${props.emulator}`
 const open = ref({}) // collapsed/expanded groups
@@ -100,6 +102,7 @@ async function restore(backup) {
 }
 
 const backupLabel = b => b.replace('qt-config.ini.', '').replace(/\.(\d{4}-)/, ' du $1').replace('_', ' ')
+  .replace(/^(\w+\.ini) du /, '$1 du ')
 const isOpen = g => open.value[g.name] ?? (search.value || g.items.length <= BIG)
 function toggle(g) { open.value = { ...open.value, [g.name]: !isOpen(g) } }
 
@@ -146,6 +149,7 @@ defineExpose({ pending })
 
     <template v-if="tab === 'wolfy' && !search">
       <WolfyEden v-if="emulator === 'eden'" />
+      <WolfyDolphin v-else-if="emulator === 'dolphin'" />
       <HomeCombo v-else :emulator="emulator" />
     </template>
 

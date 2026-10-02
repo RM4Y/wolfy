@@ -266,3 +266,23 @@ def pull_image(ref: str) -> Job:
         job.log("Image à jour.")
 
     return run_job(f"Mise à jour {ref}", work)
+
+
+def run_container(job: Job, image: str, command: list[str], mounts: list[str], user: str,
+                  environment: dict[str, str]) -> None:
+    """One-shot container of IMAGE (entrypoint replaced by COMMAND), its output in the job log."""
+    if not image_info(image).get("present"):
+        raise RuntimeError(f"Image {image} absente : construis-la d'abord (Émulateurs)")
+    uid, _, gid = user.partition(":")
+    container = client().containers.run(image, command[1:], entrypoint=command[:1], user=user,
+                                        environment=environment, volumes=mounts, detach=True,
+                                        tmpfs={"/home/retro": f"uid={uid},gid={gid or uid}"})
+    try:
+        for chunk in container.logs(stream=True, follow=True):
+            job.log(chunk.decode(errors="replace"))
+        code = container.wait().get("StatusCode", 1)
+    finally:
+        container.remove(force=True)
+    if code:
+        raise RuntimeError(f"le conteneur s'est terminé avec le code {code}")
+

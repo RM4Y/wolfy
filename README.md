@@ -36,18 +36,30 @@ navigateur ──► Wolfy (FastAPI + Vue 3, port 8420)
   `~/.config/eden/qt-config.ini` ligne par ligne (sauvegardes dans `~/.config/eden/wolfy-backups/`) ;
   les sessions Wolf copient ce fichier à leur démarrage. Les réglages imposés par l'image Wolf
   (pseudo, IP du salon, moteur audio, interface réseau) sont affichés verrouillés.
-- Réglages RetroArch : `backend/wolfy/emulator_settings/retroarch.json`, généré depuis les sources de
-  RetroArch (configuration.c, menu_setting.c, traduction française) et des cœurs LRPS2 / PPSSPP :
-  `python3 tools/gen_retroarch_schema.py v1.22.2`. Wolfy modifie `retroarch.cfg` et `config/<cœur>/<cœur>.opt`
+- Réglages PlayStation : options des cœurs uniquement (Beetle PSX HW, LRPS2, PPSSPP), décrites par
+  `backend/wolfy/emulator_settings/retroarch.json`, généré depuis les sources des cœurs (et de RetroArch) :
+  `python3 tools/gen_retroarch_schema.py v1.22.2`. Wolfy modifie `config/<cœur>/<cœur>.opt`
   du RetroArch flatpak du PC (sauvegardes dans `wolfy-backups/`), refusé si RetroArch est ouvert sur le PC.
-- Le catalogue d'émulateurs est dans `backend/wolfy/emulators.py`. Les images locales sont construites
+  Réglages de RPCS3 (PS3) et Vita3K (PS Vita) sur la même page : `emulator_settings/rpcs3.json` et `vita3k.json`,
+  générés par `python3 tools/gen_ps_schema.py` ; Wolfy écrit leur `config.yml` dans `config/playstation/rpcs3`
+  et `config/playstation/vita3k` (sauvegardes dans `config/playstation/wolfy-backups/`).
+- Le catalogue d'émulateurs est dans `backend/wolfy/emulators.py`. Jaquettes par défaut des applis (Switch,
+  PlayStation, Wii, Steam) : `backend/wolfy/covers/`, copiées au démarrage dans le dossier `covers` de Wolf si
+  absentes, et proposées à la création d'une appli (bouton « Image par défaut » dans l'éditeur). Les images locales sont construites
   depuis `images/<émulateur>/` : `images/eden` = `wolfy-eden` (Switch, voir son README),
   `images/steam` = `wolfy-steam` (Steam, sur l'image officielle GoW : verrou de session, bibliothèques
   enregistrées dans `libraryfolders.vdf`, options de démarrage — `steam-setup.py`) ;
-  `images/retroarch` = `wolfy-retroarch` (PlayStation) : cœurs LRPS2 / PPSSPP intégrés à l'image
+  `images/retroarch` = `wolfy-retroarch` (PlayStation) : cœurs Beetle PSX HW / LRPS2 / PPSSPP intégrés à l'image
   (`/opt/wolfy/cores`, dernières versions du buildbot libretro à la construction, liste dans
   `/opt/wolfy/cores/VERSIONS`) ; les playlists partagées sont copiées dans la session avec ces cœurs et
   les changements (scans, historique, favoris) réécrits vers celles du PC (`playlist-sync.py`).
+  PS3 et PS Vita : RPCS3 et Vita3K (dernières versions à la construction, dans `/opt/rpcs3` et `/opt/vita3k` ;
+  Vita3K avec sa propre glibc, plus récente que celle de l'image) sont lancés depuis le XMB par un cœur
+  « lanceur » (`launcher-core.c` → `ps-launch`) : à chaque session, `ps-playlists.py` crée les playlists
+  « Sony - PlayStation 3 » (dossiers de jeux décryptés des dossiers de ROMs + jeux installés dans `dev_hdd0`)
+  et « Sony - PlayStation Vita » (jeux installés dans Vita3K). La combinaison HOME quitte le jeu PS3 / Vita
+  et revient au XMB. Firmwares (`PS3UPDAT.PUP`, `PSVUPDAT.PUP`) et jeux (.pkg + .rap, .vpk/.zip, .pkg + zRIF)
+  s'installent depuis Wolfy (PlayStation › BIOS, firmwares, jeux), dans un conteneur ponctuel de l'image.
 
 ## Installation
 
@@ -57,7 +69,7 @@ Une seule pile Docker (`compose.yaml`, projet `wolfy`) :
 |---|---|
 | `wolf` | Wolf (image officielle `ghcr.io/games-on-whales/wolf:stable`), réseau hôte, GPU NVIDIA |
 | `wolfy` | cette interface, construite depuis le dépôt, port 8420 |
-| `wolfy-eden`, `wolfy-retroarch`, `wolfy-steam` | images des applis Switch / PlayStation / Steam (profil `images`, construction seulement : Wolf les lance à chaque session) |
+| `wolfy-eden`, `wolfy-retroarch`, `wolfy-steam` | images des applis Switch / PlayStation (dont PS3 / PS Vita) / Steam (profil `images`, construction seulement : Wolf les lance à chaque session) |
 
 ```bash
 git clone https://github.com/RM4Y/wolfy.git && cd wolfy
@@ -93,6 +105,7 @@ Facultatif (valeurs par défaut entre parenthèses) :
 | `WOLF_DEFAULT_PROFILE` | profil Wolf des applis vues par Moonlight (`moonlight-profile-id`) |
 | `RETROARCH_DIR` | configuration du RetroArch du PC (`<HOST_HOME>/.var/app/org.libretro.RetroArch/config/retroarch`) |
 | `RETROARCH_CORES_DIR` | cœurs du RetroArch flatpak, montés dans les sessions PlayStation (`<HOST_HOME>/.local/share/flatpak/app/org.libretro.RetroArch/current/active/files/share/libretro`) |
+| `DOLPHIN_DIR` | Dolphin flatpak du PC, dont la configuration est copiée dans les sessions Wii (`<HOST_HOME>/.var/app/org.DolphinEmu.dolphin-emu`) |
 | `EDEN_CONFIG_DIR`, `EDEN_DATA_DIR` | configuration et données d'Eden sur le PC (`<HOST_HOME>/.config/eden`, `<HOST_HOME>/.local/share/eden`) |
 
 Si `RETROARCH_DIR` ou les dossiers d'Eden sont ailleurs que sous `HOST_HOME`, adapter aussi les

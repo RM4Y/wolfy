@@ -1,8 +1,9 @@
 <script setup>
-// PlayStation (RetroArch): BIOS (upload), saves, states, ROM folders; paths in "Avancé".
+// PlayStation (RetroArch): BIOS (upload), saves, states, ROM folders, PS3 / PS Vita; paths in "Avancé".
 import { computed, onMounted, ref, watch } from 'vue'
 import { act, api, toast, upload } from '../api'
 import FolderPicker from './FolderPicker.vue'
+import PsStandalone from './PsStandalone.vue'
 
 const emit = defineEmits(['close'])
 const saved = ref(null)
@@ -12,6 +13,7 @@ const defaults = ref({})
 const picking = ref(null)
 const advanced = ref(false)
 const progress = ref(null)
+const ps = ref(null)
 let checkTimer
 
 const PATHS = [
@@ -72,6 +74,7 @@ async function save() {
   if (r.apps_updated.length) parts.push(`montages de ${r.apps_updated.join(', ')} mis à jour (Wolf redémarré)`)
   toast(parts.length ? `Chemins enregistrés : ${parts.join(' · ')}` : 'Aucun changement')
   await load()
+  ps.value?.load()
 }
 
 function badge(s) {
@@ -87,7 +90,7 @@ onMounted(load)
   <div class="modal-back" @click.self="emit('close')">
     <div class="modal">
       <div class="row between" style="margin-bottom:14px">
-        <h2 style="margin:0">🎮 PlayStation (RetroArch) — BIOS, jeux, sauvegardes</h2>
+        <h2 style="margin:0">🎮 PlayStation — BIOS, firmwares, jeux, sauvegardes</h2>
         <button type="button" class="ghost sm" @click="emit('close')">✖</button>
       </div>
 
@@ -131,8 +134,12 @@ onMounted(load)
             <span class="badge" style="margin-top:4px" :class="badge(status?.roms?.[i]).cls">{{ badge(status?.roms?.[i]).text }}</span>
           </div>
           <button type="button" class="sm" @click="picking = { field: 'roms' }">＋ Ajouter un dossier</button>
-          <div class="help">Montés en lecture seule dans les sessions. Ajoute les jeux dans RetroArch avec « Importer du contenu ».</div>
+          <div class="help">Montés en lecture seule dans les sessions. PS1 / PS2 / PSP : ajoute les jeux dans RetroArch avec
+            « Importer du contenu ». PS3 / PS Vita : listés automatiquement dans le XMB.</div>
         </div>
+
+        <h3 style="margin:18px 0 10px">PS3 et PS Vita</h3>
+        <PsStandalone ref="ps" />
 
         <button type="button" class="ghost sm" @click="advanced = !advanced">{{ advanced ? '▾' : '▸' }} Avancé : emplacements</button>
         <div v-if="advanced" style="margin-top:10px">

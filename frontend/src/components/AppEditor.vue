@@ -22,7 +22,7 @@ api.get('/covers').then(r => { covers.value = r.covers; coversDir.value = r.dir 
 function fromPreset(emu, title) {
   return {
     title,
-    icon: '',
+    icon: emu.icon || '',
     emulator: emu.id,
     image: emu.image,
     rom_dir: emu.rom_dir,
@@ -30,7 +30,7 @@ function fromPreset(emu, title) {
     env: [...emu.env],
     devices: [],
     ports: [],
-    base_create_json: props.baseCreateJson,
+    base_create_json: emu.base_create_json || props.baseCreateJson,
     start_virtual_compositor: true,
     runner_type: 'docker',
     runner_name: '',
@@ -45,7 +45,9 @@ function applyPreset(id) {
   const keepTitle = form.value.title || preset.systems[0] || ''
   if (isNew || confirm(`Remplacer image, montages et variables par ceux de ${preset.name} ?`)) {
     const next = fromPreset(preset, keepTitle)
-    next.icon = form.value.icon
+    // keep a cover chosen by hand, else take the new preset's default cover
+    const previous = props.emulators.find(e => e.id === form.value.emulator)
+    if (form.value.icon && form.value.icon !== previous?.icon) next.icon = form.value.icon
     next.runner_name = form.value.runner_name
     next.notes = form.value.notes
     form.value = next
@@ -152,6 +154,8 @@ async function save() {
                   ⬆ Envoyer un PNG
                   <input type="file" accept="image/png" hidden @change="uploadCover" />
                 </label>
+                <button v-if="emu?.icon && form.icon !== emu.icon" type="button" class="sm"
+                        @click="form.icon = emu.icon">↺ Image par défaut</button>
                 <button v-if="form.icon" type="button" class="ghost sm" @click="form.icon = ''">Retirer</button>
               </div>
               <input v-model="form.icon" class="mono small" style="margin-top:8px" placeholder="chemin ou URL" />
