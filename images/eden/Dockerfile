@@ -5,6 +5,8 @@ FROM ghcr.io/games-on-whales/base-app:edge
 # AppImages can't mount (no FUSE in containers): extracted on the host beforehand
 # (./eden.AppImage --appimage-extract && mv squashfs-root eden-app)
 COPY eden/eden-app /opt/eden
+# patched Eden binary + the newer libraries it needs (eden/build/build.sh)
+COPY eden/patched/ /opt/eden/shared/
 RUN chmod -R a+rX /opt/eden
 
 COPY eden/20-fix-home-perms.sh /etc/cont-init.d/20-fix-home-perms.sh

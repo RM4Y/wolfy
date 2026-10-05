@@ -7,6 +7,8 @@ __pycache__/
 .venv/
 # extracted Eden AppImage (≈300 Mo), see images/eden/README.md
 images/eden/AppDir/
+# patched Eden binary + libraries, built by images/eden/build/build.sh
+images/eden/patched/
 *.bak-*
 # emulator data (keys, firmware, saves): never versioned
 config/
