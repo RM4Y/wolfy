@@ -23,7 +23,7 @@ async function load() {
     emulators.value = e.emulators
     baseCreateJson.value = e.base_create_json
     sessions.value = o.sessions.length
-    if (!current.value) current.value = (p.profiles.find(x => x.moonlight) || p.profiles[0])?.id
+    current.value = p.profiles.find(x => x.moonlight)?.id || ''
     error.value = ''
   } catch (err) {
     error.value = err.message
@@ -62,18 +62,10 @@ onMounted(load)
 <template>
   <div class="page-head">
     <h1>Applications</h1>
-    <select v-model="current" style="width:auto">
-      <option v-for="p in profiles" :key="p.id" :value="p.id">
-        {{ p.moonlight ? '🌙 Moonlight (appareils appairés)' : `Profil « ${p.name} »` }}
-      </option>
-    </select>
     <div class="spacer"></div>
     <button class="primary" @click="editing = null">＋ Nouvelle application</button>
   </div>
   <div v-if="error" class="alert bad">{{ error }}</div>
-  <div v-if="profile && !profile.moonlight" class="alert info" style="margin-bottom:16px">
-    Ce profil n'est pas visible par les appareils Moonlight (profil de l'interface Wolf UI).
-  </div>
 
   <div v-if="profile" class="grid cols-4">
     <div v-for="app in profile.apps" :key="app.index + app.title" class="card" style="padding:12px">
