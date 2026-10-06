@@ -112,8 +112,9 @@ EMULATORS = [
         "cover": "steam.png",
         "name": "Steam",
         "systems": ["PC (Steam, Proton)"],
-        "description": "Steam en Big Picture (image Games on Whales). Données Steam partagées entre appareils "
-                       "(une seule connexion, une session à la fois), bibliothèques montées et enregistrées.",
+        "description": "Steam en Big Picture (image Games on Whales). Données Steam partagées entre appareils ; "
+                       "les sessions lancées en même temps ont chacune leur dossier Steam (leur compte), "
+                       "bibliothèques montées et enregistrées.",
         "image": "wolfy-steam:latest",
         "build_dir": "steam",
         "settings_page": "steam",
@@ -121,7 +122,7 @@ EMULATORS = [
         "rom_dir": "",
         "mounts": [],
         "env": ["RUN_SWAY=1", *GOW_ENV],
-        "multi_session": False,
+        "multi_session": True,
     },
     {
         "id": "custom",

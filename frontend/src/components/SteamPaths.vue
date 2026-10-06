@@ -68,7 +68,9 @@ onMounted(load)
           <span class="badge" :class="badge(status?.data).cls">{{ badge(status?.data).text }}</span>
           <p class="muted small">
             <code>{{ dataPath }}</code> : installation de Steam, connexion au compte et réglages, communs à tous les
-            appareils. Steam ne peut tourner que dans une session à la fois : une deuxième session Steam est refusée.
+            appareils. Deux Steam ne peuvent pas partager un dossier : une session lancée pendant qu'une autre utilise
+            Steam prend le dossier <code>data-2</code> (puis <code>data-3</code>…), avec sa propre installation et son
+            propre compte (à connecter à sa première session).
           </p>
         </div>
 
@@ -90,8 +92,8 @@ onMounted(load)
         </div>
 
         <div class="alert warn small" style="margin:6px 0 14px">
-          Une bibliothèque est partagée avec le Steam du PC : évite de lancer Steam sur le PC et dans une session en même
-          temps (les deux mettraient à jour les mêmes jeux). Changer les bibliothèques redémarre Wolf.
+          Une bibliothèque est partagée par toutes les sessions et avec le Steam du PC : évite de mettre à jour ou
+          d'installer le même jeu depuis deux Steam en même temps. Changer les bibliothèques redémarre Wolf.
         </div>
         <div class="row end">
           <button type="button" class="ghost" @click="emit('close')">Fermer</button>

@@ -1,5 +1,5 @@
 # Wolf app image: Steam (Big Picture) on the official Games on Whales image, with Wolfy's
-# settings: shared Steam data (one login for every device, one session at a time),
+# settings: shared Steam data (one Steam folder per running session, see startup-app.sh),
 # library folders registered automatically, startup mode / overlay / Proton log, combos.
 # Build context: images/ (docker compose --profile images build, or Wolfy)
 FROM ghcr.io/games-on-whales/steam:edge

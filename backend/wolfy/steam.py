@@ -1,6 +1,8 @@
 """Steam app (wolfy-steam image): shared Steam data, library folders, startup options.
 
     config/steam/data            the sessions' ~/.steam (Steam install, login, settings)
+    config/steam/data-N          ~/.steam of the sessions started while others run Steam (one
+                                 folder per running session: images/steam/startup-app.sh)
     config/steam/wolfy/steam.json   options read at session start (images/steam/steam-setup.py)
     config/steam/wolfy/combo.json   gamepad combos (combos.py)
 
@@ -9,6 +11,7 @@ games) and registered in the sessions' Steam at start.
 """
 import json
 import os
+import re
 from pathlib import Path
 
 from fastapi import HTTPException
@@ -108,20 +111,24 @@ def normalize(path: str) -> str:
 
 
 def _session_mounts(libraries: list[str]) -> list[str]:
-    return [f"{DATA}:/home/retro/.steam:rw", f"{STEAM_DIR}/wolfy:/wolfy-config:ro"] + \
+    return [f"{STEAM_DIR}:/wolfy-steam:rw", f"{STEAM_DIR}/wolfy:/wolfy-config:ro"] + \
         [f"{d}:{d}:rw" for d in libraries]
+
+
+def _accounts(data: Path) -> list[str]:
+    """Steam accounts logged in a Steam folder (~/.steam/steam is Steam's data, not the root)."""
+    login = data / "steam" / "config" / "loginusers.vdf"
+    if not login.is_file():
+        return []
+    return re.findall(r'"PersonaName"\s+"([^"]*)"', login.read_text(errors="replace"))
 
 
 def status(libraries: list[str]) -> dict:
     data = host(DATA)
     # Steam's root: the data folder itself (steam.sh there), or its debian-installation
     install = next((r for r in (data, data / "debian-installation") if (r / "steam.sh").is_file()), None)
-    users = []
-    # Steam's data (login, libraryfolders.vdf) is ~/.steam/steam, not the install root
-    login = data / "steam" / "config" / "loginusers.vdf"
-    if login.is_file():
-        import re
-        users = re.findall(r'"PersonaName"\s+"([^"]*)"', login.read_text(errors="replace"))
+    users = _accounts(data)
+    others = [(int(d.name[5:]), _accounts(d)) for d in host(STEAM_DIR).glob("data-*") if d.name[5:].isdigit()]
     libs = []
     for d in libraries:
         if normalize(d) != _clean(d):
@@ -135,9 +142,11 @@ def status(libraries: list[str]) -> dict:
                      else "pas de dossier steamapps (bibliothèque Steam ?)"})
     return {
         "data": {"exists": data.is_dir(), "ok": bool(users),
-                 "detail": (f"compte : {', '.join(users)}" if users else
-                            "Steam installé, pas encore connecté" if install else
-                            "Steam s'installera à la première session")},
+                 "detail": "".join([f"compte : {', '.join(users)}" if users else
+                                    "Steam installé, pas encore connecté" if install else
+                                    "Steam s'installera à la première session"] +
+                                   [f" — session {n} : {', '.join(u) or 'pas encore connecté'}"
+                                    for n, u in sorted(others)])},
         "libraries": libs,
     }
 

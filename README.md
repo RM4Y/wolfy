@@ -47,7 +47,7 @@ navigateur ──► Wolfy (FastAPI + Vue 3, port 8420)
   PlayStation, Wii, Steam) : `backend/wolfy/covers/`, copiées au démarrage dans le dossier `covers` de Wolf si
   absentes, et proposées à la création d'une appli (bouton « Image par défaut » dans l'éditeur). Les images locales sont construites
   depuis `images/<émulateur>/` : `images/eden` = `wolfy-eden` (Switch, voir son README),
-  `images/steam` = `wolfy-steam` (Steam, sur l'image officielle GoW : verrou de session, bibliothèques
+  `images/steam` = `wolfy-steam` (Steam, sur l'image officielle GoW : un dossier Steam par session en cours, bibliothèques
   enregistrées dans `libraryfolders.vdf`, options de démarrage — `steam-setup.py`) ;
   `images/retroarch` = `wolfy-retroarch` (PlayStation) : cœurs Beetle PSX HW / LRPS2 / PPSSPP intégrés à l'image
   (`/opt/wolfy/cores`, dernières versions du buildbot libretro à la construction, liste dans
@@ -120,8 +120,9 @@ montages correspondants du service `wolfy` dans `compose.yaml`.
   `config/switch/users` (profils `system/save` + sauvegardes `user/save`),
   `config/playstation/bios` (dossier « system » de RetroArch : BIOS PS2 dans `pcsx2/bios`, PS1, fichiers PPSSPP),
   `config/playstation/saves`, `config/playstation/states` ;
-  `config/steam/data` (le `~/.steam` des sessions : installation, compte, réglages — une seule session
-  Steam à la fois), `config/steam/wolfy/steam.json` (options de session) ;
+  `config/steam/data` (le `~/.steam` des sessions : installation, compte, réglages ; les sessions lancées
+  pendant qu'une autre utilise Steam prennent `config/steam/data-2`, `data-3`…, chacun avec son compte),
+  `config/steam/wolfy/steam.json` (options de session) ;
   `config/<système>/wolfy/combo.json` : combinaisons de manette (menu / quitter).
   Eden sur le PC utilise les mêmes dossiers (`~/.local/share/eden/keys` est un lien vers
   `config/switch/keys`, la NAND et les sauvegardes sont réglées dans `~/.config/eden/qt-config.ini`).

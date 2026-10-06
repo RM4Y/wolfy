@@ -1,20 +1,16 @@
 #!/usr/bin/env python3
 """Session setup for the Wolf "Steam" app (settings written by Wolfy in /wolfy-config/steam.json).
 
-    steam-setup.py prepare     take the session lock, register the library folders in Steam,
-                               print the shell exports for the startup options (exit 1 if
-                               Steam already runs in another session)
-    steam-setup.py heartbeat   keep the lock alive while the session runs
+    steam-setup.py prepare     register the library folders in Steam, print the shell exports
+                               for the startup options
 
-~/.steam is the shared config/steam/data folder: the same Steam login for every device, so
-only one session may run Steam at a time (two Steam clients on one data folder corrupt it).
+~/.steam is this session's Steam folder (chosen by startup-app.sh): config/steam/data, or
+config/steam/data-N when other Steam sessions are running.
 """
 import json
-import os
 import re
 import shlex
 import sys
-import time
 from pathlib import Path
 
 SETTINGS = Path("/wolfy-config/steam.json")
@@ -24,9 +20,6 @@ STEAM = Path.home() / ".steam"
 # Steam's data folder (login, userdata, libraryfolders.vdf it actually reads): ~/.steam/steam,
 # NOT the install root ~/.steam where steam.sh lives (a libraryfolders.vdf there is ignored)
 STEAMDIR = STEAM / "steam"
-LOCK = STEAM / ".wolfy-session.json"
-SESSION = os.environ.get("WOLF_SESSION_ID", "")
-STALE = 45  # s without heartbeat = the session holding the lock is gone
 
 DEFAULT = {"libraries": [], "startup_mode": "bigpicture", "compositor": "sway",
            "mangohud": False, "proton_log": False, "extra_flags": ""}
@@ -42,32 +35,6 @@ def settings() -> dict:
         return {**DEFAULT, **json.loads(SETTINGS.read_text())}
     except (OSError, ValueError):
         return dict(DEFAULT)
-
-
-# ------------------------------------------------------------------ lock
-
-def take_lock() -> bool:
-    STEAM.mkdir(parents=True, exist_ok=True)
-    try:
-        held = json.loads(LOCK.read_text())
-    except (OSError, ValueError):
-        held = {}
-    if held.get("session") not in (None, SESSION) and time.time() - held.get("heartbeat", 0) < STALE:
-        log(f"Steam data in use by session {held['session']}")
-        return False
-    LOCK.write_text(json.dumps({"session": SESSION, "heartbeat": time.time()}))
-    return True
-
-
-def heartbeat() -> None:
-    while True:
-        time.sleep(15)
-        try:
-            held = json.loads(LOCK.read_text())
-            if held.get("session") == SESSION:
-                LOCK.write_text(json.dumps({"session": SESSION, "heartbeat": time.time()}))
-        except (OSError, ValueError):
-            pass
 
 
 # ------------------------------------------------------------------ libraryfolders.vdf
@@ -142,8 +109,6 @@ def register_libraries(paths: list[str]) -> None:
 
 def prepare() -> int:
     s = settings()
-    if not take_lock():
-        return 1
     try:
         register_libraries(s["libraries"])
     except Exception as exc:  # never block Steam over this
@@ -164,7 +129,5 @@ def prepare() -> int:
 if __name__ == "__main__":
     if sys.argv[1:] == ["prepare"]:
         sys.exit(prepare())
-    elif sys.argv[1:] == ["heartbeat"]:
-        heartbeat()
     else:
         sys.exit(__doc__)
