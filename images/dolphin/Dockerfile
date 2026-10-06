@@ -3,7 +3,8 @@
 # Menu channels (dolphin_forwarders.ini in the shared NAND), so games are picked and
 # switched with the Wii Remote only.
 # Shares the host flatpak Dolphin setup mounted by Wolf (config copied per session, NAND,
-# saves and memory cards shared). Pads: the Wolf pads drive emulated Wii Remotes / GameCube
+# saves and memory cards: the PC's for the first session, a console of their own for the
+# sessions started meanwhile, see startup-app.sh). Pads: the Wolf pads drive emulated Wii Remotes / GameCube
 # pads (SDL mappings written at session start); real Wii Remotes go through the host's
 # Bluetooth (the app runs in the host network namespace, see backend/wolfy/emulators.py).
 # Build context: images/ (docker compose --profile images build, or Wolfy)
@@ -52,7 +53,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libqt6widgets6 libqt6gui6 libqt6svg6 libqt6dbus6 qt6-qpa-plugins libxcb-cursor0 \
       libevdev2 libudev1 libxi6 libxrandr2 libegl1 libgl1 libvulkan1 libbluetooth3 libpulse0 \
       libusb-1.0-0 libhidapi-hidraw0 libcurl4t64 libzstd1 liblzma5 \
-      libavcodec61 libavformat61 libavutil59 libswscale8 libswresample5 \
+      libavcodec61 libavformat61 libavutil59 libswscale8 libswresample5 rsync \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /opt/dolphin /opt/dolphin
 # every library resolved (a missing one fails the build here, not in a session)
@@ -66,8 +67,9 @@ RUN sed -i '/^bar swaybar_command waybar/d' /cfg/sway/config \
 COPY common/home-combo.py /opt/gow/home-combo.py
 COPY dolphin/dolphin-setup.py /opt/gow/dolphin-setup.py
 COPY dolphin/dolphin-run.sh /opt/gow/dolphin-run.sh
+COPY dolphin/console-data.sh /opt/gow/console-data.sh
 COPY dolphin/host-pads.py /opt/gow/host-pads.py
 COPY dolphin/40-host-pads.sh /etc/cont-init.d/40-host-pads.sh
 COPY dolphin/startup-app.sh /opt/gow/startup-app.sh
-RUN chmod +x /opt/gow/home-combo.py /opt/gow/dolphin-setup.py /opt/gow/dolphin-run.sh /opt/gow/startup-app.sh \
+RUN chmod +x /opt/gow/home-combo.py /opt/gow/dolphin-setup.py /opt/gow/dolphin-run.sh /opt/gow/console-data.sh /opt/gow/startup-app.sh \
       /opt/gow/host-pads.py /etc/cont-init.d/40-host-pads.sh

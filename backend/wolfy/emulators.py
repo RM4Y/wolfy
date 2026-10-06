@@ -79,7 +79,8 @@ EMULATORS = [
         "description": "Démarre sur le menu Wii (Dolphin Better Wii Menu DE : les jeux y sont des chaînes, "
                        "choisis à la Wiimote). Manettes : Wiimote + Nunchuk simulés, ou vraies "
                        "Wiimotes via le Bluetooth du serveur. Configuration, NAND et sauvegardes partagées "
-                       "avec le Dolphin flatpak du PC. Une session à la fois.",
+                       "avec le Dolphin flatpak du PC ; les sessions lancées en même temps ont chacune leur "
+                       "console (NAND et cartes mémoire à part, manettes de la session).",
         "image": "wolfy-dolphin:latest",
         "build_dir": "dolphin",
         "settings_page": "dolphin",
@@ -92,7 +93,7 @@ EMULATORS = [
         ],
         "env": ["RUN_SWAY=1", *GOW_ENV],
         "base_create_json": DOLPHIN_CREATE_JSON,
-        "multi_session": False,
+        "multi_session": True,
     },
     {
         "id": "gow-retroarch",

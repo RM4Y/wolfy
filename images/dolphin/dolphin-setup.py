@@ -8,6 +8,8 @@ The host flatpak Dolphin config (/dolphin-config-host, read-only) is copied to t
   host-pads.py), a real Wii Remote through the host's Bluetooth ("real") or empty ("none");
 - GameCube port n is driven by player n's pad (Wolf pad or PC gamepad);
 - Back + Guide stops the emulation (dolphin-run.sh starts the Wii Menu again).
+On Wii console 2+ (another session runs on console 1, see startup-app.sh) every player is
+on a Wolf pad: the real Wii Remotes and PC gamepads stay with console 1.
 
 Settings: /wolfy-config/dolphin.json (written by Wolfy), e.g.
     {"wiimotes": ["real", "pad", "host", "none"], "nunchuk": true,
@@ -45,6 +47,10 @@ def settings() -> dict:
     data["wiimotes"] = slots + ["none"] * (4 - len(slots))
     hosts = list(data.get("host_pads") or [])[:4]
     data["host_pads"] = hosts + [None] * (4 - len(hosts))
+    if os.environ.get("WOLFY_CONSOLE", "0") != "0":
+        # Wii console 2+ (startup-app.sh): the real Wii Remotes and PC gamepads are console
+        # 1's, this session's players are on its Wolf pads
+        data["wiimotes"] = ["pad" if s in ("real", "host") else s for s in data["wiimotes"]]
     for i, source in enumerate(data["wiimotes"]):  # PC gamepad not chosen yet: slot unused
         if source == "host" and not (data["host_pads"][i] or {}).get("sdl_name"):
             data["wiimotes"][i] = "none"

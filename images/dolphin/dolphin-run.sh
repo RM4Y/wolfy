@@ -16,6 +16,11 @@ sock="/tmp/.X11-unix/X${n%%.*}"  # ":0.0" -> X0
 for _ in $(seq 20); do [ -S "$sock" ] && break; sleep 0.5; done
 export DISPLAY="$sock"
 echo "=== $(date '+%F %T') session ${WOLF_SESSION_ID} DISPLAY=$DISPLAY"
+# consoles 2+ (a session already runs on console 1): their own data dir (console-data.sh)
+if [ "${WOLFY_CONSOLE:-0}" -gt 0 ]; then
+    export XDG_DATA_HOME="$HOME/.local/share/dolphin-emu/Wolfy/console-$((WOLFY_CONSOLE + 1))"
+fi
+echo "=== Wii console $((${WOLFY_CONSOLE:-0} + 1)), data: ${XDG_DATA_HOME:-$HOME/.local/share}/dolphin-emu"
 fails=0
 while [ "$fails" -lt 3 ]; do
     start=$(date +%s)

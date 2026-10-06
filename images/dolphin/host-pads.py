@@ -7,6 +7,8 @@ gamepads among the host's input devices (/proc/bus/input is not namespaced) and 
 their /dev/input/eventN node in the container (removed when the pad disconnects). Dolphin's
 SDL watches /dev/input (SDL_JOYSTICK_DISABLE_UDEV=1), so a pad turned on later is picked up.
 
+Only for the session on Wii console 1 (one Dolphin at a time can read a PC gamepad).
+
 Settings: /wolfy-config/dolphin.json, "host_pads": one entry per player (null or
 {"name", "vendor", "product", "uniq", "sdl_name"}) for the players set to "host".
 """
@@ -20,6 +22,7 @@ from pathlib import Path
 
 SETTINGS = Path("/wolfy-config/dolphin.json")
 INPUT = Path("/dev/input")
+CONSOLE = Path("/tmp/wolfy-console")
 
 
 def log(msg):
@@ -27,7 +30,11 @@ def log(msg):
 
 
 def wanted() -> list[dict]:
+    # the PC gamepads go to the session on Wii console 1 only (startup-app.sh writes the
+    # console of this session; not written yet = not known yet)
     try:
+        if CONSOLE.read_text().strip() != "0":
+            return []
         data = json.loads(SETTINGS.read_text())
     except (OSError, ValueError):
         return []
