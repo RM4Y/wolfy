@@ -10,7 +10,8 @@ const routes = [
   { path: '/applications', component: () => import('./views/Apps.vue'), meta: { title: 'Applications' } },
   { path: '/applications/:profile/:index', component: () => import('./views/AppConfig.vue'), meta: { title: 'Configuration' } },
   { path: '/emulateurs', component: () => import('./views/Emulators.vue'), meta: { title: 'Émulateurs' } },
-  { path: '/maintenance', component: () => import('./views/Maintenance.vue'), meta: { title: 'Maintenance' } },
+  { path: '/parametres', component: () => import('./views/Maintenance.vue'), meta: { title: 'Paramètres' } },
+  { path: '/maintenance', redirect: '/parametres' },
 ]
 
 const router = createRouter({ history: createWebHistory(), routes })

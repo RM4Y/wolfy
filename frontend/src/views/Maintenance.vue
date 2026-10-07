@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { act, ago, api, bytes } from '../api'
+import { act, ago, api, bytes, toast } from '../api'
 import JobLog from '../components/JobLog.vue'
 
 const emit = defineEmits(['refresh'])
@@ -12,16 +12,31 @@ const filter = ref('')
 const jobId = ref('')
 const jobs = ref([])
 const error = ref('')
+const publicHost = ref('')  // Wolfy's address from outside (reverse proxy)
+const savedHost = ref('')
 
 async function load() {
   try {
-    const [o, maint, j] = await Promise.all([api.get('/overview'), api.get('/maintenance'), api.get('/jobs')])
+    const [o, maint, j, st] = await Promise.all([api.get('/overview'), api.get('/maintenance'), api.get('/jobs'),
+      api.get('/settings')])
+    savedHost.value = publicHost.value = st.public_host
     wolf.value = { ...o.wolf, sessions: o.sessions.length }
     m.value = maint
     jobs.value = j.jobs
     error.value = ''
   } catch (e) {
     error.value = e.message
+  }
+}
+
+// "https://wolfy.rm4.fr/" -> "wolfy.rm4.fr"
+const cleanHost = h => h.trim().replace(/^[a-z]+:\/\//i, '').replace(/\/.*$/, '').toLowerCase()
+
+async function saveHost() {
+  const r = await act('Enregistrement', () => api.put('/settings', { public_host: cleanHost(publicHost.value) }))
+  if (r) {
+    savedHost.value = publicHost.value = r.public_host
+    toast('Adresse externe enregistrée')
   }
 }
 
@@ -78,8 +93,20 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="page-head"><h1>Maintenance</h1></div>
+  <div class="page-head"><h1>Paramètres</h1></div>
   <div v-if="error" class="alert bad">{{ error }}</div>
+
+  <div v-if="wolf" class="card">
+    <h2 style="margin:0 0 4px">🌐 Adresse externe</h2>
+    <div class="muted small" style="margin-bottom:12px">
+      Nom de domaine de Wolfy depuis internet (proxy https, ex. <code>wolfy.rm4.fr</code>). Utilisé par l'EspBar
+      (Wii › EspBar) : <code>wss://{{ cleanHost(publicHost) || 'nom-de-domaine' }}/api/espbar/ws</code>.
+    </div>
+    <form class="row" style="gap:8px" @submit.prevent="saveHost">
+      <input v-model="publicHost" placeholder="wolfy.exemple.fr" maxlength="200" style="flex:1;min-width:220px" />
+      <button type="submit" class="primary" :disabled="cleanHost(publicHost) === savedHost">💾 Enregistrer</button>
+    </form>
+  </div>
 
   <div v-if="wolf" class="card">
     <div class="row between">

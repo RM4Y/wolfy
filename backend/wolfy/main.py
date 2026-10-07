@@ -612,6 +612,24 @@ def wolf_logs(tail: int = 300):
     return {"logs": docker_ops.wolf_logs(min(max(tail, 10), 5000))}
 
 
+# ------------------------------------------------------------------- Wolfy settings
+
+class WolfySettings(BaseModel):
+    # address of Wolfy from outside (reverse proxy), e.g. wolfy.rm4.fr; empty = none
+    public_host: str = Field("", max_length=200, pattern=r"^([A-Za-z0-9.-]+(:\d+)?)?$")
+
+
+@api.get("/settings")
+def get_settings():
+    return {"public_host": store.get("settings").get("public_host", "")}
+
+
+@api.put("/settings")
+def set_settings(body: WolfySettings):
+    store.put("settings", "public_host", body.public_host.strip().lower() or None)
+    return get_settings()
+
+
 @api.get("/maintenance")
 def maintenance():
     doc = wolf_config.load()

@@ -56,7 +56,7 @@ onUnmounted(() => { clearTimeout(timer); window.removeEventListener('wolfy:logou
         </router-link>
         <router-link to="/applications">🎮 Applications</router-link>
         <router-link to="/emulateurs">🧩 Émulateurs</router-link>
-        <router-link to="/maintenance">🛠️ Maintenance</router-link>
+        <router-link to="/parametres">⚙️ Paramètres</router-link>
       </nav>
       <div class="side-foot">
         <button class="ghost sm" @click="logout">↩ Déconnexion</button>
