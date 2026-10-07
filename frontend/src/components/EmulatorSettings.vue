@@ -4,6 +4,7 @@
 // grouped in tabs, with a draft of pending changes. First tab: Wolfy's own settings.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { act, api, toast } from '../api'
+import EspBar from './EspBar.vue'
 import HomeCombo from './HomeCombo.vue'
 import SettingField from './SettingField.vue'
 import WolfyDolphin from './WolfyDolphin.vue'
@@ -140,6 +141,9 @@ defineExpose({ pending })
       <button v-for="t in data.tabs" :key="t.id" type="button" :class="{ active: tab === t.id }" @click="tab = t.id">
         {{ t.label }} <span class="muted small">{{ counts[t.id] || 0 }}</span>
       </button>
+      <button v-if="emulator === 'dolphin'" type="button" :class="{ active: tab === 'espbar' }" @click="tab = 'espbar'">
+        📡 EspBar
+      </button>
     </div>
     <div v-else class="muted small" style="margin-bottom:10px">{{ visible.length }} résultat(s)</div>
 
@@ -153,6 +157,8 @@ defineExpose({ pending })
       <HomeCombo v-else :emulator="emulator" />
     </template>
 
+    <EspBar v-if="tab === 'espbar' && !search" />
+
     <div v-for="g in groups" :key="g.name" class="card" style="padding:8px 4px;margin-bottom:14px">
       <h3 class="group-title" @click="toggle(g)">
         {{ isOpen(g) ? '▾' : '▸' }} {{ g.name }} <span class="muted small">{{ g.items.length }}</span>
@@ -162,7 +168,7 @@ defineExpose({ pending })
                       :modified="!!draft[id(it)]" @update="v => update(it, v)" @reset="reset(it)" />
       </template>
     </div>
-    <div v-if="!groups.length && (tab !== 'wolfy' || search)" class="empty card">Aucun réglage.</div>
+    <div v-if="!groups.length && (!['wolfy', 'espbar'].includes(tab) || search)" class="empty card">Aucun réglage.</div>
 
     <div v-if="pending" class="savebar">
       <span><b>{{ pending }}</b> modification(s) non enregistrée(s)</span>

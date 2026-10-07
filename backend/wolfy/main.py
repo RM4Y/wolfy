@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import auth, combos, dolphin_config, docker_ops, eden_config, eden_paths, ps_paths, ra_config, ra_paths, steam, emulators, settings, store, wolf_api, wolf_config
+from . import auth, combos, dolphin_config, docker_ops, eden_config, espbar, eden_paths, ps_paths, ra_config, ra_paths, steam, emulators, settings, store, wolf_api, wolf_config
 
 app = FastAPI(title="Wolfy", docs_url="/api/docs", openapi_url="/api/openapi.json")
 public = APIRouter(prefix="/api")
@@ -156,6 +156,8 @@ async def update_client(client_id: str, body: ClientUpdate):
 async def unpair(client_id: str):
     await wolf_api.post("unpair/client", {"client_id": client_id})
     store.put("clients", client_id, None)
+    if espbar.client_id() == client_id:
+        espbar.link(None)
     return {"ok": True}
 
 
@@ -529,6 +531,50 @@ def set_wolfy_dolphin(body: DolphinWolfy):
 @api.get("/emulator-settings/dolphin/host-pads")
 def dolphin_host_pads():
     return {"pads": dolphin_config.host_pads()}
+
+
+# ------------------------------------------------------------------- EspBar (ESP32 of the Wii sessions)
+
+@api.get("/espbar")
+async def get_espbar():
+    clients = (await wolf_api.get("clients")).get("clients", [])
+    names = store.get("clients")
+    return {
+        "firmware": espbar.firmware(),
+        "client_id": espbar.client_id(),
+        "clients": [{"client_id": c["client_id"],
+                     "name": names.get(c["client_id"], {}).get("name", ""),
+                     "client_ip": names.get(c["client_id"], {}).get("client_ip", "")} for c in clients],
+    }
+
+
+@api.post("/espbar/firmware")
+async def upload_espbar_firmware(file: UploadFile = File(...)):
+    data = await file.read()
+    return await run_in_threadpool(espbar.upload, file.filename or "", data)
+
+
+@api.get("/espbar/firmware")
+def download_espbar_firmware():
+    if not (meta := espbar.firmware()):
+        raise HTTPException(404, "Aucun programme")
+    return FileResponse(espbar.PATH, media_type="application/octet-stream", filename=meta["filename"])
+
+
+@api.delete("/espbar/firmware")
+def delete_espbar_firmware():
+    espbar.delete()
+    return {"ok": True}
+
+
+class EspBarLink(BaseModel):
+    client_id: str | None = None
+
+
+@api.put("/espbar/client")
+def link_espbar(body: EspBarLink):
+    espbar.link(body.client_id)
+    return {"ok": True}
 
 
 # ------------------------------------------------------------------- covers
