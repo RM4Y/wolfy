@@ -290,9 +290,9 @@ def set_ra_paths(body: RaPaths):
 
 
 @api.post("/emulators/retroarch/bios")
-async def upload_ra_bios(files: list[UploadFile] = File(...)):
+async def upload_ra_bios(files: list[UploadFile] = File(...), console: str = ""):
     data = [(f.filename or "", await f.read()) for f in files]
-    result = await run_in_threadpool(ra_paths.upload_bios, data)
+    result = await run_in_threadpool(ra_paths.upload_bios, data, console)
     return {**result, "status": ra_paths.status(ra_paths.current())}
 
 

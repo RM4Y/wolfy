@@ -269,13 +269,15 @@ def pull_image(ref: str) -> Job:
 
 
 def run_container(job: Job, image: str, command: list[str], mounts: list[str], user: str,
-                  environment: dict[str, str]) -> None:
-    """One-shot container of IMAGE (entrypoint replaced by COMMAND), its output in the job log."""
+                  environment: dict[str, str], check: bool = True) -> int:
+    """One-shot container of IMAGE (entrypoint replaced by COMMAND), its output in the job log.
+    Fails on a non-zero exit code, unless check=False (the caller checks the result): returns it."""
     if not image_info(image).get("present"):
         raise RuntimeError(f"Image {image} absente : construis-la d'abord (Émulateurs)")
     uid, _, gid = user.partition(":")
+    # init: a tiny PID 1 that reaps and forwards signals (xvfb-run hangs forever as PID 1)
     container = client().containers.run(image, command[1:], entrypoint=command[:1], user=user,
-                                        environment=environment, volumes=mounts, detach=True,
+                                        environment=environment, volumes=mounts, detach=True, init=True,
                                         tmpfs={"/home/retro": f"uid={uid},gid={gid or uid}"})
     try:
         for chunk in container.logs(stream=True, follow=True):
@@ -283,6 +285,7 @@ def run_container(job: Job, image: str, command: list[str], mounts: list[str], u
         code = container.wait().get("StatusCode", 1)
     finally:
         container.remove(force=True)
-    if code:
+    if code and check:
         raise RuntimeError(f"le conteneur s'est terminé avec le code {code}")
+    return code
 

@@ -183,14 +183,15 @@ def _owner(path: Path) -> str:
     return f"{st.st_uid}:{st.st_gid}"
 
 
-def _run(job, script: str, file: str | None) -> None:
+def _run(job, script: str, file: str | None, check: bool = True) -> int:
     """Run SCRIPT (bash) in a one-shot PlayStation container, data folders mounted as in a session."""
     ensure_dirs()
     mounts = session_mounts()
     if file:
         mounts.append(f"{file}:{file}:ro")
-    docker_ops.run_container(job, IMAGE, ["/bin/bash", "-c", script], mounts, user=_owner(PS_DIR),
-                             environment={"HOME": "/home/retro", "XDG_CONFIG_HOME": "/home/retro/.config"})
+    return docker_ops.run_container(job, IMAGE, ["/bin/bash", "-c", script], mounts, user=_owner(PS_DIR),
+                                    environment={"HOME": "/home/retro", "XDG_CONFIG_HOME": "/home/retro/.config"},
+                                    check=check)
 
 
 def _q(text: str) -> str:
@@ -199,23 +200,36 @@ def _q(text: str) -> str:
 
 def install_ps3_firmware(job, file: str) -> None:
     job.log(f"Installation du firmware PS3 : {file}")
-    _run(job, f"/opt/rpcs3/AppRun --headless --installfw {_q(file)}", file)
+    marker = RPCS3_DIR / "dev_flash" / "vsh" / "etc" / "version.txt"
+    before = marker.stat().st_mtime if marker.is_file() else None
+    # RPCS3 often crashes while quitting after a headless install (exit code 134 / 139):
+    # the firmware files tell whether it worked
+    code = _run(job, f"/opt/rpcs3/AppRun --headless --installfw {_q(file)}", file, check=False)
     version = ps3_firmware()
-    if not version:
-        raise RuntimeError("RPCS3 n'a pas installé le firmware (fichier PS3UPDAT.PUP valide ?)")
+    if not version or marker.stat().st_mtime == before:
+        raise RuntimeError("RPCS3 n'a pas installé le firmware (fichier PS3UPDAT.PUP valide ?)"
+                           + (f" — code de sortie {code}" if code else ""))
+    if code:
+        job.log(f"(RPCS3 s'est fermé avec le code {code} après l'installation : sans conséquence)")
     job.log(f"Firmware PS3 {version} installé.")
 
 
 def install_vita_firmware(job, file: str) -> None:
     job.log(f"Installation du firmware PS Vita : {file}")
     _run(job, f"xvfb-run -a /opt/vita3k/usr/bin/Vita3K --firmware {_q(file)}", file)
-    job.log(f"Firmware : {vita_firmware() or 'non détecté (fichier valide ?)'}")
+    version = vita_firmware()
+    if not version:
+        raise RuntimeError("Vita3K n'a pas installé le firmware (fichier PSVUPDAT.PUP valide ?)")
+    job.log(f"Firmware PS Vita {version} installé.")
 
 
 def install_ps3_pkg(job, file: str) -> None:
     job.log(f"Installation du pkg PS3 : {file}")
     before = {g["id"] for g in ps3_games([])}
-    _run(job, f"/opt/rpcs3/AppRun --headless --installpkg {_q(file)}", file)
+    # same crash on quit as the firmware install: judged by what got installed
+    code = _run(job, f"/opt/rpcs3/AppRun --headless --installpkg {_q(file)}", file, check=False)
+    if code:
+        job.log(f"(RPCS3 s'est fermé avec le code {code})")
     new = [g["title"] for g in ps3_games([]) if g["id"] not in before]
     job.log(f"Installé : {', '.join(new)}" if new else "Paquet installé (mise à jour / DLC, ou jeu déjà présent).")
 

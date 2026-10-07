@@ -1,45 +1,26 @@
 <script setup>
-// PS3 (RPCS3) and PS Vita (Vita3K) in the PlayStation app: firmware, games, installs from the ROM folders.
-import { onMounted, ref } from 'vue'
-import { api, bytes, toast, upload } from '../api'
+// PS3 (RPCS3) and PS Vita (Vita3K) in the PlayStation app: games, installs from the ROM folders
+// (their firmwares are with the BIOS, in RetroArchPaths.vue, which loads the data).
+import { ref } from 'vue'
+import { api, bytes, toast } from '../api'
 import JobLog from './JobLog.vue'
 
-const data = ref(null)
-const progress = ref({})
+defineProps({ data: { type: Object, default: null } })
+const emit = defineEmits(['reload'])
 const zrif = ref({})
 const jobId = ref('')
 const showGames = ref({})
 
 const SYSTEMS = [
-  { id: 'ps3', title: '🎮 PS3 (RPCS3)', pup: 'PS3UPDAT.PUP',
+  { id: 'ps3', title: '🎮 PS3 (RPCS3)',
     help: 'Jeux disque : dossiers décryptés (<jeu>/PS3_GAME/…) dans un dossier de jeux, utilisés tels quels. Jeux PSN, mises à jour, DLC : .pkg (+ licence .rap) à installer ci-dessous.' },
-  { id: 'vita', title: '🎮 PS Vita (Vita3K)', pup: 'PSVUPDAT.PUP',
+  { id: 'vita', title: '🎮 PS Vita (Vita3K)',
     help: 'Les jeux sont installés dans Vita3K : .vpk / .zip / dossier (dumps NoNpDrm), ou .pkg + licence zRIF.' },
 ]
 const KINDS = {
   'ps3-pkg': 'PS3 · paquet', 'ps3-rap': 'PS3 · licence', 'ps3-firmware': 'PS3 · firmware',
   'vita-pkg': 'Vita · paquet (zRIF)', 'vita-archive': 'Vita · archive', 'vita-folder': 'Vita · dossier',
   'vita-firmware': 'Vita · firmware',
-}
-
-async function load() {
-  try { data.value = await api.get('/emulators/retroarch/ps') } catch (e) { toast(e.message, 'error') }
-}
-
-async function sendFirmware(system, files) {
-  if (!files?.length) return
-  const fd = new FormData()
-  fd.append('file', files[0], files[0].name)
-  progress.value = { ...progress.value, [system]: 0 }
-  try {
-    const r = await upload(`/emulators/retroarch/ps/firmware/${system}`, fd,
-      p => (progress.value = { ...progress.value, [system]: p }))
-    jobId.value = r.job.id
-  } catch (e) {
-    toast(e.message, 'error')
-  } finally {
-    progress.value = { ...progress.value, [system]: null }
-  }
 }
 
 async function install(item) {
@@ -52,8 +33,6 @@ async function install(item) {
   }
 }
 
-onMounted(load)
-defineExpose({ load })
 </script>
 
 <template>
@@ -61,14 +40,6 @@ defineExpose({ load })
     <div class="grid cols-2" style="gap:12px">
       <div v-for="s in SYSTEMS" :key="s.id" class="card box">
         <h3>{{ s.title }}</h3>
-        <span class="badge" :class="data[s.id].firmware ? 'ok' : 'warn'">
-          {{ data[s.id].firmware ? `Firmware ${data[s.id].firmware}` : 'Firmware manquant' }}
-        </span>
-        <label class="btn sm" :class="{ disabled: progress[s.id] != null }">
-          ⬆ Envoyer {{ s.pup }}
-          <input type="file" accept=".pup,.PUP" hidden @change="sendFirmware(s.id, $event.target.files); $event.target.value = ''" />
-        </label>
-        <progress v-if="progress[s.id] != null" :value="progress[s.id]" max="1"></progress>
         <button type="button" class="ghost sm" @click="showGames[s.id] = !showGames[s.id]">
           {{ showGames[s.id] ? '▾' : '▸' }} {{ data[s.id].games.length }} jeu(x)
         </button>
@@ -97,14 +68,12 @@ defineExpose({ load })
   </template>
   <div v-else class="empty"><div class="spinner" style="margin:auto"></div></div>
 
-  <JobLog v-if="jobId" :job-id="jobId" @close="jobId = ''" @done="load" />
+  <JobLog v-if="jobId" :job-id="jobId" @close="jobId = ''" @done="emit('reload')" />
 </template>
 
 <style scoped>
 .box { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; background: var(--card-2); }
 .box h3, .box p { margin: 0; }
-.btn.disabled { pointer-events: none; opacity: .5; }
-progress { width: 100%; accent-color: var(--accent); }
 .games { margin: 0; padding-left: 18px; max-height: 200px; overflow: auto; align-self: stretch; }
 .install { padding: 6px 0; border-bottom: 1px solid var(--border, rgba(127,127,127,.2)); gap: 8px; }
 .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

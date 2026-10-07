@@ -12,6 +12,7 @@ options and playlists stay in RetroArch's own folder. The PS3 / PS Vita emulator
 (ps_paths.py) are mounted too; the sessions look for PS3 games in every ROM folder
 (config/playstation/wolfy/ps-dirs.json, read by ps-playlists.py).
 """
+import hashlib
 import json
 import io
 import os
@@ -33,13 +34,28 @@ DEFAULTS = {
     "bios": f"{PS_DIR}/bios",
     "saves": f"{PS_DIR}/saves",
     "states": f"{PS_DIR}/states",
-    "roms": [f"{settings.GAMES_DIR}/ROMS/{s}" for s in ("ps2", "psp", "psx", "ps3", "psvita")],
+    "roms": [f"{settings.GAMES_DIR}/ROMS/{s}" for s in ("psx", "ps2", "ps3", "psp", "psvita")],
 }
+# ROM folders are listed in console order (by folder name), the others after
+CONSOLE_ORDER = (("psx", "ps1"), ("ps2",), ("ps3",), ("psp",), ("psvita", "vita"))
+
+
+def sort_roms(dirs: list[str]) -> list[str]:
+    def rank(d: str) -> int:
+        name = Path(d).name.lower()
+        return next((i for i, names in enumerate(CONSOLE_ORDER) if name in names), len(CONSOLE_ORDER))
+    return sorted(dirs, key=rank)  # stable: same console / unknown keep their order
 CFG_KEYS = {"bios": "system_directory", "saves": "savefile_directory", "states": "savestate_directory"}
 GAME_EXT = (".iso", ".bin", ".cue", ".chd", ".cso", ".pbp", ".elf", ".m3u", ".img", ".mdf", ".zso")
 
 PS2_BIOS_SIZE = 4 * 1024 * 1024
 PS1_BIOS_SIZE = 512 * 1024
+# PS1 BIOS read by Beetle PSX HW, by file name (Japan, North America, Europe); MD5 of the
+# good dumps, so a BIOS sent under another name is stored under the right one
+PS1_BIOS = {"scph5500.bin": ("Japon", "8dd7d5296a650fac7319bce665a6a53c"),
+            "scph5501.bin": ("Amérique du Nord", "490f666e1afb15b7362b406ed1cea246"),
+            "scph5502.bin": ("Europe", "32736f17079d0b2b7024407c39bd3050")}
+PS1_BY_MD5 = {md5: name for name, (_, md5) in PS1_BIOS.items()}
 PS2_COMPANIONS = (".nvm", ".mec", ".rom1", ".rom2", ".erom")
 
 
@@ -107,7 +123,7 @@ def host_retroarch_running() -> bool:
 def current() -> dict:
     cfg = read_cfg()
     paths = {k: _expand(cfg.get(key, "")) for k, key in CFG_KEYS.items()}
-    paths["roms"] = store.get("emulator_paths").get("retroarch", {}).get("roms", DEFAULTS["roms"])
+    paths["roms"] = sort_roms(store.get("emulator_paths").get("retroarch", {}).get("roms", DEFAULTS["roms"]))
     return paths
 
 
@@ -121,15 +137,20 @@ def bios_files(path: str) -> dict:
                  if f.is_file() and f.stat().st_size == PS2_BIOS_SIZE) if (root / "pcsx2" / "bios").is_dir() else []
     ps1 = sorted(f.name for f in root.glob("*") if f.is_file() and f.stat().st_size == PS1_BIOS_SIZE) \
         if root.is_dir() else []
-    return {"ps2": ps2, "ps1": ps1, "ppsspp": (root / "PPSSPP").is_dir()}
+    return {"ps2": ps2, "ps1": ps1, "ps1_known": [n for n in ps1 if n.lower() in PS1_BIOS],
+            "ppsspp": (root / "PPSSPP").is_dir()}
 
 
 def status(paths: dict) -> dict:
     out = {}
     b = bios_files(paths["bios"])
-    parts = [f"PS2 : {', '.join(b['ps2']) or 'aucun'}", f"PS1 : {', '.join(b['ps1']) or 'aucun (facultatif)'}"]
-    out["bios"] = {"exists": host(paths["bios"]).is_dir(), "ok": bool(b["ps2"]),
-                   "detail": " · ".join(parts), "files": b}
+    exists = host(paths["bios"]).is_dir()
+    regions = [PS1_BIOS[n.lower()][0] for n in b["ps1_known"]]
+    out["bios_ps2"] = {"exists": exists, "ok": bool(b["ps2"]), "files": b["ps2"],
+                       "detail": ", ".join(b["ps2"]) or "manquant"}
+    out["bios_ps1"] = {"exists": exists, "ok": bool(regions), "files": b["ps1"],
+                       "detail": ", ".join(regions) if regions else
+                       ("non reconnu (doit être scph5500/5501/5502.bin)" if b["ps1"] else "manquant")}
     for k, label in (("saves", "fichier(s) de sauvegarde"), ("states", "état(s) sauvegardé(s)")):
         p = host(paths[k])
         out[k] = {"exists": p.is_dir(), "ok": p.is_dir(), "detail": f"{_count(p)} {label}"}
@@ -162,7 +183,7 @@ def write_ps_dirs(roms: list[str]) -> None:
 def apply(paths: dict, restart_wolf) -> dict:
     paths = {
         **{k: _clean(paths.get(k) or DEFAULTS[k]) for k in ("bios", "saves", "states")},
-        "roms": list(dict.fromkeys(_clean(d) for d in paths.get("roms", []) if d.strip())),
+        "roms": sort_roms(list(dict.fromkeys(_clean(d) for d in paths.get("roms", []) if d.strip()))),
     }
     for k, label in (("bios", "BIOS"), ("saves", "Sauvegardes"), ("states", "États")):
         if not host(paths[k]).is_dir():
@@ -186,8 +207,10 @@ def apply(paths: dict, restart_wolf) -> dict:
 
 # ------------------------------------------------------------------ BIOS upload
 
-def upload_bios(files: list[tuple[str, bytes]]) -> dict:
-    """PS2 BIOS (4 Mo .bin + .nvm/.mec…), PS1 BIOS (512 Ko .bin), or a .zip of them."""
+def upload_bios(files: list[tuple[str, bytes]], console: str = "") -> dict:
+    """PS2 BIOS (4 Mo .bin + .nvm/.mec…), PS1 BIOS (512 Ko .bin), or a .zip of them;
+    console "ps1" / "ps2" keeps only that console's files. A known PS1 BIOS is stored under
+    the name Beetle PSX looks for (scph5500/5501/5502.bin)."""
     items: list[tuple[str, bytes]] = []
     for name, data in files:
         if name.lower().endswith(".zip"):
@@ -202,13 +225,21 @@ def upload_bios(files: list[tuple[str, bytes]]) -> dict:
         if len(data) == PS2_BIOS_SIZE:
             ps2.append((name, data))
         elif len(data) == PS1_BIOS_SIZE:
-            ps1.append((name, data))
+            ps1.append((PS1_BY_MD5.get(hashlib.md5(data).hexdigest(), name), data))
         elif low.endswith(PS2_COMPANIONS):
             companions.append((name, data))
         else:
             ignored.append(name)
+    if console == "ps1":
+        ignored += [n for n, _ in ps2 + companions]
+        ps2, companions = [], []
+    elif console == "ps2":
+        ignored += [n for n, _ in ps1]
+        ps1 = []
     if not ps2 and not ps1:
-        raise HTTPException(400, "Aucun BIOS reconnu : BIOS PS2 = fichier de 4 Mo, BIOS PS1 = 512 Ko")
+        raise HTTPException(400, {"ps1": "Aucun BIOS PS1 reconnu (fichier .bin de 512 Ko)",
+                                  "ps2": "Aucun BIOS PS2 reconnu (fichier .bin de 4 Mo)"}.get(
+            console, "Aucun BIOS reconnu : BIOS PS2 = fichier de 4 Mo, BIOS PS1 = 512 Ko"))
 
     root = Path(current()["bios"])
     stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
