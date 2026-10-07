@@ -6,7 +6,8 @@
 # saves and memory cards: the PC's for the first session, a console of their own for the
 # sessions started meanwhile, see startup-app.sh). Pads: the Wolf pads drive emulated Wii Remotes / GameCube
 # pads (SDL mappings written at session start); real Wii Remotes go through the host's
-# Bluetooth (the app runs in the host network namespace, see backend/wolfy/emulators.py).
+# Bluetooth (the app runs in the host network namespace, see backend/wolfy/emulators.py),
+# or through the EspBar (an ESP32, relayed by Wolfy: espbar/, ../../espbar).
 # Build context: images/ (docker compose --profile images build, or Wolfy)
 
 # ---------------------------------------------------------------- build (same Ubuntu as the app)
@@ -33,6 +34,9 @@ RUN f=/src/Source/Core/DolphinQt/MainWindow.cpp \
     && grep -q '  if (m_exit_requested || Settings::Instance().IsBatchModeEnabled())$' "$f" \
     && sed -i 's/^  if (m_exit_requested || Settings::Instance().IsBatchModeEnabled())$/  if (m_exit_requested || (Settings::Instance().IsBatchModeEnabled() \&\& !WiiForwarder::HasPendingForwarderBoot()))/' "$f" \
     && grep -n 'HasPendingForwarderBoot()))' "$f"
+# Wolfy EspBar: Wii Remotes connected to an ESP32 and relayed by Wolfy (espbar/IOEspBar.cpp)
+COPY dolphin/espbar /tmp/espbar
+RUN python3 /tmp/espbar/patch-dolphin.py /src
 # same options as the fork's flatpak manifest (Flatpak/org.DolphinEmu.dolphin-emu.yml)
 RUN cmake -S /src -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/dolphin \
       -DENABLE_ALSA=OFF -DENABLE_SDL=ON -DENABLE_EVDEV=ON -DENABLE_TESTS=OFF \
@@ -71,5 +75,6 @@ COPY dolphin/console-data.sh /opt/gow/console-data.sh
 COPY dolphin/host-pads.py /opt/gow/host-pads.py
 COPY dolphin/40-host-pads.sh /etc/cont-init.d/40-host-pads.sh
 COPY dolphin/startup-app.sh /opt/gow/startup-app.sh
+COPY dolphin/espbar-env.py /opt/gow/espbar-env.py
 RUN chmod +x /opt/gow/home-combo.py /opt/gow/dolphin-setup.py /opt/gow/dolphin-run.sh /opt/gow/console-data.sh /opt/gow/startup-app.sh \
-      /opt/gow/host-pads.py /etc/cont-init.d/40-host-pads.sh
+      /opt/gow/host-pads.py /opt/gow/espbar-env.py /etc/cont-init.d/40-host-pads.sh

@@ -58,6 +58,9 @@ services:
       - HOST_HOME=${HOST_HOME:?HOST_HOME manquant dans .env}
     ports:
       - "8420:8420"
+      # EspBar relay for the Wii sessions' Dolphin (host network: localhost only); the ESP32
+      # itself comes through 8420 (WebSocket /api/espbar/ws)
+      - "127.0.0.1:8421:8421"
     volumes:
       - ./data:/data
       # start/stop Wolf, list app containers, build/pull images

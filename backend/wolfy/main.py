@@ -6,13 +6,13 @@ import tempfile
 import time
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, Request, Response, UploadFile
+from fastapi import APIRouter, Depends, FastAPI, File, HTTPException, Request, Response, UploadFile, WebSocket
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import auth, combos, dolphin_config, docker_ops, eden_config, espbar, eden_paths, ps_paths, ra_config, ra_paths, steam, emulators, settings, store, wolf_api, wolf_config
+from . import auth, combos, dolphin_config, docker_ops, eden_config, espbar, espbar_relay, eden_paths, ps_paths, ra_config, ra_paths, steam, emulators, settings, store, wolf_api, wolf_config
 
 app = FastAPI(title="Wolfy", docs_url="/api/docs", openapi_url="/api/openapi.json")
 public = APIRouter(prefix="/api")
@@ -61,6 +61,20 @@ async def hook_session_stop(body: SessionHook):
         raise HTTPException(403, "Jeton invalide")
     await wolf_api.post("sessions/stop", {"session_id": body.session_id})
     return {"ok": True}
+
+
+@public.websocket("/espbar/ws")
+async def espbar_ws(ws: WebSocket):
+    """The EspBar's ESP32 (token checked in its first frame)."""
+    await espbar_relay.serve_websocket(ws)
+
+
+@public.get("/hooks/espbar")
+async def hook_espbar(session: str, token: str):
+    """Wii session start: where the EspBar relay is, and whether its Wii Remotes are for this session."""
+    if not hmac.compare_digest(token, settings.hook_token()):
+        raise HTTPException(403, "Jeton invalide")
+    return {"port": settings.ESPBAR_PORT, "linked": await espbar_relay.linked(session)}
 
 
 # ------------------------------------------------------------------- overview
@@ -542,6 +556,10 @@ async def get_espbar():
     return {
         "firmware": espbar.firmware(),
         "client_id": espbar.client_id(),
+        "wifi": espbar.wifi(),
+        "public_host": store.get("settings").get("public_host", ""),
+        "port": settings.ESPBAR_PORT,
+        "status": espbar_relay.status(),
         "clients": [{"client_id": c["client_id"],
                      "name": names.get(c["client_id"], {}).get("name", ""),
                      "client_ip": names.get(c["client_id"], {}).get("client_ip", "")} for c in clients],
@@ -553,6 +571,19 @@ def download_espbar_firmware():
     if not espbar.firmware():
         raise HTTPException(404, "Aucun programme")
     return FileResponse(espbar.PATH, media_type="application/octet-stream", filename="espbar.bin")
+
+
+class EspBarWifi(BaseModel):
+    ssid: str = Field(min_length=1, max_length=32)
+    password: str = Field("", max_length=64)
+    url: str = Field(pattern=r"^wss?://[^/\s:]+(:\d+)?(/\S*)?$", max_length=200)
+
+
+@api.post("/espbar/config")
+def espbar_config(body: EspBarWifi):
+    """The ESP32's settings partition (Wi-Fi, Wolfy's address), written at injection."""
+    blob = espbar.config_blob(body.ssid, body.password, body.url.strip())
+    return Response(blob, media_type="application/octet-stream")
 
 
 class EspBarLink(BaseModel):
@@ -734,6 +765,14 @@ try:  # PS3 / PS Vita: data folders and the ROM folders list read by the session
     ra_paths.write_ps_dirs(ra_paths.current()["roms"])
 except Exception as exc:
     print(f"PlayStation folders not prepared: {exc}", flush=True)
+
+
+@app.on_event("startup")
+async def start_espbar_relay():
+    try:
+        await espbar_relay.start()
+    except OSError as exc:
+        print(f"EspBar relay not started: {exc}", flush=True)
 
 
 # ------------------------------------------------------------------- frontend (built SPA)

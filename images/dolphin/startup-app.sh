@@ -20,6 +20,9 @@ echo "$SLOT" > /tmp/wolfy-console  # read by host-pads.py
 export WOLFY_CONSOLE=$SLOT
 [ "$SLOT" -eq 0 ] || /opt/gow/console-data.sh "$SLOT"
 
+# EspBar (Wolfy > Wii > EspBar): its Wii Remotes go to the linked device's session
+eval "$(python3 /opt/gow/espbar-env.py)"
+
 # session copy of the PC's Dolphin config, pads set for Wolf (/wolfy-config/dolphin.json)
 python3 /opt/gow/dolphin-setup.py
 

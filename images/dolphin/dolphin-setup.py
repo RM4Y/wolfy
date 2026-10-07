@@ -48,9 +48,11 @@ def settings() -> dict:
     hosts = list(data.get("host_pads") or [])[:4]
     data["host_pads"] = hosts + [None] * (4 - len(hosts))
     if os.environ.get("WOLFY_CONSOLE", "0") != "0":
-        # Wii console 2+ (startup-app.sh): the real Wii Remotes and PC gamepads are console
-        # 1's, this session's players are on its Wolf pads
-        data["wiimotes"] = ["pad" if s in ("real", "host") else s for s in data["wiimotes"]]
+        # Wii console 2+ (startup-app.sh): the host's real Wii Remotes and PC gamepads are
+        # console 1's, this session's players are on its Wolf pads, or on the EspBar's Wii
+        # Remotes when it is linked to this session's device
+        real = "real" if os.environ.get("WOLFY_ESPBAR_LINKED") == "1" else "pad"
+        data["wiimotes"] = [{"host": "pad", "real": real}.get(s, s) for s in data["wiimotes"]]
     for i, source in enumerate(data["wiimotes"]):  # PC gamepad not chosen yet: slot unused
         if source == "host" and not (data["host_pads"][i] or {}).get("sdl_name"):
             data["wiimotes"][i] = "none"
