@@ -50,6 +50,9 @@ HOST_ROOT = Path(_env("WOLFY_HOST_ROOT", "/host"))
 # host port of Wolfy, called back by the Switch sessions (quit combo)
 PUBLIC_PORT = int(_env("WOLFY_PUBLIC_PORT", "8420"))
 
+# the EspBar's ESP32 program, injected from the browser (espbar/ in this project)
+ESPBAR_FIRMWARE = Path(_env("WOLFY_ESPBAR_FIRMWARE", str(Path(__file__).resolve().parents[2] / "espbar" / "firmware.bin")))
+
 STATIC_DIR = Path(_env("WOLFY_STATIC", str(Path(__file__).resolve().parent.parent / "static")))
 
 

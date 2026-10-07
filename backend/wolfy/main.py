@@ -548,23 +548,11 @@ async def get_espbar():
     }
 
 
-@api.post("/espbar/firmware")
-async def upload_espbar_firmware(file: UploadFile = File(...)):
-    data = await file.read()
-    return await run_in_threadpool(espbar.upload, file.filename or "", data)
-
-
 @api.get("/espbar/firmware")
 def download_espbar_firmware():
-    if not (meta := espbar.firmware()):
+    if not espbar.firmware():
         raise HTTPException(404, "Aucun programme")
-    return FileResponse(espbar.PATH, media_type="application/octet-stream", filename=meta["filename"])
-
-
-@api.delete("/espbar/firmware")
-def delete_espbar_firmware():
-    espbar.delete()
-    return {"ok": True}
+    return FileResponse(espbar.PATH, media_type="application/octet-stream", filename="espbar.bin")
 
 
 class EspBarLink(BaseModel):
