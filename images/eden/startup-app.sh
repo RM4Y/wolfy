@@ -63,6 +63,22 @@ set_key Audio output_device auto
 # hotkey in this session's copy, then watch the session's pad
 python3 /opt/gow/home-combo.py --patch-config "$CFG/qt-config.ini" || true
 python3 /opt/gow/home-combo.py &
+# motion pointer on the right stick (L3 + R3, see stick-gyro.py): players 1-4's motion
+# and right stick come from its DSU server (pad n = the session's n-th Wolf pad), which
+# holds the stick at rest for the game while it moves the pointer. The SDL right stick
+# binding keeps its settings (deadzone...), only its source changes.
+set_key Controls enable_udp_controller true
+set_key Controls udp_input_servers 127.0.0.1:26760
+UDP=engine:cemuhookudp,guid:0000000000000000000000007f000001,port:26760
+for n in 0 1 2 3; do
+    set_key Controls "player_${n}_motionleft" "\"$UDP,motion:0,pad:$n\""
+    set_key Controls "player_${n}_motionright" "\"$UDP,motion:0,pad:$n\""
+    RSTICK=$(sed -n "s/^player_${n}_rstick=//p" "$CFG/qt-config.ini" | head -1)
+    if [[ "$RSTICK" == *engine:sdl,* ]]; then
+        set_key Controls "player_${n}_rstick" "$(sed -E "s/engine:sdl,port:[0-9]+,guid:[0-9a-f]+/$UDP,pad:$n/; s/axis_x:[0-9]+/axis_x:2/; s/axis_y:[0-9]+/axis_y:3/" <<<"$RSTICK")"
+    fi
+done
+python3 /opt/gow/stick-gyro.py &
 gow_log "Starting Eden (Switch HOME menu) as $NICK"
 
 source /opt/gow/launch-comp.sh

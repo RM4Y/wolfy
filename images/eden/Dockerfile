@@ -24,7 +24,8 @@ RUN sed -i '/^# Need to autostart/e cat /tmp/sway-hide-dialogs.conf' /cfg/sway/c
 
 # gamepad combo -> Switch HOME, configurable from Wolfy
 COPY common/home-combo.py /opt/gow/home-combo.py
-RUN chmod +x /opt/gow/home-combo.py
+COPY eden/stick-gyro.py /opt/gow/stick-gyro.py
+RUN chmod +x /opt/gow/home-combo.py /opt/gow/stick-gyro.py
 
 COPY eden/startup-app.sh /opt/gow/startup-app.sh
 RUN chmod +x /opt/gow/startup-app.sh
