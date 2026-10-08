@@ -40,6 +40,11 @@ enum : u8
 constexpr int SLOTS = 4;
 constexpr size_t MAX_QUEUED = 64;
 
+std::string IdOf(int slot, u32 generation)
+{
+  return fmt::format("espbar/{}/{}", slot, generation);
+}
+
 std::string Env(const char* name)
 {
   const char* v = std::getenv(name);
@@ -293,7 +298,7 @@ WiimoteEspBar::~WiimoteEspBar()
 
 std::string WiimoteEspBar::GetId() const
 {
-  return fmt::format("espbar/{}/{}", m_slot, m_generation);
+  return IdOf(m_slot, m_generation);
 }
 
 bool WiimoteEspBar::ConnectInternal()
@@ -341,9 +346,11 @@ auto WiimoteScannerEspBar::FindAttachedWiimotes() -> FindResults
     return results;
   for (const auto& [slot, generation] : Link::Get().Present())
   {
-    auto wiimote = std::make_unique<WiimoteEspBar>(slot, generation);
-    if (!IsNewWiimote(wiimote->GetId()))
+    // checked before creating it: a Wiimote destroyed here would forget the id of the
+    // connected one (Wiimote::Shutdown), found again and connected twice on the next scan
+    if (!IsNewWiimote(IdOf(slot, generation)))
       continue;
+    auto wiimote = std::make_unique<WiimoteEspBar>(slot, generation);
     NOTICE_LOG_FMT(WIIMOTE, "EspBar: found the Wii Remote of slot {}", slot + 1);
     if (wiimote->IsBalanceBoard())
       results.balance_boards.emplace_back(std::move(wiimote));

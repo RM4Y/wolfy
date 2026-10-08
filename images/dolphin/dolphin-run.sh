@@ -30,7 +30,7 @@ while [ "$fails" -lt 3 ]; do
     SDL_JOYSTICK_DISABLE_UDEV=1 /opt/dolphin/bin/dolphin-emu --batch --nand_title="$SYSTEM_MENU" \
         -C Logger.Options.WriteToConsole=True -C Logger.Options.Verbosity=3 \
         -C Logger.Logs.BOOT=True -C Logger.Logs.CORE=True -C Logger.Logs.IOS_ES=True \
-        -C Logger.Logs.VIDEO=True -C Logger.Logs.HOST_GPU=True
+        -C Logger.Logs.VIDEO=True -C Logger.Logs.HOST_GPU=True -C Logger.Logs.WIIMOTE=True
     echo "--- dolphin-emu exited with code $?"
     if [ $(( $(date +%s) - start )) -lt 10 ]; then fails=$((fails + 1)); else fails=0; fi
     sleep 1

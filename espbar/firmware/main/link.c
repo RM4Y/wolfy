@@ -19,10 +19,14 @@
 #include "esp_transport_ssl.h"
 #include "esp_transport_tcp.h"
 #include "esp_transport_ws.h"
+#include "lwip/sockets.h"
 
 #include "protocol.h"
 
-#define VERSION "1"
+#define VERSION "2"
+
+// exported by tcp_transport but only declared in its private headers (ESP-IDF 5.3)
+int esp_transport_get_socket(esp_transport_handle_t t);
 #define LED GPIO_NUM_2  // blue LED of the DevKit: blinks = looking for Wolfy, on = linked
 #define WIFI_UP BIT0
 
@@ -152,6 +156,7 @@ static void link_task(void *arg)
     esp_transport_ws_config_t ws_cfg = {.ws_path = s_cfg.path, .propagate_control_frames = true};
     esp_transport_ws_set_config(ws, &ws_cfg);
     uint8_t buf[256];
+    uint8_t out[1024];  // frames waiting in s_out, sent as one WebSocket message
 
     for (;;) {
         gpio_set_level(LED, 0);
@@ -165,6 +170,11 @@ static void link_task(void *arg)
             }
             continue;
         }
+        // send each report at once: with Nagle a report waits for the ACK of the previous one,
+        // and in modem sleep (required next to Bluetooth) ACKs only come at each DTIM beacon
+        int fd = esp_transport_get_socket(ws), one = 1;
+        if (fd >= 0)
+            setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
         ESP_LOGI(TAG, "linked to Wolfy %s (free heap %u)", s_cfg.url, (unsigned)esp_get_free_heap_size());
         gpio_set_level(LED, 1);
         s_rx_len = 0;
@@ -174,9 +184,12 @@ static void link_task(void *arg)
         TickType_t last_rx = xTaskGetTickCount(), last_ping = 0;
         bool ok = true;
         while (ok) {
-            size_t n;
-            while (ok && (n = xMessageBufferReceive(s_out, buf, sizeof(buf), 0)) > 0)
-                ok = ws_send(ws, buf, n);
+            size_t n, used = 0;
+            while (sizeof(out) - used >= EB_MAX_PAYLOAD + 4 &&
+                   (n = xMessageBufferReceive(s_out, out + used, sizeof(out) - used, 0)) > 0)
+                used += n;
+            if (used)
+                ok = ws_send(ws, out, used);
             TickType_t now = xTaskGetTickCount();
             if (ok && now - last_ping >= pdMS_TO_TICKS(2000)) {
                 last_ping = now;
@@ -184,7 +197,7 @@ static void link_task(void *arg)
             }
             if (!ok)
                 break;
-            int r = esp_transport_read(ws, (char *)buf, sizeof(buf), 5);
+            int r = esp_transport_read(ws, (char *)buf, sizeof(buf), 1);  // 1 ms: reports wait less
             if (r < 0)
                 break;
             ws_transport_opcodes_t op = esp_transport_ws_get_read_opcode(ws) & 0x0f;

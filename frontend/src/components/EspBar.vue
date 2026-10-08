@@ -73,22 +73,36 @@ async function flash() {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(wifi.value),
       }),
     ])
-    transport = new Transport(port, false)
-    const loader = new ESPLoader({ transport, baudrate: 921600, romBaudrate: 115200, terminal })
-    const chip = await loader.main()
-    if (fw.chip && loader.chip.IMAGE_CHIP_ID !== fw.chip_id) {
-      throw new Error(`Le programme est compilé pour ${fw.chip}, la carte branchée est un ${chip}`)
+    // 921600 baud fails on some USB-serial bridges (CP2102: "Invalid head of packet"
+    // right after the stub starts): retry at the ROM speed
+    for (const baudrate of [921600, 115200]) {
+      try {
+        transport = new Transport(port, false)
+        const loader = new ESPLoader({ transport, baudrate, romBaudrate: 115200, terminal })
+        const chip = await loader.main()
+        if (fw.chip && loader.chip.IMAGE_CHIP_ID !== fw.chip_id) {
+          throw Object.assign(new Error(`Le programme est compilé pour ${fw.chip}, la carte branchée est un ${chip}`), { final: true })
+        }
+        await loader.writeFlash({
+          fileArray: [
+            { data: new Uint8Array(bin), address: fw.offset },
+            { data: new Uint8Array(cfg), address: fw.config_offset },  // Wi-Fi + Wolfy
+          ],
+          flashMode: 'keep', flashFreq: 'keep', flashSize: 'keep',
+          eraseAll: fw.merged && eraseAll.value, compress: true,
+          reportProgress: (_, written, total) => (flashing.value = written / total),
+        })
+        await loader.after('hard_reset')
+        break
+      } catch (e) {
+        if (e.final || baudrate === 115200) throw e
+        write(`\n⚠️ ${e.message}\nNouvel essai à 115200 bauds (plus lent)...\n\n`)
+        flashing.value = 0
+        await transport.disconnect().catch(() => {})
+        transport = null
+        await new Promise(r => setTimeout(r, 500))
+      }
     }
-    await loader.writeFlash({
-      fileArray: [
-        { data: new Uint8Array(bin), address: fw.offset },
-        { data: new Uint8Array(cfg), address: fw.config_offset },  // Wi-Fi + Wolfy
-      ],
-      flashMode: 'keep', flashFreq: 'keep', flashSize: 'keep',
-      eraseAll: fw.merged && eraseAll.value, compress: true,
-      reportProgress: (_, written, total) => (flashing.value = written / total),
-    })
-    await loader.after('hard_reset')
     write('\n✅ Programme écrit, l\'ESP32 redémarre.\n')
     toast('Programme injecté dans l\'ESP32')
   } catch (e) {

@@ -8,7 +8,7 @@ import HomeCombo from './HomeCombo.vue'
 const SOURCES = [
   { value: 'pad', label: '🎮 Manette Moonlight', help: 'Wiimote simulée sur la manette de l\'appareil Moonlight (Xbox : pointeur au stick droit)' },
   { value: 'host', label: '🕹️ Manette du PC', help: 'Manette branchée sur le serveur (USB ou Bluetooth), Wiimote simulée' },
-  { value: 'real', label: '📡 Vraie Wiimote', help: 'Wiimote connectée au Bluetooth du serveur (1 + 2 pour l\'appairer)' },
+  { value: 'real', label: '📡 Vraie Wiimote', help: 'Wiimote connectée au Bluetooth du serveur ou à l\'EspBar (1 + 2 pour l\'appairer)' },
   { value: 'none', label: '⛔ Aucune', help: 'Emplacement vide' },
 ]
 const saved = ref(null)
