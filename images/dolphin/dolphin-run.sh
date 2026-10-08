@@ -21,6 +21,10 @@ if [ "${WOLFY_CONSOLE:-0}" -gt 0 ]; then
     export XDG_DATA_HOME="$HOME/.local/share/dolphin-emu/Wolfy/console-$((WOLFY_CONSOLE + 1))"
 fi
 echo "=== Wii console $((${WOLFY_CONSOLE:-0} + 1)), data: ${XDG_DATA_HOME:-$HOME/.local/share}/dolphin-emu"
+# Sound: Wolf moves each stream to the sink of the session whose container has the stream's
+# hostname, and every session in the host network has the host's: all would go to the last
+# session started. A hostname of its own keeps it on this session's sink ($PULSE_SINK).
+export PULSE_PROP="application.process.host=wolfy-session-${WOLF_SESSION_ID}"
 fails=0
 while [ "$fails" -lt 3 ]; do
     start=$(date +%s)
