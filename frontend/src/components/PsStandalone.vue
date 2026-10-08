@@ -19,6 +19,7 @@ const SYSTEMS = [
 ]
 const KINDS = {
   'ps3-pkg': 'PS3 · paquet', 'ps3-rap': 'PS3 · licence', 'ps3-firmware': 'PS3 · firmware',
+  'ps3-disc-data': 'PS3 · 1re installation',
   'vita-pkg': 'Vita · paquet (zRIF)', 'vita-archive': 'Vita · archive', 'vita-folder': 'Vita · dossier',
   'vita-firmware': 'Vita · firmware',
 }
@@ -44,7 +45,9 @@ async function install(item) {
           {{ showGames[s.id] ? '▾' : '▸' }} {{ data[s.id].games.length }} jeu(x)
         </button>
         <ul v-if="showGames[s.id]" class="games small">
-          <li v-for="g in data[s.id].games" :key="g.path"><b>{{ g.title }}</b> <span class="muted">{{ g.id }} · {{ g.where }}</span></li>
+          <li v-for="g in data[s.id].games" :key="g.path"><b>{{ g.title }}</b> <span class="muted">{{ g.id }} · {{ g.where }}</span>
+            <span v-if="g.needs_data" class="badge warn" title="Sinon RPCS3 les installe au 1er lancement, écran noir pendant plusieurs minutes">
+              données à installer ci-dessous</span></li>
           <li v-if="!data[s.id].games.length" class="muted">Aucun jeu trouvé.</li>
         </ul>
         <p class="muted small">{{ s.help }}</p>
@@ -63,6 +66,8 @@ async function install(item) {
       <div class="help">
         Dépose les .pkg, .rap, .vpk, .zip ou firmwares .PUP dans un dossier de jeux (par ex. <code>ROMS/ps3</code>,
         <code>ROMS/psvita</code>), puis installe-les ici. Les jeux apparaissent dans le XMB à la session suivante.
+        Les jeux disque PS3 avec des données à installer (« 1re installation ») : installe-les ici avant de jouer,
+        sinon RPCS3 le fait au premier lancement derrière un écran noir de plusieurs minutes.
       </div>
     </div>
   </template>

@@ -111,7 +111,8 @@ def ps3_games(rom_dirs: list[str]) -> list[dict]:
                     sfo = read_sfo(base / "PARAM.SFO")
                     games.setdefault(sfo.get("TITLE_ID") or game.name, {
                         "id": sfo.get("TITLE_ID", ""), "title": sfo.get("TITLE") or game.name,
-                        "where": "disque", "path": "/" + str(game.relative_to(settings.HOST_ROOT))})
+                        "where": "disque", "path": "/" + str(game.relative_to(settings.HOST_ROOT)),
+                        "needs_data": base.name == "PS3_GAME" and disc_data(game) is not None})
                     break
     hdd = RPCS3_DIR / "dev_hdd0" / "game"
     if hdd.is_dir():
@@ -134,6 +135,64 @@ def vita_games() -> list[dict]:
                 out.append({"id": app.name, "title": sfo.get("TITLE") or app.name, "where": "installé (ux0)",
                             "path": str(app)})
     return sorted(out, key=lambda g: g["title"].lower())
+
+
+def disc_data(game: Path) -> dict | None:
+    """Data packages a PS3 disc game installs on its first boot (PS3_GAME/INSDIR, PKGDIR,
+    PS3_EXTRA), if RPCS3 hasn't installed them yet. RPCS3 does it on boot, behind a black
+    screen for minutes, then writes a lock file (rpcs3/Emu/System.cpp): Wolfy can do it first."""
+    base = game / "PS3_GAME"
+    if not (base / "PARAM.SFO").is_file():
+        return None
+    pkgs = [p for d in (base / "INSDIR", base / "PKGDIR") if d.is_dir()
+            for p in sorted(d.iterdir()) if p.is_file() and p.suffix.lower() == ".pkg"]
+    if (game / "PS3_EXTRA").is_dir():
+        pkgs += sorted(p for p in (game / "PS3_EXTRA").rglob("*") if p.is_file() and p.suffix.lower() == ".pkg")
+    if not pkgs:
+        return None
+    sfo = read_sfo(base / "PARAM.SFO")
+    title_id = sfo.get("TITLE_ID", "")
+    lock = RPCS3_DIR / "dev_hdd0" / "game" / "\uff04locks" / f"{title_id}_v{sfo.get('APP_VER', '')}"
+    if not title_id or lock.exists() or (RPCS3_DIR / "dev_hdd0" / "game" / ".locks" / title_id).exists():
+        return None
+    return {"title": sfo.get("TITLE") or game.name, "pkgs": pkgs, "lock": lock,
+            "size": sum(p.stat().st_size for p in pkgs)}
+
+
+def _disc_games(rom_dirs: list[str]) -> list[Path]:
+    out = []
+    for d in rom_dirs:
+        root = host(d)
+        if root.is_dir():
+            out += sorted(p for p in root.iterdir() if p.is_dir() and (p / "PS3_GAME" / "PARAM.SFO").is_file())
+    return out
+
+
+def install_ps3_disc_data(job, folder: str) -> None:
+    """The data packages of a disc game, as RPCS3 does on its first boot, then its lock file."""
+    game = host(folder)
+    data = disc_data(game)
+    if not data:
+        job.log("Données déjà installées.")
+        return
+    job.log(f"{data['title']} : {len(data['pkgs'])} paquet(s) de données, "
+            f"{data['size'] / 1024 ** 3:.1f} Go — quelques minutes")
+    hdd = RPCS3_DIR / "dev_hdd0" / "game"
+    before = {p.name: p.stat().st_mtime for p in hdd.iterdir()} if hdd.is_dir() else {}
+    container_dir = "/" + str(game.relative_to(settings.HOST_ROOT))
+    script = " ; ".join(
+        f"echo '--- {p.name}' ; /opt/rpcs3/AppRun --headless --installpkg "
+        + _q(container_dir + "/" + str(p.relative_to(game))) + " 2>&1 | grep -v 'PKG: \\(Entry\\|Overwritten\\)'"
+        for p in data["pkgs"])
+    # RPCS3 crashes on quit after a headless install: judged by what got written
+    _run(job, script, container_dir, check=False)
+    after = {p.name: p.stat().st_mtime for p in hdd.iterdir()} if hdd.is_dir() else {}
+    if after == before:
+        raise RuntimeError("RPCS3 n'a rien installé (paquets de données illisibles ?)")
+    data["lock"].parent.mkdir(parents=True, exist_ok=True)
+    data["lock"].touch()
+    _chown_like(hdd, RPCS3_DIR)
+    job.log(f"Données de {data['title']} installées : le jeu démarre sans installation.")
 
 
 def installables(rom_dirs: list[str]) -> list[dict]:
@@ -165,6 +224,11 @@ def installables(rom_dirs: list[str]) -> list[dict]:
             if kind:
                 out.append({"path": "/" + str(p.relative_to(settings.HOST_ROOT)), "name": p.name, "kind": kind,
                             "size": p.stat().st_size if p.is_file() else None})
+    for game in _disc_games(rom_dirs):
+        if data := disc_data(game):
+            out.append({"path": "/" + str(game.relative_to(settings.HOST_ROOT)), "kind": "ps3-disc-data",
+                        "name": f"{data['title']} — données du disque ({len(data['pkgs'])} paquet(s))",
+                        "size": data["size"]})
     return out
 
 
@@ -325,6 +389,7 @@ def install_vita_folder(job, folder: str) -> None:
 
 INSTALLERS = {
     "ps3-firmware": install_ps3_firmware, "ps3-pkg": install_ps3_pkg, "ps3-rap": install_ps3_rap,
+    "ps3-disc-data": install_ps3_disc_data,
     "vita-firmware": install_vita_firmware, "vita-archive": install_vita_archive, "vita-folder": install_vita_folder,
 }
 
