@@ -2,12 +2,15 @@
 
 #include <string.h>
 
+#include <stdio.h>
+
 #include "btstack.h"
+#include "driver/gpio.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 
-#include "link.h"
 #include "protocol.h"
 
 static const char *TAG = "wiimotes";
@@ -16,6 +19,14 @@ static const char *TAG = "wiimotes";
 #define COD_WIIMOTE_TR 0x000508  // RVL-CNT-01-TR (MotionPlus inside)
 #define INQUIRY_LENGTH 3         // x 1.28 s
 #define OUT_QUEUE 16
+// Search: during the linked device's Wii session while no Wii Remote is connected, or for 30 s
+// after the button (D4 to 3V3) is held 3 s (to add one). Not otherwise: an inquiry takes the
+// radio from the connected Wii Remotes (their reports drop from ~37 to ~25/s).
+#define BUTTON GPIO_NUM_4
+#define SEARCH_LED GPIO_NUM_15  // blinks while searching
+#define BUTTON_HOLD_MS 3000
+#define SEARCH_MS 30000
+#define TICK_MS 50
 
 typedef struct {
     bool used;
@@ -29,13 +40,21 @@ typedef struct {
 } wiimote_t;
 
 static wiimote_t s_wm[EB_SLOTS];
-static bool s_scan;        // Wolfy wants Wii Remotes (the linked device's Wii session is up)
+static bool s_scan;        // the linked device's Wii session is up (Wolfy wants Wii Remotes)
 static bool s_inquiring;
+static uint32_t s_search_left;  // ms of search left (button)
+static uint32_t s_button_held;  // ms
+static btstack_timer_source_t s_tick;
+static uint32_t s_ticks;
 static bool s_connecting;  // an outgoing connection is being set up (one at a time)
 static bool s_have_candidate;
 static bd_addr_t s_candidate;
 static btstack_timer_source_t s_retry_timer;
 static btstack_packet_callback_registration_t s_hci_cb;
+
+// reports from the Wii Remotes since the last wiimotes_stats(), longest wait between two (us)
+static uint32_t s_bt_reports;
+static int64_t s_bt_last, s_bt_gap;
 
 // ---------------------------------------------------------------- frames from Wolfy
 
@@ -130,9 +149,11 @@ static void release(wiimote_t *w)
 
 static void schedule_inquiry(uint32_t ms);
 
+static bool want_search(void) { return s_search_left || (s_scan && free_slots() == EB_SLOTS); }
+
 static void start_inquiry(void)
 {
-    if (!s_scan || s_inquiring || s_connecting || !free_slots())
+    if (!want_search() || s_inquiring || s_connecting || !free_slots())
         return;
     if (gap_inquiry_start(INQUIRY_LENGTH) == 0)
         s_inquiring = true;
@@ -212,6 +233,8 @@ static void channel_opened(uint8_t *packet)
     announce(w);
     if (!incoming)
         s_connecting = false;
+    if (s_inquiring && !want_search())
+        gap_inquiry_stop();
     schedule_inquiry(200);
 }
 
@@ -254,8 +277,14 @@ static void l2cap_handler(uint8_t type, uint16_t channel, uint8_t *packet, uint1
 {
     if (type == L2CAP_DATA_PACKET) {
         wiimote_t *w = by_cid(channel);
-        if (w && w->ready && channel == w->intr_cid && size <= EB_MAX_PAYLOAD)
+        if (w && w->ready && channel == w->intr_cid && size <= EB_MAX_PAYLOAD) {
+            int64_t now = esp_timer_get_time();
+            if (s_bt_last && now - s_bt_last > s_bt_gap)
+                s_bt_gap = now - s_bt_last;
+            s_bt_last = now;
+            s_bt_reports++;
             link_send(EB_REPORT, slot_of(w), packet, size);
+        }
         return;
     }
     if (type != HCI_EVENT_PACKET)
@@ -316,7 +345,7 @@ static void hci_handler(uint8_t type, uint16_t channel, uint8_t *packet, uint16_
     }
     case GAP_EVENT_INQUIRY_COMPLETE:
         s_inquiring = false;
-        if (s_have_candidate && s_scan)
+        if (s_have_candidate && want_search())
             connect_candidate();
         else
             schedule_inquiry(100);
@@ -351,8 +380,7 @@ static void handle_frame(const inbound_t *f)
         break;
     case EB_SCAN:
         s_scan = f->len && f->data[0];
-        ESP_LOGI(TAG, "search %s", s_scan ? "on" : "off");
-        if (s_scan)
+        if (want_search())
             start_inquiry();
         else if (s_inquiring)
             gap_inquiry_stop();
@@ -377,6 +405,43 @@ static void handle_frame(const inbound_t *f)
     }
 }
 
+void wiimotes_stats(char *out, size_t size, uint32_t ms)
+{
+    snprintf(out, size, "bt %lu/s (trou max %lld ms), recherche %s",
+             (unsigned long)(s_bt_reports * 1000 / (ms ? ms : 1)), s_bt_gap / 1000,
+             want_search() ? "oui" : "non");
+    s_bt_reports = 0;
+    s_bt_gap = 0;
+}
+
+// ---------------------------------------------------------------- search button
+
+static void tick(btstack_timer_source_t *ts)
+{
+    s_ticks++;
+    if (gpio_get_level(BUTTON)) {
+        s_button_held += TICK_MS;
+        if (s_button_held == BUTTON_HOLD_MS) {  // once per press, held longer = no repeat
+            ESP_LOGI(TAG, "search for %d s", SEARCH_MS / 1000);
+            s_search_left = SEARCH_MS;
+            start_inquiry();
+        }
+    } else {
+        s_button_held = 0;
+    }
+    if (s_search_left) {
+        s_search_left = s_search_left > TICK_MS ? s_search_left - TICK_MS : 0;
+        if (!s_search_left) {
+            ESP_LOGI(TAG, "search over");
+            if (s_inquiring && !want_search())
+                gap_inquiry_stop();
+        }
+    }
+    gpio_set_level(SEARCH_LED, want_search() && (s_ticks / 3) % 2);  // ~3 blinks per second
+    btstack_run_loop_set_timer(ts, TICK_MS);
+    btstack_run_loop_add_timer(ts);
+}
+
 void wiimotes_init(void)
 {
     s_in = xQueueCreate(32, sizeof(inbound_t));
@@ -391,6 +456,16 @@ void wiimotes_init(void)
     gap_connectable_control(1);         // Wii Remotes paired with SYNC connect to us
     l2cap_register_service(l2cap_handler, PSM_HID_CONTROL, 0xffff, LEVEL_0);
     l2cap_register_service(l2cap_handler, PSM_HID_INTERRUPT, 0xffff, LEVEL_0);
+
+    gpio_reset_pin(BUTTON);
+    gpio_set_direction(BUTTON, GPIO_MODE_INPUT);
+    gpio_set_pull_mode(BUTTON, GPIO_PULLDOWN_ONLY);
+    gpio_reset_pin(SEARCH_LED);
+    gpio_set_direction(SEARCH_LED, GPIO_MODE_OUTPUT);
+    gpio_set_level(SEARCH_LED, 0);
+    btstack_run_loop_set_timer_handler(&s_tick, tick);
+    btstack_run_loop_set_timer(&s_tick, TICK_MS);
+    btstack_run_loop_add_timer(&s_tick);
 
     s_hci_cb.callback = hci_handler;
     hci_add_event_handler(&s_hci_cb);

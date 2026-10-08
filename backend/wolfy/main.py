@@ -170,8 +170,7 @@ async def update_client(client_id: str, body: ClientUpdate):
 async def unpair(client_id: str):
     await wolf_api.post("unpair/client", {"client_id": client_id})
     store.put("clients", client_id, None)
-    if espbar.client_id() == client_id:
-        espbar.link(None)
+    espbar.unlink_client(client_id)
     return {"ok": True}
 
 
@@ -553,13 +552,17 @@ def dolphin_host_pads():
 async def get_espbar():
     clients = (await wolf_api.get("clients")).get("clients", [])
     names = store.get("clients")
+    status = espbar_relay.status()
+    boards = espbar.boards()
     return {
-        "firmware": espbar.firmware(),
-        "client_id": espbar.client_id(),
+        "firmwares": {v: espbar.firmware(v) for v in espbar.VARIANTS},
         "wifi": espbar.wifi(),
         "public_host": store.get("settings").get("public_host", ""),
         "port": settings.ESPBAR_PORT,
-        "status": espbar_relay.status(),
+        # known EspBars, connected ones first
+        "boards": sorted(({"key": k, "client_id": b.get("client_id"), "status": status.get(k)}
+                          for k, b in boards.items()),
+                         key=lambda b: (b["status"] is None, b["key"])),
         "clients": [{"client_id": c["client_id"],
                      "name": names.get(c["client_id"], {}).get("name", ""),
                      "client_ip": names.get(c["client_id"], {}).get("client_ip", "")} for c in clients],
@@ -567,10 +570,12 @@ async def get_espbar():
 
 
 @api.get("/espbar/firmware")
-def download_espbar_firmware():
-    if not espbar.firmware():
+def download_espbar_firmware(variant: str = "single"):
+    if variant not in espbar.VARIANTS or not espbar.firmware(variant):
         raise HTTPException(404, "Aucun programme")
-    return FileResponse(espbar.PATH, media_type="application/octet-stream", filename="espbar.bin")
+    # never from the browser cache: an updated program would be injected as the old one
+    return FileResponse(espbar.VARIANTS[variant], media_type="application/octet-stream",
+                        filename=f"espbar-{variant}.bin", headers={"Cache-Control": "no-store"})
 
 
 class EspBarWifi(BaseModel):
@@ -586,13 +591,23 @@ def espbar_config(body: EspBarWifi):
     return Response(blob, media_type="application/octet-stream")
 
 
-class EspBarLink(BaseModel):
+class EspBarBoard(BaseModel):
     client_id: str | None = None
 
 
-@api.put("/espbar/client")
-def link_espbar(body: EspBarLink):
-    espbar.link(body.client_id)
+@api.put("/espbar/boards/{key}")
+def save_espbar_board(key: str, body: EspBarBoard):
+    """Give an EspBar a device (also at injection: key = MAC read from the chip)."""
+    key = key.strip().lower()
+    if not re.fullmatch(r"[0-9a-f]{2}(:[0-9a-f]{2}){5}", key):
+        raise HTTPException(400, "Adresse MAC invalide")
+    espbar.save(key, body.client_id)
+    return {"ok": True}
+
+
+@api.delete("/espbar/boards/{key}")
+def forget_espbar_board(key: str):
+    espbar.forget(key)
     return {"ok": True}
 
 

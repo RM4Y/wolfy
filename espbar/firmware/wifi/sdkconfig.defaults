@@ -1,0 +1,16 @@
+# EspBar on two ESP32, the Wi-Fi one: Wi-Fi to Wolfy, UART2 (TX2 / RX2) + EN / BOOT to the
+# Bluetooth ESP32, which it updates with the program it carries: through that program (OTA), or
+# through its ROM bootloader (esp-serial-flasher) when GPIO0 is wired
+CONFIG_IDF_TARGET="esp32"
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_ESPTOOLPY_FLASHMODE_DIO=y
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="../partitions.csv"
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+CONFIG_FREERTOS_HZ=1000
+
+# wss:// to Wolfy (wolfy.rm4.fr): Let's Encrypt checked with the CA bundle
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
+
+CONFIG_SERIAL_FLASHER_PORT_UART=y
+CONFIG_SERIAL_FLASHER_LOG_LEVEL_WARN=y

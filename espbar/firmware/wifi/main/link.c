@@ -18,16 +18,17 @@
 #include "esp_transport.h"
 #include "esp_transport_ssl.h"
 #include "esp_transport_tcp.h"
+#include "esp_timer.h"
 #include "esp_transport_ws.h"
 #include "lwip/sockets.h"
 
 #include "protocol.h"
 
-#define VERSION "2"
+#define VERSION "11"
+#define LED GPIO_NUM_2  // blue LED of the DevKit: blinks = looking for Wolfy, on = linked
 
 // exported by tcp_transport but only declared in its private headers (ESP-IDF 5.3)
 int esp_transport_get_socket(esp_transport_handle_t t);
-#define LED GPIO_NUM_2  // blue LED of the DevKit: blinks = looking for Wolfy, on = linked
 #define WIFI_UP BIT0
 
 static const char *TAG = "link";
@@ -35,6 +36,12 @@ static espbar_config_t s_cfg;
 static EventGroupHandle_t s_events;
 static MessageBufferHandle_t s_out;
 static volatile bool s_linked;
+
+// report flow, sent to Wolfy every 2 s (EB_STATS): where reports are lost or held
+static struct {
+    uint32_t dropped, frames, msgs;  // queue full, frames / messages out
+    int64_t send_max;                // us: longest send
+} s_st;
 
 static void on_wifi(void *arg, esp_event_base_t base, int32_t id, void *data)
 {
@@ -67,6 +74,10 @@ static void wifi_start(void)
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wc));
     ESP_ERROR_CHECK(esp_wifi_start());
+#if !CONFIG_BT_ENABLED
+    // the radio is ours alone (two ESP32): no modem sleep, ACKs come at once
+    esp_wifi_set_ps(WIFI_PS_NONE);
+#endif
 }
 
 static size_t frame(uint8_t *out, uint8_t type, uint8_t slot, const uint8_t *data, uint16_t len)
@@ -86,7 +97,8 @@ void link_send(uint8_t type, uint8_t slot, const uint8_t *data, uint16_t len)
     if (!s_linked || len > EB_MAX_PAYLOAD)
         return;
     uint8_t buf[EB_MAX_PAYLOAD + 4];
-    xMessageBufferSend(s_out, buf, frame(buf, type, slot, data, len), 0);
+    if (!xMessageBufferSend(s_out, buf, frame(buf, type, slot, data, len), 0))
+        s_st.dropped++;
 }
 
 static bool ws_send(esp_transport_handle_t ws, const uint8_t *buf, size_t len)
@@ -97,16 +109,23 @@ static bool ws_send(esp_transport_handle_t ws, const uint8_t *buf, size_t len)
 
 static bool send_hello(esp_transport_handle_t ws)
 {
-    uint8_t mac[6];
-    char mac_str[18];
-    esp_read_mac(mac, ESP_MAC_BT);
-    snprintf(mac_str, sizeof(mac_str), "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2],
-             mac[3], mac[4], mac[5]);
+    // id: the chip's base MAC (of the Wi-Fi ESP32), which Wolfy reads at injection and knows
+    // this EspBar by (its name and device); mac: its Bluetooth address
+    uint8_t id[6], mac[6];
+    char id_str[18], mac_str[18] = "";
+    esp_efuse_mac_get_default(id);
+    snprintf(id_str, sizeof(id_str), "%02x:%02x:%02x:%02x:%02x:%02x", id[0], id[1], id[2], id[3],
+             id[4], id[5]);
+    if (radio_bt_addr(mac))
+        snprintf(mac_str, sizeof(mac_str), "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2],
+                 mac[3], mac[4], mac[5]);
     cJSON *hello = cJSON_CreateObject();
     cJSON_AddStringToObject(hello, "role", "esp");
     cJSON_AddStringToObject(hello, "token", s_cfg.token);
     cJSON_AddStringToObject(hello, "version", VERSION);
+    cJSON_AddStringToObject(hello, "id", id_str);
     cJSON_AddStringToObject(hello, "mac", mac_str);
+    cJSON_AddStringToObject(hello, "boards", radio_boards);
     char *text = cJSON_PrintUnformatted(hello);
     cJSON_Delete(hello);
     uint8_t buf[300];
@@ -116,7 +135,7 @@ static bool send_hello(esp_transport_handle_t ws)
     return ok;
 }
 
-// Bytes from Wolfy (WebSocket messages, frames may span them): complete frames go to BTstack.
+// Bytes from Wolfy (WebSocket messages, frames may span them): complete frames go to Bluetooth.
 static uint8_t s_rx[EB_MAX_PAYLOAD + 4];
 static size_t s_rx_len;
 
@@ -135,7 +154,7 @@ static void feed(const uint8_t *data, size_t len)
         len -= n;
         if (s_rx_len >= 4 && s_rx_len == 2 + (size_t)(s_rx[0] | s_rx[1] << 8)) {
             if (s_rx[2] != EB_PING)
-                wiimotes_on_frame(s_rx[2], s_rx[3], s_rx + 4, s_rx_len - 4);
+                radio_send(s_rx[2], s_rx[3], s_rx + 4, s_rx_len - 4);
             s_rx_len = 0;
         }
     }
@@ -171,7 +190,8 @@ static void link_task(void *arg)
             continue;
         }
         // send each report at once: with Nagle a report waits for the ACK of the previous one,
-        // and in modem sleep (required next to Bluetooth) ACKs only come at each DTIM beacon
+        // and in modem sleep (required next to Bluetooth on one ESP32) ACKs only come at each
+        // DTIM beacon
         int fd = esp_transport_get_socket(ws), one = 1;
         if (fd >= 0)
             setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
@@ -180,7 +200,7 @@ static void link_task(void *arg)
         s_rx_len = 0;
         xMessageBufferReset(s_out);
         s_linked = true;
-        wiimotes_on_frame(EB_HELLO, 0, NULL, 0);  // resend the connected Wii Remotes
+        radio_send(EB_HELLO, 0, NULL, 0);  // resend the connected Wii Remotes
         TickType_t last_rx = xTaskGetTickCount(), last_ping = 0;
         bool ok = true;
         while (ok) {
@@ -188,12 +208,29 @@ static void link_task(void *arg)
             while (sizeof(out) - used >= EB_MAX_PAYLOAD + 4 &&
                    (n = xMessageBufferReceive(s_out, out + used, sizeof(out) - used, 0)) > 0)
                 used += n;
-            if (used)
+            if (used) {
+                int64_t t0 = esp_timer_get_time();
                 ok = ws_send(ws, out, used);
+                if (esp_timer_get_time() - t0 > s_st.send_max)
+                    s_st.send_max = esp_timer_get_time() - t0;
+                s_st.msgs++;
+                for (size_t i = 0; i < used; i += 2 + (out[i] | out[i + 1] << 8))
+                    s_st.frames++;
+            }
             TickType_t now = xTaskGetTickCount();
             if (ok && now - last_ping >= pdMS_TO_TICKS(2000)) {
                 last_ping = now;
                 ok = ws_send(ws, buf, frame(buf, EB_PING, 0, NULL, 0));
+                char bt[EB_MAX_PAYLOAD + 1], text[200];
+                radio_stats(bt, sizeof(bt), 2000);
+                int n = snprintf(text, sizeof(text),
+                                 "%s, envoi %lu trames en %lu messages (envoi max %lld ms), perdus %lu",
+                                 bt, (unsigned long)s_st.frames, (unsigned long)s_st.msgs,
+                                 s_st.send_max / 1000, (unsigned long)s_st.dropped);
+                if (ok && n > 0 && n < (int)sizeof(text) - 4)
+                    ok = ws_send(ws, buf, frame(buf, EB_STATS, 0, (uint8_t *)text, n));
+                s_st.dropped = s_st.frames = s_st.msgs = 0;
+                s_st.send_max = 0;
             }
             if (!ok)
                 break;
@@ -220,7 +257,7 @@ static void link_task(void *arg)
         s_linked = false;
         esp_transport_close(ws);
         uint8_t off = 0;
-        wiimotes_on_frame(EB_SCAN, 0, &off, 1);
+        radio_send(EB_SCAN, 0, &off, 1);
     }
 }
 

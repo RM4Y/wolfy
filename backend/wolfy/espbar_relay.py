@@ -1,12 +1,13 @@
-"""EspBar relay between the ESP32 (Wii Remotes over Bluetooth) and the Dolphin of the linked
-device's Wii session (images/dolphin/espbar/IOEspBar.cpp). The ESP32 comes through a WebSocket
+"""EspBar relay between the ESP32 boards (Wii Remotes over Bluetooth) and the Dolphin of the Wii
+session of each one's device (images/dolphin/espbar/IOEspBar.cpp). An ESP32 comes through a WebSocket
 on Wolfy's own address (/api/espbar/ws: wss://wolfy.rm4.fr through SWAG, or ws://<lan ip>:8420),
 the sessions' Dolphin through a local TCP port (ESPBAR_PORT).
 
 Frames, both ways: u16 length (little endian, of what follows) | u8 type | u8 slot | payload.
-Both ends open with HELLO (JSON): the ESP32 with the EspBar token, Dolphin with its session
-id and the session hook token. Wolfy routes the Wii Remotes to the Dolphin whose session
-belongs to the linked device, and asks the ESP32 to look for Wii Remotes only then.
+Both ends open with HELLO (JSON): the ESP32 with the EspBar token and its id (base MAC: its
+name and device, espbar.boards()), Dolphin with its session id and the session hook token.
+Wolfy routes each EspBar's Wii Remotes to the Dolphin whose session belongs to its device, and
+asks the ESP32 to look for Wii Remotes only then.
 """
 import asyncio
 import hmac
@@ -16,9 +17,9 @@ import time
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-from . import espbar, settings, store, wolf_api
+from . import espbar, settings, wolf_api
 
-HELLO, WIIMOTE_ON, WIIMOTE_OFF, REPORT, DROP, PING, SCAN = range(1, 8)
+HELLO, WIIMOTE_ON, WIIMOTE_OFF, REPORT, DROP, PING, SCAN, STATS = range(1, 9)
 SLOTS = 4
 
 
@@ -35,13 +36,41 @@ class Peer:
         self.writer.close()
 
 
-_esp: Peer | None = None
+class Esp:
+    """A connected EspBar, and where its Wii Remotes go."""
+
+    def __init__(self, key: str, peer: Peer):
+        self.key, self.peer = key, peer
+        self.wiimotes: dict[int, str] = {}         # slot -> Bluetooth address
+        self.traffic: dict[int, list[int]] = {}    # slot -> [reports to Dolphin, reports to the Wii Remote]
+        self.active: str | None = None             # session receiving the Wii Remotes
+        self.idle_since: float | None = None       # no session for the Wii Remotes since (monotonic)
+        self.last_session: str | None = None       # last session that had the Wii Remotes
+        self.flow = ""                             # last report flow sent by the ESP32 (STATS, every 2 s)
+
+    @property
+    def name(self) -> str:
+        return espbar.board_name(self.key)
+
+    def target(self) -> Peer | None:
+        return _dolphins.get(self.active) if self.active else None
+
+    def give(self, session: str | None) -> None:
+        """Move the Wii Remotes to the Dolphin of <session> (or nobody), tell the ESP32."""
+        if old := self.target():
+            for slot in self.wiimotes:
+                old.send(WIIMOTE_OFF, slot)
+        self.active = session
+        if new := self.target():
+            self.last_session = session
+            for slot, addr in self.wiimotes.items():
+                new.send(WIIMOTE_ON, slot, bytes.fromhex(addr.replace(":", "")))
+        self.peer.send(SCAN, 0, bytes([1 if session else 0]))
+        print(f"{self.name}: Wii Remotes -> {('session ' + session) if session else 'nobody'}", flush=True)
+
+
+_esps: dict[str, Esp] = {}        # board key -> connected EspBar
 _dolphins: dict[str, Peer] = {}   # session id -> Dolphin of that Wii session
-_active: str | None = None        # session receiving the Wii Remotes
-_wiimotes: dict[int, str] = {}    # slot -> Bluetooth address
-_idle_since: float | None = None  # no session for the Wii Remotes since (monotonic)
-_last_session: str | None = None  # last session that had the Wii Remotes
-_traffic: dict[int, list[int]] = {}  # slot -> [reports to Dolphin, reports to the Wii Remote]
 IDLE_DROP = 30                     # then they are turned off (Dolphin quit without doing it)
                                    # (at once when that session has ended)
 
@@ -111,85 +140,89 @@ def _bdaddr(raw: bytes) -> str:
     return ":".join(f"{b:02X}" for b in raw[:6])
 
 
-async def _linked_sessions(strict: bool = False) -> set[str]:
-    """Wolf sessions of the device the EspBar is linked to (strict: Wolf unreachable raises)."""
-    client = espbar.client_id()
-    if not client:
-        return set()
+async def _wolf_sessions(strict: bool = False) -> list[dict]:
+    """Wolf's sessions (strict: Wolf unreachable raises)."""
     try:
-        sessions = (await wolf_api.get("sessions")).get("sessions", [])
+        return (await wolf_api.get("sessions")).get("sessions", [])
     except Exception:
         if strict:
             raise
-        return set()
+        return []
+
+
+def _sessions_of(client: str | None, sessions: list[dict]) -> set[str]:
     # a session is known by its session_id, or by its client_id (what Wolf's sessions/stop takes)
-    return {str(s[k]) for s in sessions if str(s.get("client_id")) == client
+    return {str(s[k]) for s in sessions if client and str(s.get("client_id")) == client
             for k in ("session_id", "id", "client_id") if s.get(k) is not None}
 
 
+def _client_of(key: str) -> str | None:
+    return espbar.boards().get(key, {}).get("client_id")
+
+
 async def linked(session: str) -> bool:
-    return session in await _linked_sessions()
+    """The session belongs to a device that has an EspBar."""
+    clients = {b["client_id"] for b in espbar.boards().values() if b.get("client_id")}
+    if not clients:
+        return False
+    sessions = await _wolf_sessions()
+    return any(session in _sessions_of(c, sessions) for c in clients)
 
 
 async def _route() -> None:
-    """Give the Wii Remotes to the linked device's Dolphin (if it runs), tell the ESP32."""
-    global _active, _last_session
-    sessions = await _linked_sessions() if _dolphins else set()
-    target = next((s for s in _dolphins if s in sessions), None)
-    if target != _active:
-        if _active in _dolphins:
-            for slot in _wiimotes:
-                _dolphins[_active].send(WIIMOTE_OFF, slot)
-        _active = target
-        if target:
-            _last_session = target
-            for slot, addr in _wiimotes.items():
-                _dolphins[target].send(WIIMOTE_ON, slot, bytes.fromhex(addr.replace(":", "")))
-        if _esp:
-            _esp.send(SCAN, 0, bytes([1 if target else 0]))
-        print(f"EspBar: Wii Remotes -> {('session ' + target) if target else 'nobody'}", flush=True)
+    """Give each EspBar's Wii Remotes to its device's Dolphin (if it runs)."""
+    if not _esps:
+        return
+    sessions = await _wolf_sessions() if _dolphins else []
+    for esp in list(_esps.values()):
+        mine = _sessions_of(_client_of(esp.key), sessions)
+        target = next((s for s in _dolphins if s in mine), None)
+        if target != esp.active:
+            esp.give(target)
 
 
 async def _serve_esp(peer: Peer) -> None:
-    global _esp
-    if _esp:
-        _esp.close()
-    _esp = peer
-    _wiimotes.clear()
-    _traffic.clear()
-    peer.send(SCAN, 0, bytes([1 if _active else 0]))
-    print(f"EspBar: ESP32 {peer.info.get('mac')} connected", flush=True)
+    key = str(peer.info.get("id") or peer.info.get("mac") or "").lower()  # firmware < 10: no id
+    if not key:
+        return
+    espbar.register(key)
+    if old := _esps.get(key):
+        old.peer.close()
+    esp = _esps[key] = Esp(key, peer)
+    peer.send(SCAN, 0, b"\0")
+    print(f"{esp.name}: ESP32 {key} connected", flush=True)
+    await _route()
     try:
         while True:
             type_, slot, payload = await _read_frame(peer.reader, 10)
-            target = _dolphins.get(_active) if _active else None
+            target = esp.target()
             if type_ == REPORT:
                 if target:
                     target.send(REPORT, slot, payload)
-                    if slot in _traffic:
-                        _traffic[slot][0] += 1
+                    if slot in esp.traffic:
+                        esp.traffic[slot][0] += 1
+            elif type_ == STATS:  # report flow of the ESP32, shown in Wolfy > Wii > EspBar
+                esp.flow = payload.decode(errors="replace")
             elif type_ == WIIMOTE_ON and slot < SLOTS:
-                _wiimotes[slot] = _bdaddr(payload)
-                _traffic[slot] = [0, 0]
-                print(f"EspBar: Wii Remote {_wiimotes[slot]} on slot {slot + 1} -> "
-                      f"{('session ' + _active) if target else 'nobody'}", flush=True)
+                esp.wiimotes[slot] = _bdaddr(payload)
+                esp.traffic[slot] = [0, 0]
+                print(f"{esp.name}: Wii Remote {esp.wiimotes[slot]} on slot {slot + 1} -> "
+                      f"{('session ' + esp.active) if target else 'nobody'}", flush=True)
                 if target:
                     target.send(WIIMOTE_ON, slot, payload)
             elif type_ == WIIMOTE_OFF and slot < SLOTS:
-                up, down = _traffic.pop(slot, [0, 0])
-                print(f"EspBar: Wii Remote {_wiimotes.pop(slot, '?')} of slot {slot + 1} gone "
+                up, down = esp.traffic.pop(slot, [0, 0])
+                print(f"{esp.name}: Wii Remote {esp.wiimotes.pop(slot, '?')} of slot {slot + 1} gone "
                       f"({up} reports to Dolphin, {down} to the Wii Remote)", flush=True)
                 if target:
                     target.send(WIIMOTE_OFF, slot)
     finally:
-        if _esp is peer:
-            _esp = None
-            if _active in _dolphins:
-                for slot in _wiimotes:
-                    _dolphins[_active].send(WIIMOTE_OFF, slot)
-            _wiimotes.clear()
-            _traffic.clear()
-            print("EspBar: ESP32 disconnected", flush=True)
+        if _esps.get(key) is esp:
+            del _esps[key]
+            if target := esp.target():
+                for slot in esp.wiimotes:
+                    target.send(WIIMOTE_OFF, slot)
+            print(f"{esp.name}: ESP32 disconnected", flush=True)
 
 
 async def _serve_dolphin(peer: Peer) -> None:
@@ -202,13 +235,14 @@ async def _serve_dolphin(peer: Peer) -> None:
     try:
         while True:
             type_, slot, payload = await _read_frame(peer.reader)
-            if _active == session and _esp and type_ in (REPORT, DROP):
-                _esp.send(type_, slot, payload)
-                if type_ == REPORT and slot in _traffic:
-                    _traffic[slot][1] += 1
+            esp = next((e for e in _esps.values() if e.active == session), None)
+            if esp and type_ in (REPORT, DROP):
+                esp.peer.send(type_, slot, payload)
+                if type_ == REPORT and slot in esp.traffic:
+                    esp.traffic[slot][1] += 1
             if type_ == DROP:
                 print(f"EspBar: Dolphin of session {session} turns off the Wii Remote of slot {slot + 1}"
-                      f"{'' if _active == session and _esp else ' (ignored: not its Wii Remotes)'}", flush=True)
+                      f"{f' of {esp.name}' if esp else ' (ignored: no EspBar for it)'}", flush=True)
     finally:
         if _dolphins.get(session) is peer:
             del _dolphins[session]
@@ -255,36 +289,36 @@ async def _handle(reader, writer, roles=("esp", "dolphin")) -> None:
 
 
 async def _keepalive() -> None:
-    """Ping both ends (they drop a silent link after 6 s), follow the link and the sessions,
+    """Ping both ends (they drop a silent link after 6 s), follow the links and the sessions,
     turn off Wii Remotes left without a session."""
-    global _idle_since, _last_session
     while True:
         await asyncio.sleep(2)
-        for peer in [_esp, *_dolphins.values()]:
-            if peer:
-                peer.send(PING)
+        for peer in [*(e.peer for e in _esps.values()), *_dolphins.values()]:
+            peer.send(PING)
         try:
             await _route()
         except Exception as exc:
             print(f"EspBar: routing failed: {exc}", flush=True)
-        if _active or not _wiimotes:
-            _idle_since = None
-            continue
-        if _idle_since is None:
-            _idle_since = time.monotonic()
-        # Dolphin gone: its session ended (Moonlight quit), or Dolphin is restarting inside it
-        # (dolphin-run.sh) and the Wii Remotes stay on for a while
-        try:
-            ended = bool(_last_session) and _last_session not in await _linked_sessions(strict=True)
-        except Exception:
-            ended = False
-        if _esp and (ended or time.monotonic() - _idle_since > IDLE_DROP):
-            print(f"EspBar: {'session ' + str(_last_session) + ' ended' if ended else 'no Wii session'}, "
-                  "turning the Wii Remotes off", flush=True)
-            for slot in _wiimotes:
-                _esp.send(DROP, slot)
-            _idle_since = None
-            _last_session = None
+        for esp in list(_esps.values()):
+            if esp.active or not esp.wiimotes:
+                esp.idle_since = None
+                continue
+            if esp.idle_since is None:
+                esp.idle_since = time.monotonic()
+            # Dolphin gone: its session ended (Moonlight quit), or Dolphin is restarting inside it
+            # (dolphin-run.sh) and the Wii Remotes stay on for a while
+            try:
+                ended = bool(esp.last_session) and esp.last_session not in _sessions_of(
+                    _client_of(esp.key), await _wolf_sessions(strict=True))
+            except Exception:
+                ended = False
+            if ended or time.monotonic() - esp.idle_since > IDLE_DROP:
+                print(f"{esp.name}: {'session ' + str(esp.last_session) + ' ended' if ended else 'no Wii session'}, "
+                      "turning the Wii Remotes off", flush=True)
+                for slot in esp.wiimotes:
+                    esp.peer.send(DROP, slot)
+                esp.idle_since = None
+                esp.last_session = None
 
 
 async def start() -> None:
@@ -293,12 +327,11 @@ async def start() -> None:
     print(f"EspBar: relay listening on port {settings.ESPBAR_PORT}", flush=True)
 
 
-def status() -> dict:
-    names = store.get("clients")
-    return {
-        "online": _esp is not None,
-        "esp": {k: _esp.info.get(k) for k in ("mac", "version", "ip")} | {"since": _esp.since} if _esp else None,
-        "wiimotes": [{"slot": s + 1, "addr": a} for s, a in sorted(_wiimotes.items())],
-        "session": _active,
-        "client_name": names.get(espbar.client_id() or "", {}).get("name", "") if _active else "",
-    }
+def status() -> dict[str, dict]:
+    """Connected EspBars, by board key."""
+    return {key: {
+        "esp": {k: esp.peer.info.get(k) for k in ("mac", "version", "ip", "boards")} | {"since": esp.peer.since},
+        "wiimotes": [{"slot": s + 1, "addr": a} for s, a in sorted(esp.wiimotes.items())],
+        "session": esp.active,
+        "flow": esp.flow,
+    } for key, esp in _esps.items()}

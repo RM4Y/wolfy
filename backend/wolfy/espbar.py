@@ -1,5 +1,6 @@
-"""EspBar: the ESP32 program shipped with Wolfy (espbar/firmware.bin), injected from the
-browser, and the paired Moonlight device it is linked to."""
+"""EspBar: the ESP32 programs shipped with Wolfy (espbar/firmware.bin for one ESP32,
+firmware-dual.bin + firmware-bt.bin for two), injected from the browser, and the EspBar boards: the paired
+Moonlight device each is linked to."""
 import hashlib
 import json
 import secrets
@@ -7,7 +8,11 @@ import time
 
 from . import settings, store
 
-PATH = settings.ESPBAR_FIRMWARE
+# one ESP32 (Wi-Fi + Bluetooth), or two: the Wi-Fi one, which updates the Bluetooth one itself,
+# and the Bluetooth one (injected once, when its GPIO0 isn't wired to the Wi-Fi one)
+VARIANTS = {"single": settings.ESPBAR_FIRMWARE,
+            "dual": settings.ESPBAR_FIRMWARE.with_name("firmware-dual.bin"),
+            "bt": settings.ESPBAR_FIRMWARE.with_name("firmware-bt.bin")}
 ESP_MAGIC = 0xE9             # first byte of an ESP image (bootloader or app)
 APP_OFFSET = 0x10000         # app partition of the default Arduino / PlatformIO tables
 PARTITIONS_OFFSET = 0x8000   # partition table, inside a merged image
@@ -31,10 +36,11 @@ def _inspect(data: bytes) -> dict | None:
     return None
 
 
-def firmware() -> dict | None:
-    """The program, or None while it is not built yet."""
+def firmware(variant: str) -> dict | None:
+    """The program of <variant> (VARIANTS), or None while it is not built yet."""
+    path = VARIANTS[variant]
     try:
-        data = PATH.read_bytes()
+        data = path.read_bytes()
     except OSError:
         return None
     if not (image := _inspect(data)):
@@ -42,7 +48,7 @@ def firmware() -> dict | None:
     return {
         "size": len(data),
         "sha256": hashlib.sha256(data).hexdigest(),
-        "built_at": time.strftime("%Y-%m-%d %H:%M", time.localtime(PATH.stat().st_mtime)),
+        "built_at": time.strftime("%Y-%m-%d %H:%M", time.localtime(path.stat().st_mtime)),
         **image,
         "config_offset": CONFIG_OFFSET,
     }
@@ -70,9 +76,44 @@ def config_blob(ssid: str, password: str, url: str) -> bytes:
     return b"EB01" + json.dumps(data).encode() + b"\0"
 
 
-def client_id() -> str | None:
-    return store.get("espbar").get("client_id")
+# The EspBar boards, known by their chip's base MAC ("id" of their HELLO, read by the browser
+# at injection): {key: {"client_id"}}. A device has one EspBar at most (each fills the
+# Wii Remote slots 1-4 of its Dolphin).
+
+def boards() -> dict[str, dict]:
+    return store.get("espbar_boards")
 
 
-def link(client: str | None) -> None:
-    store.put("espbar", "client_id", client or None)
+def board_name(key: str) -> str:
+    return f"EspBar {key}"
+
+
+def register(key: str) -> None:
+    """An EspBar connected: known from now on (the first one takes the former single link)."""
+    if key in boards():
+        return
+    legacy = store.get("espbar").get("client_id")
+    store.put("espbar_boards", key, {"client_id": None})
+    if legacy:
+        store.put("espbar", "client_id", None)
+        save(key, legacy)
+
+
+def save(key: str, client_id: str | None) -> None:
+    """Give an EspBar a device (taken from the EspBar that had it), or none."""
+    if client_id:
+        for other, b in boards().items():
+            if other != key and b.get("client_id") == client_id:
+                store.put("espbar_boards", other, {**b, "client_id": None})
+    store.put("espbar_boards", key, {**boards().get(key, {}), "client_id": client_id or None})
+
+
+def forget(key: str) -> None:
+    store.put("espbar_boards", key, None)
+
+
+def unlink_client(client_id: str) -> None:
+    """The device was unpaired: no EspBar for it any more."""
+    for key, b in boards().items():
+        if b.get("client_id") == client_id:
+            store.put("espbar_boards", key, {**b, "client_id": None})
