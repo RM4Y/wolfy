@@ -3,9 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" href="/wolfy.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#07060f" />
-    <script>try { const t = localStorage.getItem("wolfy-theme"); if (t) document.documentElement.dataset.theme = t } catch {}</script>
+    <meta name="application-name" content="Wolfy" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Wolfy" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="format-detection" content="telephone=no" />
+    <script>try { const t = localStorage.getItem("wolfy-theme"); if (t) document.documentElement.dataset.theme = t; if (t === "light") document.querySelector('meta[name="theme-color"]').content = "#f3f2fa" } catch {}</script>
     <title>Wolfy</title>
   </head>
   <body>

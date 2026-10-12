@@ -41,6 +41,7 @@ const theme = ref(document.documentElement.dataset.theme || 'dark')
 function toggleTheme() {
   theme.value = theme.value === 'dark' ? 'light' : 'dark'
   document.documentElement.dataset.theme = theme.value
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme.value === 'dark' ? '#07060f' : '#f3f2fa')
   try { localStorage.setItem('wolfy-theme', theme.value) } catch { /* private window */ }
 }
 

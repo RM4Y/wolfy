@@ -150,8 +150,8 @@ h3 { font: 600 14px/21px var(--font-sans); margin: 0; }
   border-right: 1px solid var(--border);
   box-shadow: inset -1px 0 0 var(--glass-edge);
   -webkit-backdrop-filter: var(--glass); backdrop-filter: var(--glass);
-  padding: var(--space-4) var(--space-3);
-  position: sticky; top: 0; height: 100vh;
+  padding: calc(var(--space-4) + env(safe-area-inset-top)) var(--space-3) calc(var(--space-4) + env(safe-area-inset-bottom)) calc(var(--space-3) + env(safe-area-inset-left));
+  position: sticky; top: 0; height: 100vh; height: 100dvh;
   display: flex; flex-direction: column; gap: 2px;
 }
 [data-theme="light"] .side { background: var(--surface); }
@@ -175,7 +175,10 @@ h3 { font: 600 14px/21px var(--font-sans); margin: 0; }
 .side-foot { margin-top: auto; border-top: 1px solid var(--border); padding-top: var(--space-3); display: flex; flex-direction: column; gap: 2px; }
 .side-foot button { justify-content: flex-start; width: 100%; height: 38px; padding: 0 10px; font-weight: 500; }
 
-main { padding: var(--space-8); max-width: 1280px; width: 100%; min-width: 0; }
+main {
+  padding: calc(var(--space-8) + env(safe-area-inset-top)) calc(var(--space-8) + env(safe-area-inset-right)) var(--space-8) var(--space-8);
+  max-width: 1280px; width: 100%; min-width: 0;
+}
 .page-head { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-6); flex-wrap: wrap; }
 .page-head .spacer { flex: 1; }
 .page-head .sub { color: var(--ink-muted); font-size: 13px; }
@@ -183,11 +186,14 @@ main { padding: var(--space-8); max-width: 1280px; width: 100%; min-width: 0; }
 /* mobile: compact header + tab bar at the bottom */
 .topbar, .tabbar, .sheet-back { display: none; }
 @media (max-width: 899px) {
-  .shell { grid-template-columns: 1fr; }
+  .shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; align-content: start; }
   .side { display: none; }
-  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 4px; }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: calc(14px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) 4px calc(16px + env(safe-area-inset-left));
+  }
   .topbar .brand { padding: 0; }
-  main { padding: var(--space-3) var(--space-4) calc(88px + env(safe-area-inset-bottom)); }
+  main { padding: var(--space-3) calc(var(--space-4) + env(safe-area-inset-right)) calc(88px + env(safe-area-inset-bottom)) calc(var(--space-4) + env(safe-area-inset-left)); }
   .page-head { margin-bottom: var(--space-4); }
   .tabbar {
     display: grid; grid-template-columns: repeat(5, 1fr);
@@ -232,9 +238,8 @@ main { padding: var(--space-8); max-width: 1280px; width: 100%; min-width: 0; }
 .divider { height: 1px; background: var(--border); margin: var(--space-5) calc(-1 * var(--space-5)); }
 .grid { display: grid; gap: var(--space-6); }
 .grid.cols-4 { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: var(--space-4); }
-.grid.cols-3 { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
-.grid.cols-2 { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); }
-@media (max-width: 500px) { .grid.cols-2, .grid.cols-3 { grid-template-columns: 1fr; } }
+.grid.cols-3 { grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+.grid.cols-2 { grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); }
 .row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 .row.between { justify-content: space-between; }
 .row.end { justify-content: flex-end; }
@@ -469,6 +474,7 @@ button.on, button.on:hover:not(:disabled) { background: var(--brand-soft); borde
   .table-wrap.cards tr { padding: var(--space-3) 0; border-bottom: 1px solid var(--border); }
   .table-wrap.cards tr:last-child { border-bottom: 0; }
   .table-wrap.cards td { border: 0; padding: 2px 0; text-align: left; }
-  .table-wrap.cards td.act { margin-top: var(--space-2); }
+  .table-wrap.cards td.act { margin-top: var(--space-2); width: auto; }
+  .table-wrap.cards td.act > * + * { margin-left: 6px; }
   .table-wrap.cards tbody tr:hover td { background: none; }
 }

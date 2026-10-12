@@ -138,4 +138,15 @@ onMounted(load)
 .handle:hover { background: var(--surface-raised); color: var(--ink); }
 .touch { display: none; }
 @media (hover: none) { .handle { display: none; } .touch { display: inline-flex; } }
+/* phones: compact horizontal cards (square cover on the left) */
+@media (max-width: 600px) {
+  .apps { grid-template-columns: 1fr; gap: var(--space-3); }
+  .app { display: grid; grid-template-columns: 88px minmax(0, 1fr); grid-template-areas: "cover body" "foot foot"; }
+  .app-cover { grid-area: cover; aspect-ratio: 1; margin: 12px 0 0 12px; border-radius: var(--radius-lg); padding: 10px; }
+  .app-cover :deep(.label) { display: none; }
+  .app-cover :deep(.glyph) { font-size: 84px; top: -10px; }
+  .app-body { grid-area: body; padding: 12px 12px 8px; }
+  .app-foot { grid-area: foot; padding: 0 12px 12px; }
+  .app:hover { transform: none; }
+}
 </style>

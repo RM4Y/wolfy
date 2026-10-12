@@ -111,8 +111,8 @@ onMounted(load)
   <div v-if="wolf" class="card">
     <h2 style="margin:0 0 4px">Adresse externe</h2>
     <div class="muted small" style="margin-bottom:12px">
-      Nom de domaine de Wolfy depuis internet (proxy https, ex. <code>wolfy.rm4.fr</code>). Utilisé par l'EspBar
-      (Wii › EspBar) : <code>wss://{{ cleanHost(publicHost) || 'nom-de-domaine' }}/api/espbar/ws</code>.
+      Nom de domaine de Wolfy depuis internet (proxy https, ex. <code>wolfy.rm4.fr</code>). Utilisé par la WolfyBar
+      (Wii › WolfyBar) : <code>wss://{{ cleanHost(publicHost) || 'nom-de-domaine' }}/api/espbar/ws</code>.
     </div>
     <form class="row" style="gap:8px" @submit.prevent="saveHost">
       <input v-model="publicHost" placeholder="wolfy.exemple.fr" maxlength="200" style="flex:1;min-width:220px" />
@@ -194,7 +194,7 @@ onMounted(load)
         <button class="sm" @click="prune"><Icon name="broom" />Supprimer les conteneurs arrêtés</button>
       </div>
       <div v-if="!m.containers.length" class="empty">Aucun conteneur d'application.</div>
-      <div v-else class="table-wrap">
+      <div v-else class="table-wrap cards">
         <table>
           <thead><tr><th>Nom</th><th>Application</th><th>État</th><th>Créé</th><th></th></tr></thead>
           <tbody>
@@ -203,8 +203,8 @@ onMounted(load)
               <td>{{ c.app }}</td>
               <td><span class="badge" :class="c.status === 'running' ? 'ok' : 'warn'">{{ c.status }}</span></td>
               <td class="small muted">{{ ago(c.created) }}</td>
-              <td style="text-align:right;white-space:nowrap">
-                <button v-if="c.status === 'running'" class="sm" @click="containerAction(c, 'stop')">⏹</button>
+              <td class="act">
+                <button v-if="c.status === 'running'" class="sm" @click="containerAction(c, 'stop')"><Icon name="stop" />Arrêter</button>
                 <button class="sm danger" @click="containerAction(c, 'remove')"><Icon name="trash" />Supprimer</button>
               </td>
             </tr>
@@ -213,24 +213,26 @@ onMounted(load)
       </div>
     </div>
 
-    <div class="grid cols-2">
+    <div class="grid split">
       <div class="card">
         <h2>Images des applications</h2>
+        <div class="table-wrap cards">
         <table class="small">
           <tbody>
             <tr v-for="img in m.images" :key="img.ref">
-              <td class="mono">{{ img.ref }}</td>
+              <td class="mono" :title="img.ref">{{ img.ref.replace(/^ghcr\.io\//, '') }}</td>
               <td>
                 <span v-if="img.present" class="muted">{{ ago(img.created) }} · {{ bytes(img.size) }}</span>
                 <span v-else class="badge bad">absente</span>
               </td>
-              <td style="text-align:right">
+              <td class="act">
                 <button v-if="img.ref.includes('/')" class="sm" title="Mettre à jour" @click="pull(img)"><Icon name="download" />Mettre à jour</button>
-                <router-link v-else to="/emulateurs" class="small">construire</router-link>
+                <router-link v-else to="/emulateurs" class="small">Construire</router-link>
               </td>
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
 
       <div class="card">
@@ -255,13 +257,13 @@ onMounted(load)
       <h2>Sauvegardes de config.toml</h2>
       <p class="muted small" style="margin-top:-6px">Une sauvegarde est créée avant chaque modification faite par Wolfy (30 conservées).</p>
       <div v-if="!m.backups.length" class="empty">Aucune sauvegarde pour l'instant.</div>
-      <div v-else class="table-wrap">
+      <div v-else class="table-wrap cards">
         <table class="small">
           <tbody>
             <tr v-for="b in m.backups" :key="b.name">
               <td class="mono">{{ b.name.replace('config.toml.', '') }}</td>
               <td class="muted">{{ date(b.mtime) }}</td>
-              <td style="text-align:right;white-space:nowrap">
+              <td class="act">
                 <a class="btn sm" :href="`/api/backups/${b.name}`" download><Icon name="download" />Télécharger</a>
                 <button class="sm" @click="restore(b)"><Icon name="undo" />Restaurer</button>
               </td>
@@ -273,16 +275,18 @@ onMounted(load)
 
     <div v-if="jobs.length" class="card">
       <h2>Tâches récentes</h2>
+      <div class="table-wrap cards">
       <table class="small">
         <tbody>
           <tr v-for="j in jobs" :key="j.id">
             <td>{{ j.title }}</td>
             <td><span class="badge" :class="{ ok: j.status === 'success', bad: j.status === 'error', warn: j.status === 'running' }">{{ j.status }}</span></td>
             <td class="muted">{{ j.started.replace('T', ' ') }}</td>
-            <td style="text-align:right"><button class="sm" @click="jobId = j.id">Journal</button></td>
+            <td class="act"><button class="sm" @click="jobId = j.id"><Icon name="file" />Journal</button></td>
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
   </template>
 
@@ -290,6 +294,7 @@ onMounted(load)
 </template>
 
 <style scoped>
+.split { grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); align-items: start; }
 .setting-row { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
 .setting-title { font-weight: 600; font-size: 15px; }
 </style>
