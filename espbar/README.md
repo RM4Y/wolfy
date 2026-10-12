@@ -1,8 +1,8 @@
-# EspBar
+# WolfyBar
 
 Une « DolphinBar Wi-Fi » : un ESP32 (DevKit classique), ou deux, connecte les Wiimotes en Bluetooth
 et les envoie, par le Wi-Fi, au Dolphin de la session Wii de l'appareil Moonlight relié
-(Wolfy › Wii › onglet **EspBar**). Les rapports HID passent tels quels : Dolphin les voit
+(Wolfy › Wii › onglet **WolfyBar**). Les rapports HID passent tels quels : Dolphin les voit
 comme de vraies Wiimotes (pointeur IR, Nunchuk, MotionPlus, haut-parleur, vibreur).
 
 ```
@@ -10,7 +10,7 @@ Wiimotes ──Bluetooth──▶ ESP32 ──Wi-Fi, WebSocket──▶ Wolfy (r
 Wiimotes ──Bluetooth──▶ ESP32 BT ──UART──▶ ESP32 Wi-Fi ──Wi-Fi, WebSocket──▶ …            (2 ESP32)
 ```
 
-Deux variantes, au choix à l'injection (Wolfy › Wii › EspBar) :
+Deux variantes, au choix à l'injection (Wolfy › Wii › WolfyBar) :
 
 - **1 ESP32** (`firmware.bin`, `firmware/single`) : Wi-Fi et Bluetooth se partagent l'antenne,
   ~37 rapports/s par Wiimote.
@@ -47,20 +47,20 @@ convertisseur USB-série est sur les mêmes broches RX0 / TX0).
   LED bleue de la carte (D2) : clignote = cherche Wolfy, allumée = connecté.
 - **Page de réglage** (`firmware/wifi/main/setup.c`) : bouton maintenu 10 s (la LED de D15 clignote
   chaque seconde, puis reste allumée), ou aucune configuration : l'ESP32 Wi-Fi redémarre en point
-  d'accès ouvert « EspBar-XXXX » ; le téléphone qui s'y connecte ouvre la page (portail captif,
+  d'accès ouvert « WolfyBar-XXXX » ; le téléphone qui s'y connecte ouvre la page (portail captif,
   http://192.168.4.1) : réseau Wi-Fi (liste des réseaux autour), mot de passe, adresse de Wolfy. Le
   jeton de Wolfy est gardé (une première injection depuis Wolfy reste nécessaire). Enregistrer
-  redémarre l'EspBar ; sans enregistrement, elle repart avec ses réglages au bout de 10 min, ou
+  redémarre la WolfyBar ; sans enregistrement, elle repart avec ses réglages au bout de 10 min, ou
   quand on maintient de nouveau 10 s le bouton. Avec 2 ESP32, le bouton de l'ESP32 Bluetooth le
   demande à l'ESP32 Wi-Fi par l'UART (`EB_SETUP`).
 - **Wolfy** (`backend/wolfy/espbar_relay.py`) : l'ESP32 le joint par un WebSocket sur sa propre
   adresse, `wss://wolfy.rm4.fr/api/espbar/ws` (via SWAG, de n'importe où ; certificat vérifié)
   ou `ws://<IP du serveur>:8420/api/espbar/ws` (réseau local). Les Dolphin des sessions le
   joignent sur le port 8421 (localhost seulement). Les Wiimotes vont à la session de l'appareil relié.
-  Plusieurs EspBar : chacune est reconnue par la MAC de base de sa puce (`id` de son HELLO, lue par
-  le navigateur à l'injection) et a son appareil, choisi à l'injection (une EspBar par appareil), dans
-  Wolfy › Wii › EspBar ; une carte inconnue y apparaît à sa première connexion.
-- **Dolphin** (`images/dolphin/espbar/`) : backend « EspBar » ajouté aux vraies Wiimotes.
+  Plusieurs WolfyBar : chacune est reconnue par la MAC de base de sa puce (`id` de son HELLO, lue par
+  le navigateur à l'injection) et a son appareil, choisi à l'injection (une WolfyBar par appareil), dans
+  Wolfy › Wii › WolfyBar ; une carte inconnue y apparaît à sa première connexion.
+- **Dolphin** (`images/dolphin/espbar/`) : backend « WolfyBar » ajouté aux vraies Wiimotes.
   Les joueurs réglés sur « Vraie Wiimote » (onglet Wolfy-Dolphin) les reçoivent.
 
 ## Compiler

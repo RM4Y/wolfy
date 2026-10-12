@@ -142,7 +142,7 @@ defineExpose({ pending })
     <div v-if="!search" class="tabs">
       <button type="button" :class="{ active: tab === 'wolfy' }" @click="tab = 'wolfy'">Wolfy-{{ name }}</button>
       <button v-if="emulator === 'dolphin'" type="button" :class="{ active: tab === 'espbar' }" @click="tab = 'espbar'">
-        EspBar
+        WolfyBar
       </button>
       <button v-for="t in data.tabs" :key="t.id" type="button" :class="{ active: tab === t.id }" @click="tab = t.id">
         {{ t.label }} <span class="n">{{ counts[t.id] || 0 }}</span>

@@ -64,7 +64,7 @@ bool config_load(espbar_config_t *cfg)
         return false;
     static char buf[CONFIG_SIZE];
     if (esp_partition_read(part, 0, buf, sizeof(buf)) != ESP_OK || memcmp(buf, "EB01", 4) != 0) {
-        ESP_LOGE(TAG, "no configuration: inject the EspBar from Wolfy");
+        ESP_LOGE(TAG, "no configuration: inject the WolfyBar from Wolfy");
         return false;
     }
     buf[sizeof(buf) - 1] = 0;

@@ -230,7 +230,7 @@ async def _serve_dolphin(peer: Peer) -> None:
     if old := _dolphins.get(session):
         old.close()
     _dolphins[session] = peer
-    print(f"EspBar: Dolphin of session {session} connected", flush=True)
+    print(f"WolfyBar: Dolphin of session {session} connected", flush=True)
     await _route()
     try:
         while True:
@@ -241,12 +241,12 @@ async def _serve_dolphin(peer: Peer) -> None:
                 if type_ == REPORT and slot in esp.traffic:
                     esp.traffic[slot][1] += 1
             if type_ == DROP:
-                print(f"EspBar: Dolphin of session {session} turns off the Wii Remote of slot {slot + 1}"
-                      f"{f' of {esp.name}' if esp else ' (ignored: no EspBar for it)'}", flush=True)
+                print(f"WolfyBar: Dolphin of session {session} turns off the Wii Remote of slot {slot + 1}"
+                      f"{f' of {esp.name}' if esp else ' (ignored: no WolfyBar for it)'}", flush=True)
     finally:
         if _dolphins.get(session) is peer:
             del _dolphins[session]
-            print(f"EspBar: Dolphin of session {session} disconnected", flush=True)
+            print(f"WolfyBar: Dolphin of session {session} disconnected", flush=True)
             await _route()
 
 
@@ -298,7 +298,7 @@ async def _keepalive() -> None:
         try:
             await _route()
         except Exception as exc:
-            print(f"EspBar: routing failed: {exc}", flush=True)
+            print(f"WolfyBar: routing failed: {exc}", flush=True)
         for esp in list(_esps.values()):
             if esp.active or not esp.wiimotes:
                 esp.idle_since = None
@@ -324,7 +324,7 @@ async def _keepalive() -> None:
 async def start() -> None:
     await asyncio.start_server(lambda r, w: _handle(r, w, roles=("dolphin",)), "0.0.0.0", settings.ESPBAR_PORT)
     asyncio.create_task(_keepalive())
-    print(f"EspBar: relay listening on port {settings.ESPBAR_PORT}", flush=True)
+    print(f"WolfyBar: relay listening on port {settings.ESPBAR_PORT}", flush=True)
 
 
 def status() -> dict[str, dict]:

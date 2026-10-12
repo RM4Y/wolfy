@@ -472,7 +472,7 @@ void wiimotes_init(void)
     l2cap_init();
     gap_set_security_level(LEVEL_0);  // Wii Remotes in 1 + 2 mode don't authenticate
     gap_ssp_set_enable(0);            // they only know legacy PIN pairing
-    gap_set_local_name("EspBar");
+    gap_set_local_name("WolfyBar");
     gap_set_class_of_device(0x000104);  // shown as a computer
     gap_set_default_link_policy_settings(LM_LINK_POLICY_ENABLE_ROLE_SWITCH);
     gap_connectable_control(1);         // Wii Remotes paired with SYNC connect to us

@@ -1,5 +1,5 @@
 <script setup>
-// "EspBar" tab of the Wii settings: the ESP32 boards that connect Wii Remotes over Bluetooth
+// "WolfyBar" tab of the Wii settings: the ESP32 boards that connect Wii Remotes over Bluetooth
 // and send them through Wolfy to the Dolphin of the Wii session of each one's device. Its program
 // (espbar/firmware.bin for one ESP32, firmware-dual.bin for two: the Wi-Fi one flashes the
 // Bluetooth one itself) and Wi-Fi settings are injected from the browser (Web Serial, ESP32
@@ -15,7 +15,7 @@ const eraseAll = ref(false)
 const log = ref('')
 const logBox = ref(null)
 const wifi = ref(null)  // { ssid, password, url }
-const injectClient = ref('')  // device given to the injected EspBar ('' = unchanged)
+const injectClient = ref('')  // device given to the injected WolfyBar ('' = unchanged)
 const variant = ref('dual')  // 'single' (one ESP32) or 'dual' (two)
 const dualPart = ref('wifi')  // with two: the ESP32 plugged in, 'wifi' or 'bt' (once, over USB)
 const target = () => variant.value === 'dual' && dualPart.value === 'bt' ? 'bt' : variant.value
@@ -43,13 +43,13 @@ async function load() {
 
 async function link(b, clientId) {
   const ok = await act('Enregistrement', () => api.put(`/espbar/boards/${b.key}`, { client_id: clientId || null }),
-    clientId ? 'EspBar reliée à l\'appareil' : 'EspBar déliée')
+    clientId ? 'WolfyBar reliée à l\'appareil' : 'WolfyBar déliée')
   if (ok) load()
 }
 
 async function forget(b) {
   if (!confirm(`Oublier ${boardLabel(b)} ? Elle réapparaîtra à sa prochaine connexion.`)) return
-  if (await act('Suppression', () => api.del(`/espbar/boards/${b.key}`), 'EspBar oubliée')) load()
+  if (await act('Suppression', () => api.del(`/espbar/boards/${b.key}`), 'WolfyBar oubliée')) load()
 }
 
 function write(text) {
@@ -61,7 +61,7 @@ const terminal = { clean: () => (log.value = ''), writeLine: t => write(`${t}\n`
 async function flash() {
   const kind = target()
   const fw = data.value.firmwares[kind]
-  const withConfig = kind !== 'bt'  // the Bluetooth ESP32 has no Wi-Fi, and is no EspBar of its own
+  const withConfig = kind !== 'bt'  // the Bluetooth ESP32 has no Wi-Fi, and is no WolfyBar of its own
   if (withConfig && (!wifi.value.ssid || !wifi.value.url)) {
     toast('Renseigne le Wi-Fi avant d\'injecter', 'error')
     return
@@ -75,7 +75,7 @@ async function flash() {
   log.value = ''
   flashing.value = 0
   let transport
-  let mac = ''  // the chip's base MAC: Wolfy knows the EspBar by it
+  let mac = ''  // the chip's base MAC: Wolfy knows the WolfyBar by it
   try {
     const get = (url, opts) => fetch(url, opts).then(r => {
       if (!r.ok) throw new Error(`${url} : erreur ${r.status}`)
@@ -138,7 +138,7 @@ async function flash() {
 }
 
 const clientLabel = c => c.name || `Appareil ${c.client_ip || c.client_id.slice(-4)}`
-const boardLabel = b => `l'EspBar ${b.key}`
+const boardLabel = b => `la WolfyBar ${b.key}`
 const clientName = id => {
   const c = data.value.clients.find(c => c.client_id === id)
   return c ? clientLabel(c) : 'l\'appareil relié'
@@ -152,17 +152,17 @@ onUnmounted(() => clearTimeout(timer))
   <div v-if="error" class="alert bad">{{ error }}</div>
   <template v-if="data">
     <div class="card">
-      <h2 style="margin:0 0 4px">EspBar</h2>
+      <h2 style="margin:0 0 4px">WolfyBar</h2>
       <div class="muted small" style="margin-bottom:12px">
-        Une EspBar connecte les Wiimotes en Bluetooth et les envoie, par le Wi-Fi, au Dolphin de la session Wii
-        de son appareil (une EspBar par appareil). Pendant une session Wii, elle cherche tant qu'aucune Wiimote
+        Une WolfyBar connecte les Wiimotes en Bluetooth et les envoie, par le Wi-Fi, au Dolphin de la session Wii
+        de son appareil (une WolfyBar par appareil). Pendant une session Wii, elle cherche tant qu'aucune Wiimote
         n'est connectée (LED D15 clignotante) : appuie sur 1 + 2. Pour en ajouter une autre : maintiens 3 s le
         bouton (D4) puis relâche, 30 s de recherche (avec 2 ESP32 : LED et bouton sur l'ESP32 Bluetooth). Maintenu
         10 s (la LED clignote chaque seconde, puis reste allumée) : page de réglage du Wi-Fi sur le réseau
-        « EspBar-XXXX ». Joueurs réglés sur « Vraie Wiimote » (onglet Wolfy-Dolphin).
+        « WolfyBar-XXXX ». Joueurs réglés sur « Vraie Wiimote » (onglet Wolfy-Dolphin).
       </div>
       <div v-if="!data.boards.length" class="muted small">
-        Aucune EspBar : injecte le programme dans un ESP32 (plus bas), elle apparaît ici à sa première connexion.
+        Aucune WolfyBar : injecte le programme dans un ESP32 (plus bas), elle apparaît ici à sa première connexion.
       </div>
       <div v-for="b in data.boards" :key="b.key" class="board">
         <div class="row" style="gap:8px;align-items:center">
@@ -173,7 +173,7 @@ onUnmounted(() => clearTimeout(timer))
               {{ clientLabel(c) }}{{ c.client_ip ? ` (${c.client_ip})` : '' }}
             </option>
           </select>
-          <button v-if="!b.status" type="button" class="ghost sm" title="Oublier cette EspBar" aria-label="Oublier cette EspBar" @click="forget(b)"><Icon name="trash" /></button>
+          <button v-if="!b.status" type="button" class="ghost sm" title="Oublier cette WolfyBar" aria-label="Oublier cette WolfyBar" @click="forget(b)"><Icon name="trash" /></button>
         </div>
         <div v-if="!b.status" class="small muted" style="margin-top:6px">
           <span class="dot lead"></span>Non connectée à Wolfy (LED bleue clignotante : Wi-Fi ou adresse de Wolfy à vérifier)
@@ -201,7 +201,7 @@ onUnmounted(() => clearTimeout(timer))
     </div>
 
     <div class="card">
-      <h2 style="margin:0 0 4px">Wi-Fi des EspBar</h2>
+      <h2 style="margin:0 0 4px">Wi-Fi des WolfyBar</h2>
       <div class="muted small" style="margin-bottom:14px">
         Écrit dans l'ESP32 avec le programme : réinjecte après un changement.
       </div>
@@ -267,7 +267,7 @@ onUnmounted(() => clearTimeout(timer))
         </div>
       </div>
       <div v-if="!fw()" class="alert warn small">
-        Ce programme de l'EspBar n'est pas encore compilé
+        Ce programme de la WolfyBar n'est pas encore compilé
         (<code>espbar/{{ variant === 'dual' ? 'firmware-dual.bin' : 'firmware.bin' }}</code>).
       </div>
       <div v-else-if="!serial" class="alert warn small">
@@ -276,7 +276,7 @@ onUnmounted(() => clearTimeout(timer))
       </div>
       <template v-else>
         <div v-if="target() !== 'bt'" class="row" style="gap:8px;margin-bottom:12px;align-items:center">
-          <span class="small" style="white-space:nowrap">Appareil de l'EspBar</span>
+          <span class="small" style="white-space:nowrap">Appareil de la WolfyBar</span>
           <select v-model="injectClient" style="flex:1;min-width:160px">
             <option value="">— Appareil : inchangé —</option>
             <option v-for="c in data.clients" :key="c.client_id" :value="c.client_id">

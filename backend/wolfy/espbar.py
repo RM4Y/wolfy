@@ -85,7 +85,7 @@ def boards() -> dict[str, dict]:
 
 
 def board_name(key: str) -> str:
-    return f"EspBar {key}"
+    return f"WolfyBar {key}"
 
 
 def register(key: str) -> None:
