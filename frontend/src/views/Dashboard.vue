@@ -35,10 +35,7 @@ onUnmounted(() => clearTimeout(timer))
 
 <template>
   <div class="page-head">
-    <div>
-      <h1>Tableau de bord</h1>
-      <div v-if="data" class="sub">{{ data.hostname }} · <span class="mono">{{ wolf.image }}</span></div>
-    </div>
+    <h1>Tableau de bord</h1>
     <div class="spacer"></div>
     <button @click="restart"><Icon name="refresh" />Redémarrer Wolf</button>
   </div>
