@@ -12,7 +12,7 @@ from fastapi import HTTPException
 
 from . import settings, store, wolf_api
 
-IDLE_SECONDS = 5 * 60
+DEFAULT_MINUTES = 5  # delay before closing, set in Paramètres (settings.idle_minutes)
 CHECK_SECONDS = 15
 VIDEO_BPS = 100_000  # below that, no picture is going out (audio alone is ~0.3 Mbit/s)
 
@@ -21,6 +21,10 @@ _last_active: dict[str, float] = {}  # client_id -> last time video went out (or
 
 def enabled() -> bool:
     return bool(store.get("settings").get("idle_stop"))
+
+
+def minutes() -> int:
+    return int(store.get("settings").get("idle_minutes") or DEFAULT_MINUTES)
 
 
 def netstat() -> dict | None:
@@ -54,7 +58,7 @@ def stop_at(session: dict) -> float | None:
     last = _last_active.get(str(session.get("client_id")))
     if not enabled() or last is None or time.time() - last < CHECK_SECONDS * 2:
         return None
-    return last + IDLE_SECONDS
+    return last + minutes() * 60
 
 
 async def _check() -> None:
@@ -65,10 +69,10 @@ async def _check() -> None:
     update(sessions, netstat())
     if not enabled():
         return
-    now = time.time()
+    now, delay = time.time(), minutes() * 60
     for s in sessions:
         key = str(s.get("client_id"))
-        if now - _last_active.get(key, now) < IDLE_SECONDS:
+        if now - _last_active.get(key, now) < delay:
             continue
         try:
             await wolf_api.post("sessions/stop", {"session_id": key})
@@ -77,7 +81,7 @@ async def _check() -> None:
             continue
         _last_active.pop(key, None)
         name = store.get("clients").get(key, {}).get("name") or s.get("client_ip", "")
-        print(f"idle session of {name} ({key}) stopped after {IDLE_SECONDS // 60} min", flush=True)
+        print(f"idle session of {name} ({key}) stopped after {delay // 60} min", flush=True)
         store.put("settings", "idle_last_stop", {"client": name, "app_id": s.get("app_id"), "at": now})
 
 

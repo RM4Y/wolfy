@@ -42,11 +42,13 @@ async function saveHost() {
   }
 }
 
-async function saveIdle(on) {
-  const r = await act('Enregistrement', () => api.put('/settings', { idle_stop: on }))
+const IDLE_DELAYS = [2, 5, 10, 15, 20, 30, 45, 60, 90, 120]
+
+async function saveIdle(change) {
+  const r = await act('Enregistrement', () => api.put('/settings', change))
   if (r) {
     idleStop.value = r
-    toast(on ? `Les sessions inactives seront fermées après ${r.idle_minutes} min` : 'Fermeture automatique désactivée')
+    toast(r.idle_stop ? `Les sessions inactives seront fermées après ${r.idle_minutes} min` : 'Fermeture automatique désactivée')
   } else idleStop.value = { ...idleStop.value }  // back to the saved state
 }
 
@@ -122,7 +124,7 @@ onMounted(load)
     <h2 style="margin:0 0 12px">Sessions</h2>
     <div class="setting-row">
       <div>
-        <div class="setting-title">Fermer l'application après {{ idleStop.idle_minutes }} minutes d'inactivité</div>
+        <div class="setting-title">Fermer l'application après {{ idleStop.idle_minutes }} minute{{ idleStop.idle_minutes > 1 ? 's' : '' }} d'inactivité</div>
         <div class="muted" style="margin-top:2px">
           Quand plus personne ne regarde une session (Moonlight fermé, réduit ou déconnecté sans « Quitter »),
           elle s'arrête comme avec Quitter : l'application se ferme et libère le serveur. Les sauvegardes
@@ -130,8 +132,17 @@ onMounted(load)
         </div>
       </div>
       <label class="switch" title="Activer">
-        <input type="checkbox" :checked="idleStop.idle_stop" @change="saveIdle($event.target.checked)" /><span></span>
+        <input type="checkbox" :checked="idleStop.idle_stop" @change="saveIdle({ idle_stop: $event.target.checked })" /><span></span>
       </label>
+    </div>
+    <div v-if="idleStop.idle_stop" class="row" style="margin-top:12px;gap:10px">
+      <label for="idle-delay" style="margin:0">Délai</label>
+      <select id="idle-delay" :value="idleStop.idle_minutes" style="width:auto"
+              @change="saveIdle({ idle_minutes: Number($event.target.value) })">
+        <option v-for="m in IDLE_DELAYS" :key="m" :value="m">{{ m < 60 ? `${m} min` : `${m / 60} h${m % 60 ? ' 30' : ''}` }}</option>
+        <option v-if="!IDLE_DELAYS.includes(idleStop.idle_minutes)" :value="idleStop.idle_minutes">{{ idleStop.idle_minutes }} min</option>
+      </select>
+      <span class="muted small">sans image envoyée à l'appareil</span>
     </div>
     <div v-if="idleStop.idle_stop && !idleStop.net_available" class="alert warn small" style="margin-top:12px">
       <Icon name="alert" />

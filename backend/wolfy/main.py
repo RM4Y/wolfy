@@ -679,15 +679,16 @@ def wolf_logs(tail: int = 300):
 class WolfySettings(BaseModel):
     # address of Wolfy from outside (reverse proxy), e.g. wolfy.rm4.fr; empty = none
     public_host: str | None = Field(None, max_length=200, pattern=r"^([A-Za-z0-9.-]+(:\d+)?)?$")
-    # close the sessions nobody watches after 5 min (idle.py)
+    # close the sessions nobody watches after idle_minutes (idle.py)
     idle_stop: bool | None = None
+    idle_minutes: int | None = Field(None, ge=1, le=240)
 
 
 @api.get("/settings")
 def get_settings():
     st = store.get("settings")
     return {"public_host": st.get("public_host", ""), "idle_stop": bool(st.get("idle_stop")),
-            "idle_minutes": idle.IDLE_SECONDS // 60, "idle_last_stop": st.get("idle_last_stop"),
+            "idle_minutes": idle.minutes(), "idle_last_stop": st.get("idle_last_stop"),
             "net_available": idle.netstat() is not None}
 
 
@@ -697,6 +698,8 @@ def set_settings(body: WolfySettings):
         store.put("settings", "public_host", body.public_host.strip().lower() or None)
     if body.idle_stop is not None:
         store.put("settings", "idle_stop", body.idle_stop or None)
+    if body.idle_minutes is not None:
+        store.put("settings", "idle_minutes", body.idle_minutes)
     return get_settings()
 
 
