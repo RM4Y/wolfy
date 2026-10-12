@@ -27,6 +27,7 @@ static const char *TAG = "wiimotes";
 #define SEARCH_LED WIIMOTES_LED  // blinks while searching, on while the setup page is up
 #define BUTTON_HOLD_MS 3000
 #define SETUP_ALIVE_MS 3000  // the Wi-Fi ESP32 says its setup page is up every second
+#define SETUP_BOOT_MS 8000   // LED on while the Wi-Fi ESP32 restarts into it (no dark gap)
 #define SEARCH_MS 30000
 #define TICK_MS 50
 
@@ -429,6 +430,8 @@ static void tick(btstack_timer_source_t *ts)
         s_button_held += TICK_MS;
         if (s_button_held == SETUP_HOLD_MS) {  // once per press, held longer = no repeat
             ESP_LOGI(TAG, "setup page");
+            // up: this closes it (LED off now), else on until the Wi-Fi ESP32 says it is up
+            s_setup_left = s_setup_left ? 0 : SETUP_BOOT_MS;
             setup_request();
         }
     } else {
