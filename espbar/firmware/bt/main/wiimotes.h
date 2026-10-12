@@ -3,6 +3,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// The button (to 3V3) and the LED of the EspBar (on the Bluetooth ESP32 with two)
+#define WIIMOTES_BUTTON 4
+#define WIIMOTES_LED 15
+#define SETUP_HOLD_MS 10000  // button held: the setup page (setup_request), or closes it
+
 // Bluetooth side (BTstack): finds Wii Remotes (1 + 2 or SYNC pressed), opens their HID
 // channels and relays their reports to/from Wolfy. Call after btstack_init().
 void wiimotes_init(void);
@@ -16,3 +21,7 @@ void wiimotes_stats(char *out, size_t size, uint32_t ms);
 // Implemented by the program: a frame to Wolfy (from BTstack's thread), straight over Wi-Fi
 // (one ESP32) or through the Wi-Fi ESP32 (two).
 void link_send(uint8_t type, uint8_t slot, const uint8_t *data, uint16_t len);
+
+// Implemented by the program: the button was held SETUP_HOLD_MS. Opens the Wi-Fi setup page
+// (../../wifi/main/setup.h), or closes it when it is up.
+void setup_request(void);

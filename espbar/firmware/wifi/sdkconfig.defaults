@@ -14,3 +14,6 @@ CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
 
 CONFIG_SERIAL_FLASHER_PORT_UART=y
 CONFIG_SERIAL_FLASHER_LOG_LEVEL_WARN=y
+
+# setup page (setup.c): phones send long headers when checking for a captive portal
+CONFIG_HTTPD_MAX_REQ_HDR_LEN=1024

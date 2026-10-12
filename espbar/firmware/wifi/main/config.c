@@ -23,6 +23,7 @@ static void copy(char *dst, size_t size, const cJSON *obj, const char *key)
 static bool parse_url(espbar_config_t *cfg)
 {
     const char *p = cfg->url;
+    cfg->tls = false;
     if (strncmp(p, "wss://", 6) == 0) {
         cfg->tls = true;
         p += 6;
@@ -46,15 +47,21 @@ static bool parse_url(espbar_config_t *cfg)
     return cfg->port > 0;
 }
 
+static const esp_partition_t *partition(void)
+{
+    const esp_partition_t *part =
+        esp_partition_find_first(ESP_PARTITION_TYPE_DATA, CONFIG_SUBTYPE, "espbar");
+    if (!part)
+        ESP_LOGE(TAG, "no espbar partition");
+    return part;
+}
+
 bool config_load(espbar_config_t *cfg)
 {
     memset(cfg, 0, sizeof(*cfg));
-    const esp_partition_t *part =
-        esp_partition_find_first(ESP_PARTITION_TYPE_DATA, CONFIG_SUBTYPE, "espbar");
-    if (!part) {
-        ESP_LOGE(TAG, "no espbar partition");
+    const esp_partition_t *part = partition();
+    if (!part)
         return false;
-    }
     static char buf[CONFIG_SIZE];
     if (esp_partition_read(part, 0, buf, sizeof(buf)) != ESP_OK || memcmp(buf, "EB01", 4) != 0) {
         ESP_LOGE(TAG, "no configuration: inject the EspBar from Wolfy");
@@ -77,4 +84,30 @@ bool config_load(espbar_config_t *cfg)
     }
     ESP_LOGI(TAG, "Wi-Fi \"%s\", Wolfy %s", cfg->ssid, cfg->url);
     return cfg->ssid[0] != 0;
+}
+
+bool config_save(espbar_config_t *cfg)
+{
+    const esp_partition_t *part = partition();
+    if (!part || !cfg->ssid[0] || !parse_url(cfg))
+        return false;
+    cJSON *json = cJSON_CreateObject();
+    cJSON_AddStringToObject(json, "ssid", cfg->ssid);
+    cJSON_AddStringToObject(json, "password", cfg->password);
+    cJSON_AddStringToObject(json, "url", cfg->url);
+    cJSON_AddStringToObject(json, "token", cfg->token);
+    char *text = cJSON_PrintUnformatted(json);
+    cJSON_Delete(json);
+    static char buf[CONFIG_SIZE];
+    size_t len = text ? strlen(text) : CONFIG_SIZE;
+    bool ok = 4 + len + 1 <= sizeof(buf);
+    if (ok) {
+        memcpy(buf, "EB01", 4);
+        memcpy(buf + 4, text, len + 1);
+        ok = esp_partition_erase_range(part, 0, CONFIG_SIZE) == ESP_OK &&
+             esp_partition_write(part, 0, buf, 4 + len + 1) == ESP_OK;
+    }
+    free(text);
+    ESP_LOGI(TAG, "saved Wi-Fi \"%s\", Wolfy %s: %s", cfg->ssid, cfg->url, ok ? "ok" : "failed");
+    return ok;
 }

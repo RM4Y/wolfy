@@ -14,6 +14,7 @@
 #include "freertos/task.h"
 
 #include "link.h"
+#include "setup.h"
 #include "wire.h"
 
 // Wiring to the Bluetooth ESP32 (README.md): our TX2 -> its RX0, our RX2 <- its TX0,
@@ -123,6 +124,10 @@ static void on_frame(uint8_t type, uint8_t slot, const uint8_t *data, uint16_t l
         break;
     case EB_STATS:
         set_stats((const char *)data, len);
+        break;
+    case EB_SETUP:  // its button held 10 s: the setup page
+        ESP_LOGI(TAG, "setup page asked");
+        setup_reboot(true);
         break;
     case EB_OTA_ACK:
         if (len < 5)
@@ -331,7 +336,7 @@ static void radio_task(void *arg)
     }
 }
 
-void radio_start(void)
+static void uart_start(void)
 {
     uart_config_t cfg = {
         .baud_rate = WIRE_BAUD,
@@ -350,5 +355,32 @@ void radio_start(void)
     gpio_set_level(PIN_BOOT, 1);
     gpio_set_direction(PIN_EN, GPIO_MODE_OUTPUT);
     gpio_set_direction(PIN_BOOT, GPIO_MODE_OUTPUT);
+}
+
+void radio_start(void)
+{
+    uart_start();
     xTaskCreate(radio_task, "bt-esp", 6144, NULL, 6, NULL);
+}
+
+static void on_setup_frame(uint8_t type, uint8_t slot, const uint8_t *data, uint16_t len)
+{
+    if (type == EB_SETUP)  // held 10 s again: closed
+        setup_reboot(false);
+}
+
+void radio_setup_poll(void)
+{
+    static bool started;
+    static unsigned polls;
+    if (!started) {
+        uart_start();
+        started = true;
+    }
+    if (polls++ % 10 == 0)
+        send_frame(EB_SETUP, 0, NULL, 0);
+    uint8_t buf[256];
+    int n = uart_read_bytes(UART, buf, sizeof(buf), 0);
+    if (n > 0)
+        wire_feed(&s_rx, buf, n, on_setup_frame);
 }

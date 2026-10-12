@@ -42,9 +42,17 @@ convertisseur USB-série est sur les mêmes broches RX0 / TX0).
 - **ESP32** (`firmware/`) : ESP-IDF + [BTstack](https://github.com/bluekitchen/btstack)
   (recherche des Wiimotes, canaux HID L2CAP, appairage). Cherche les Wiimotes (1 + 2) pendant
   une session Wii de l'appareil relié tant qu'aucune n'est connectée, ou 30 s quand on maintient
-  3 s le bouton (D4 ↔ 3V3) ; la LED de D15 clignote alors. Pas de recherche sinon : elle prend la
-  radio aux Wiimotes connectées (~25 rapports/s au lieu de ~37).
+  3 s le bouton (D4 ↔ 3V3) puis qu'on le relâche ; la LED de D15 clignote alors. Pas de recherche
+  sinon : elle prend la radio aux Wiimotes connectées (~25 rapports/s au lieu de ~37).
   LED bleue de la carte (D2) : clignote = cherche Wolfy, allumée = connecté.
+- **Page de réglage** (`firmware/wifi/main/setup.c`) : bouton maintenu 10 s (la LED de D15 clignote
+  chaque seconde, puis reste allumée), ou aucune configuration : l'ESP32 Wi-Fi redémarre en point
+  d'accès ouvert « EspBar-XXXX » ; le téléphone qui s'y connecte ouvre la page (portail captif,
+  http://192.168.4.1) : réseau Wi-Fi (liste des réseaux autour), mot de passe, adresse de Wolfy. Le
+  jeton de Wolfy est gardé (une première injection depuis Wolfy reste nécessaire). Enregistrer
+  redémarre l'EspBar ; sans enregistrement, elle repart avec ses réglages au bout de 10 min, ou
+  quand on maintient de nouveau 10 s le bouton. Avec 2 ESP32, le bouton de l'ESP32 Bluetooth le
+  demande à l'ESP32 Wi-Fi par l'UART (`EB_SETUP`).
 - **Wolfy** (`backend/wolfy/espbar_relay.py`) : l'ESP32 le joint par un WebSocket sur sa propre
   adresse, `wss://wolfy.rm4.fr/api/espbar/ws` (via SWAG, de n'importe où ; certificat vérifié)
   ou `ws://<IP du serveur>:8420/api/espbar/ws` (réseau local). Les Dolphin des sessions le

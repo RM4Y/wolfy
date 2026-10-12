@@ -98,6 +98,9 @@ void link_send(uint8_t type, uint8_t slot, const uint8_t *data, uint16_t len)
     uart_write_bytes(UART, buf, wire_encode(buf, type, slot, data, len));  // one frame at a time
 }
 
+// The Wi-Fi ESP32 restarts into its setup page (or closes it): it then tells us every second.
+void setup_request(void) { link_send(EB_SETUP, 0, NULL, 0); }
+
 // Our Bluetooth address and build: the Wi-Fi ESP32 flashes us when it carries another one.
 // <boot>: we just started (our Wii Remotes are gone), else an answer to its HELLO.
 static void send_hello(uint8_t boot)

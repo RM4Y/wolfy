@@ -20,11 +20,13 @@ static const char *TAG = "wiimotes";
 #define INQUIRY_LENGTH 3         // x 1.28 s
 #define OUT_QUEUE 16
 // Search: during the linked device's Wii session while no Wii Remote is connected, or for 30 s
-// after the button (D4 to 3V3) is held 3 s (to add one). Not otherwise: an inquiry takes the
-// radio from the connected Wii Remotes (their reports drop from ~37 to ~25/s).
-#define BUTTON GPIO_NUM_4
-#define SEARCH_LED GPIO_NUM_15  // blinks while searching
+// after the button (D4 to 3V3) is held 3 s and released (to add one). Not otherwise: an inquiry
+// takes the radio from the connected Wii Remotes (their reports drop from ~37 to ~25/s).
+// Held 10 s: the Wi-Fi setup page. The LED blinks once a second while it is held.
+#define BUTTON WIIMOTES_BUTTON
+#define SEARCH_LED WIIMOTES_LED  // blinks while searching, on while the setup page is up
 #define BUTTON_HOLD_MS 3000
+#define SETUP_ALIVE_MS 3000  // the Wi-Fi ESP32 says its setup page is up every second
 #define SEARCH_MS 30000
 #define TICK_MS 50
 
@@ -44,6 +46,7 @@ static bool s_scan;        // the linked device's Wii session is up (Wolfy wants
 static bool s_inquiring;
 static uint32_t s_search_left;  // ms of search left (button)
 static uint32_t s_button_held;  // ms
+static uint32_t s_setup_left;   // ms: the setup page is up (two ESP32: told by the Wi-Fi one)
 static btstack_timer_source_t s_tick;
 static uint32_t s_ticks;
 static bool s_connecting;  // an outgoing connection is being set up (one at a time)
@@ -402,6 +405,9 @@ static void handle_frame(const inbound_t *f)
         if (w && w->handle != HCI_CON_HANDLE_INVALID)
             gap_disconnect(w->handle);
         break;
+    case EB_SETUP:
+        s_setup_left = SETUP_ALIVE_MS;
+        break;
     }
 }
 
@@ -421,14 +427,20 @@ static void tick(btstack_timer_source_t *ts)
     s_ticks++;
     if (gpio_get_level(BUTTON)) {
         s_button_held += TICK_MS;
-        if (s_button_held == BUTTON_HOLD_MS) {  // once per press, held longer = no repeat
+        if (s_button_held == SETUP_HOLD_MS) {  // once per press, held longer = no repeat
+            ESP_LOGI(TAG, "setup page");
+            setup_request();
+        }
+    } else {
+        if (s_button_held >= BUTTON_HOLD_MS && s_button_held < SETUP_HOLD_MS) {
             ESP_LOGI(TAG, "search for %d s", SEARCH_MS / 1000);
             s_search_left = SEARCH_MS;
             start_inquiry();
         }
-    } else {
         s_button_held = 0;
     }
+    if (s_setup_left)
+        s_setup_left = s_setup_left > TICK_MS ? s_setup_left - TICK_MS : 0;
     if (s_search_left) {
         s_search_left = s_search_left > TICK_MS ? s_search_left - TICK_MS : 0;
         if (!s_search_left) {
@@ -437,7 +449,14 @@ static void tick(btstack_timer_source_t *ts)
                 gap_inquiry_stop();
         }
     }
-    gpio_set_level(SEARCH_LED, want_search() && (s_ticks / 3) % 2);  // ~3 blinks per second
+    bool led;
+    if (s_button_held && s_button_held < SETUP_HOLD_MS)
+        led = s_button_held % 1000 < 300;  // one blink per second held
+    else if (s_setup_left)
+        led = true;
+    else
+        led = want_search() && (s_ticks / 3) % 2;  // ~3 blinks per second
+    gpio_set_level(SEARCH_LED, led);
     btstack_run_loop_set_timer(ts, TICK_MS);
     btstack_run_loop_add_timer(ts);
 }

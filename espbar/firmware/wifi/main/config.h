@@ -14,3 +14,5 @@ typedef struct {
 
 // Reads the "espbar" partition written by Wolfy: "EB01" then a NUL-terminated JSON object.
 bool config_load(espbar_config_t *cfg);
+// Writes it back (setup page): url checked and parsed, token kept as it is.
+bool config_save(espbar_config_t *cfg);

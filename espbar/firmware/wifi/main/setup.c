@@ -1,0 +1,335 @@
+#include "setup.h"
+
+#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "esp_attr.h"
+#include "esp_event.h"
+#include "esp_http_server.h"
+#include "esp_log.h"
+#include "esp_mac.h"
+#include "esp_netif.h"
+#include "esp_system.h"
+#include "esp_timer.h"
+#include "esp_wifi.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "lwip/sockets.h"
+
+#define SETUP_IDLE_MS (10 * 60 * 1000)  // without a visit: back to the saved settings
+#define SETUP_MAGIC 0x5e7a9b01
+#define SCAN_MAX 20
+#define PAGE_URL "http://192.168.4.1/"
+
+static const char *TAG = "setup";
+RTC_NOINIT_ATTR static uint32_t s_boot_setup;  // kept across esp_restart()
+static espbar_config_t s_cfg;
+static wifi_ap_record_t s_aps[SCAN_MAX];
+static uint16_t s_ap_count;
+static volatile int64_t s_last_visit;
+static volatile bool s_saved;
+
+bool setup_requested(void)
+{
+    bool asked = s_boot_setup == SETUP_MAGIC;
+    s_boot_setup = 0;
+    return asked;
+}
+
+void setup_reboot(bool setup)
+{
+    s_boot_setup = setup ? SETUP_MAGIC : 0;
+    esp_restart();
+}
+
+// ---------------------------------------------------------------- Wi-Fi
+
+static void scan(void)
+{
+    wifi_scan_config_t sc = {.show_hidden = false};
+    s_ap_count = 0;
+    if (esp_wifi_scan_start(&sc, true) != ESP_OK)
+        return;
+    uint16_t n = SCAN_MAX;
+    if (esp_wifi_scan_get_ap_records(&n, s_aps) == ESP_OK)
+        s_ap_count = n;
+    // strongest first, each network once (several access points may share a name)
+    for (int i = 0; i < s_ap_count; i++)
+        for (int j = i + 1; j < s_ap_count; j++)
+            if (s_aps[j].rssi > s_aps[i].rssi) {
+                wifi_ap_record_t t = s_aps[i];
+                s_aps[i] = s_aps[j];
+                s_aps[j] = t;
+            }
+    int kept = 0;
+    for (int i = 0; i < s_ap_count; i++) {
+        bool seen = !s_aps[i].ssid[0];
+        for (int j = 0; j < kept && !seen; j++)
+            seen = strcmp((char *)s_aps[j].ssid, (char *)s_aps[i].ssid) == 0;
+        if (!seen)
+            s_aps[kept++] = s_aps[i];
+    }
+    s_ap_count = kept;
+}
+
+static void wifi_ap_start(void)
+{
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_create_default_wifi_ap();
+    esp_netif_create_default_wifi_sta();  // scans
+    wifi_init_config_t init = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&init));
+    uint8_t mac[6];
+    esp_read_mac(mac, ESP_MAC_WIFI_SOFTAP);
+    wifi_config_t wc = {.ap = {.channel = 1, .authmode = WIFI_AUTH_OPEN, .max_connection = 4}};
+    wc.ap.ssid_len = snprintf((char *)wc.ap.ssid, sizeof(wc.ap.ssid), "EspBar-%02X%02X", mac[4], mac[5]);
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wc));
+    ESP_ERROR_CHECK(esp_wifi_start());
+    ESP_LOGI(TAG, "access point %s, page " PAGE_URL, wc.ap.ssid);
+}
+
+// ---------------------------------------------------------------- DNS: every name is us
+// (phones then open the page by themselves, as on a hotel Wi-Fi)
+
+static void dns_task(void *arg)
+{
+    int fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    struct sockaddr_in addr = {.sin_family = AF_INET, .sin_port = htons(53), .sin_addr.s_addr = INADDR_ANY};
+    if (fd < 0 || bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        ESP_LOGE(TAG, "no DNS server");
+        vTaskDelete(NULL);
+    }
+    uint8_t buf[512];
+    for (;;) {
+        struct sockaddr_in from;
+        socklen_t from_len = sizeof(from);
+        int n = recvfrom(fd, buf, sizeof(buf) - 16, 0, (struct sockaddr *)&from, &from_len);
+        if (n < 12 || (buf[2] & 0x80) || !(buf[4] << 8 | buf[5]))  // not a query
+            continue;
+        size_t q = 12;  // first question: name, type, class
+        while (q < (size_t)n && buf[q])
+            q += buf[q] + 1;
+        if (q + 5 > (size_t)n)
+            continue;
+        bool type_a = buf[q + 1] == 0 && buf[q + 2] == 1;
+        size_t len = q + 5;
+        buf[2] = 0x81;  // response, recursion desired
+        buf[3] = 0x80;  // recursion available, no error
+        buf[4] = 0, buf[5] = 1;                      // 1 question
+        buf[6] = 0, buf[7] = type_a;                 // answer: A only
+        buf[8] = buf[9] = buf[10] = buf[11] = 0;
+        if (type_a) {
+            const uint8_t answer[] = {0xc0, 12, 0, 1, 0, 1, 0, 0, 0, 60, 0, 4, 192, 168, 4, 1};
+            memcpy(buf + len, answer, sizeof(answer));
+            len += sizeof(answer);
+        }
+        sendto(fd, buf, len, 0, (struct sockaddr *)&from, from_len);
+    }
+}
+
+// ---------------------------------------------------------------- page
+
+static void send_text(httpd_req_t *req, const char *text) { httpd_resp_sendstr_chunk(req, text); }
+
+static void send_escaped(httpd_req_t *req, const char *text)
+{
+    char buf[128];
+    size_t n = 0;
+    for (; *text; text++) {
+        const char *rep = *text == '<' ? "&lt;" : *text == '>' ? "&gt;" : *text == '&' ? "&amp;"
+                        : *text == '"' ? "&quot;" : *text == '\'' ? "&#39;" : NULL;
+        size_t len = rep ? strlen(rep) : 1;
+        if (n + len >= sizeof(buf)) {
+            httpd_resp_send_chunk(req, buf, n);
+            n = 0;
+        }
+        memcpy(buf + n, rep ? rep : text, len);
+        n += len;
+    }
+    if (n)
+        httpd_resp_send_chunk(req, buf, n);
+}
+
+static void send_page(httpd_req_t *req, const char *error)
+{
+    httpd_resp_set_type(req, "text/html; charset=utf-8");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+    send_text(req,
+        "<!doctype html><html lang=fr><meta charset=utf-8>"
+        "<meta name=viewport content='width=device-width,initial-scale=1'><title>EspBar</title><style>"
+        "body{font-family:system-ui,sans-serif;max-width:440px;margin:0 auto;padding:16px;background:#111;color:#eee}"
+        "label{display:block;margin:16px 0 6px}"
+        "input{width:100%;box-sizing:border-box;padding:11px;font-size:16px;border-radius:8px;"
+        "border:1px solid #555;background:#1d1d1d;color:#eee}"
+        "button{margin-top:22px;width:100%;padding:13px;font-size:16px;border:0;border-radius:8px;background:#2a7;color:#fff}"
+        ".n{display:flex;justify-content:space-between;padding:10px 12px;margin:4px 0;border-radius:8px;"
+        "background:#1d1d1d;cursor:pointer}.n span{color:#999}"
+        ".m{color:#999;font-size:13px}.e{color:#f77}a{color:#6af}"
+        "</style><h2>📡 EspBar</h2>");
+    if (error) {
+        send_text(req, "<p class=e>");
+        send_text(req, error);
+        send_text(req, "</p>");
+    }
+    if (!s_cfg.token[0])
+        send_text(req, "<p class=e>Jeton de Wolfy absent : injecte d'abord l'EspBar depuis Wolfy "
+                       "(Wii › EspBar), puis reviens ici pour changer de Wi-Fi.</p>");
+    send_text(req, "<form method=post action=/save><label>Réseau Wi-Fi</label>"
+                   "<input id=s name=ssid required maxlength=32 autocomplete=off value=\"");
+    send_escaped(req, s_cfg.ssid);
+    send_text(req, "\">");
+    for (int i = 0; i < s_ap_count; i++) {
+        char extra[24];
+        snprintf(extra, sizeof(extra), "%s %d dBm", s_aps[i].authmode == WIFI_AUTH_OPEN ? "" : "🔒",
+                 s_aps[i].rssi);
+        send_text(req, "<div class=n onclick='s.value=this.dataset.s;p.focus()' data-s=\"");
+        send_escaped(req, (char *)s_aps[i].ssid);
+        send_text(req, "\">");
+        send_escaped(req, (char *)s_aps[i].ssid);
+        send_text(req, "<span>");
+        send_text(req, extra);
+        send_text(req, "</span></div>");
+    }
+    send_text(req, "<p class=m><a href='/?scan=1'>Rechercher les réseaux</a></p>"
+                   "<label>Mot de passe</label><input id=p name=password type=password maxlength=64 "
+                   "placeholder='Vide : inchangé (même réseau) ou réseau ouvert'>"
+                   "<label>Adresse de Wolfy</label><input name=url required maxlength=200 value=\"");
+    send_escaped(req, s_cfg.url);
+    send_text(req, "\"><p class=m>wss://wolfy.rm4.fr/api/espbar/ws, ou ws://&lt;IP du serveur&gt;:8420/api/espbar/ws"
+                   " sur le réseau local</p><button>Enregistrer et redémarrer</button></form>"
+                   "<p class=m>Sans enregistrement, l'EspBar repart avec ses réglages au bout de 10 min, "
+                   "ou quand on maintient de nouveau 10 s son bouton.</p>");
+    httpd_resp_send_chunk(req, NULL, 0);
+}
+
+static esp_err_t page_get(httpd_req_t *req)
+{
+    s_last_visit = esp_timer_get_time();
+    char query[16];
+    if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK && strstr(query, "scan"))
+        scan();
+    send_page(req, NULL);
+    return ESP_OK;
+}
+
+static void url_decode(char *dst, size_t size, const char *src)
+{
+    size_t n = 0;
+    while (*src && n + 1 < size) {
+        if (*src == '+') {
+            dst[n++] = ' ';
+            src++;
+        } else if (*src == '%' && isxdigit((unsigned char)src[1]) && isxdigit((unsigned char)src[2])) {
+            char hex[3] = {src[1], src[2], 0};
+            dst[n++] = strtol(hex, NULL, 16);
+            src += 3;
+        } else {
+            dst[n++] = *src++;
+        }
+    }
+    dst[n] = 0;
+}
+
+static void form_value(const char *body, const char *key, char *out, size_t size)
+{
+    char raw[3 * 200 + 1];
+    if (httpd_query_key_value(body, key, raw, sizeof(raw)) != ESP_OK)
+        raw[0] = 0;
+    url_decode(out, size, raw);
+}
+
+static esp_err_t save_post(httpd_req_t *req)
+{
+    s_last_visit = esp_timer_get_time();
+    static char body[1024];
+    if (req->content_len >= sizeof(body)) {
+        send_page(req, "Formulaire trop long.");
+        return ESP_OK;
+    }
+    size_t len = 0;
+    while (len < req->content_len) {
+        int r = httpd_req_recv(req, body + len, req->content_len - len);
+        if (r <= 0)
+            return ESP_FAIL;
+        len += r;
+    }
+    body[len] = 0;
+
+    espbar_config_t cfg = s_cfg;
+    form_value(body, "ssid", cfg.ssid, sizeof(cfg.ssid));
+    form_value(body, "password", cfg.password, sizeof(cfg.password));
+    form_value(body, "url", cfg.url, sizeof(cfg.url));
+    if (!cfg.password[0] && strcmp(cfg.ssid, s_cfg.ssid) == 0)
+        strlcpy(cfg.password, s_cfg.password, sizeof(cfg.password));  // same network: unchanged
+    if (!cfg.ssid[0]) {
+        send_page(req, "Choisis un réseau Wi-Fi.");
+        return ESP_OK;
+    }
+    if (!config_save(&cfg)) {
+        // shown again as typed, so it can be fixed
+        strlcpy(s_cfg.url, cfg.url, sizeof(s_cfg.url));
+        send_page(req, "Adresse de Wolfy invalide (ws://… ou wss://…), ou écriture ratée.");
+        return ESP_OK;
+    }
+    s_cfg = cfg;
+    httpd_resp_set_type(req, "text/html; charset=utf-8");
+    send_text(req, "<!doctype html><html lang=fr><meta charset=utf-8>"
+                   "<meta name=viewport content='width=device-width,initial-scale=1'><title>EspBar</title>"
+                   "<body style='font-family:system-ui,sans-serif;background:#111;color:#eee;padding:16px'>"
+                   "<h2>✅ Enregistré</h2><p>L'EspBar redémarre et se connecte à « ");
+    send_escaped(req, cfg.ssid);
+    send_text(req, " ». Tu peux quitter ce réseau.</p>");
+    httpd_resp_send_chunk(req, NULL, 0);
+    s_saved = true;
+    return ESP_OK;
+}
+
+// anything else (phones checking for Internet: /generate_204, /hotspot-detect.html...): the page
+static esp_err_t redirect(httpd_req_t *req, httpd_err_code_t err)
+{
+    httpd_resp_set_status(req, "302 Found");
+    httpd_resp_set_hdr(req, "Location", PAGE_URL);
+    httpd_resp_send(req, NULL, 0);
+    return ESP_OK;
+}
+
+static void http_start(void)
+{
+    httpd_handle_t server;
+    httpd_config_t hc = HTTPD_DEFAULT_CONFIG();
+    hc.stack_size = 8192;
+    hc.lru_purge_enable = true;  // phones open many connections
+    ESP_ERROR_CHECK(httpd_start(&server, &hc));
+    const httpd_uri_t page = {.uri = "/", .method = HTTP_GET, .handler = page_get};
+    const httpd_uri_t save = {.uri = "/save", .method = HTTP_POST, .handler = save_post};
+    httpd_register_uri_handler(server, &page);
+    httpd_register_uri_handler(server, &save);
+    httpd_register_err_handler(server, HTTPD_404_NOT_FOUND, redirect);
+}
+
+// ---------------------------------------------------------------- task
+
+void setup_run(const espbar_config_t *cfg)
+{
+    s_cfg = *cfg;
+    wifi_ap_start();
+    scan();
+    xTaskCreate(dns_task, "dns", 3072, NULL, 5, NULL);
+    http_start();
+    s_last_visit = esp_timer_get_time();
+    for (;;) {
+        setup_poll();
+        vTaskDelay(pdMS_TO_TICKS(100));
+        if (s_saved) {
+            vTaskDelay(pdMS_TO_TICKS(1000));  // the answer reaches the phone
+            setup_reboot(false);
+        }
+        if (esp_timer_get_time() - s_last_visit > SETUP_IDLE_MS * 1000LL) {
+            ESP_LOGI(TAG, "no visit: back to the saved settings");
+            setup_reboot(false);
+        }
+    }
+}

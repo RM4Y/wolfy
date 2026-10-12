@@ -157,8 +157,9 @@ onUnmounted(() => clearTimeout(timer))
         Une EspBar connecte les Wiimotes en Bluetooth et les envoie, par le Wi-Fi, au Dolphin de la session Wii
         de son appareil (une EspBar par appareil). Pendant une session Wii, elle cherche tant qu'aucune Wiimote
         n'est connectée (LED D15 clignotante) : appuie sur 1 + 2. Pour en ajouter une autre : maintiens 3 s le
-        bouton (D4), 30 s de recherche (avec 2 ESP32 : LED et bouton sur l'ESP32 Bluetooth). Joueurs réglés sur
-        « Vraie Wiimote » (onglet Wolfy-Dolphin).
+        bouton (D4) puis relâche, 30 s de recherche (avec 2 ESP32 : LED et bouton sur l'ESP32 Bluetooth). Maintenu
+        10 s (la LED clignote chaque seconde, puis reste allumée) : page de réglage du Wi-Fi sur le réseau
+        « EspBar-XXXX ». Joueurs réglés sur « Vraie Wiimote » (onglet Wolfy-Dolphin).
       </div>
       <div v-if="!data.boards.length" class="muted small">
         Aucune EspBar : injecte le programme dans un ESP32 (plus bas), elle apparaît ici à sa première connexion.

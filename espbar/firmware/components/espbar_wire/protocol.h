@@ -22,6 +22,10 @@
 #define EB_OTA_END 11    // wifi -> bt: check the app, boot it
 #define EB_OTA_ACK 12    // bt -> wifi: u8 status (0 = ok) + u32 next offset expected
 
+// wifi esp <-> bt esp only: the setup page (Wi-Fi network, Wolfy's address) of the Wi-Fi ESP32
+#define EB_SETUP 13      // bt -> wifi: the button was held 10 s (open the page, or close it)
+                         // wifi -> bt: the page is up (every second: its LED stays on)
+
 #define EB_SLOTS 4
 #define EB_MAX_PAYLOAD 64
 #define EB_OTA_CHUNK 1024

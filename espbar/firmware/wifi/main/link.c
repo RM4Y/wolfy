@@ -24,7 +24,7 @@
 
 #include "protocol.h"
 
-#define VERSION "11"
+#define VERSION "12"
 #define LED GPIO_NUM_2  // blue LED of the DevKit: blinks = looking for Wolfy, on = linked
 
 // exported by tcp_transport but only declared in its private headers (ESP-IDF 5.3)
