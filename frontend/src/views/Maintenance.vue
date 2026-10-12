@@ -14,12 +14,14 @@ const jobs = ref([])
 const error = ref('')
 const publicHost = ref('')  // Wolfy's address from outside (reverse proxy)
 const savedHost = ref('')
+const idleStop = ref(null)  // { idle_stop, idle_minutes, idle_last_stop, net_available }
 
 async function load() {
   try {
     const [o, maint, j, st] = await Promise.all([api.get('/overview'), api.get('/maintenance'), api.get('/jobs'),
       api.get('/settings')])
     savedHost.value = publicHost.value = st.public_host
+    idleStop.value = st
     wolf.value = { ...o.wolf, sessions: o.sessions.length }
     m.value = maint
     jobs.value = j.jobs
@@ -38,6 +40,14 @@ async function saveHost() {
     savedHost.value = publicHost.value = r.public_host
     toast('Adresse externe enregistrée')
   }
+}
+
+async function saveIdle(on) {
+  const r = await act('Enregistrement', () => api.put('/settings', { idle_stop: on }))
+  if (r) {
+    idleStop.value = r
+    toast(on ? `Les sessions inactives seront fermées après ${r.idle_minutes} min` : 'Fermeture automatique désactivée')
+  } else idleStop.value = { ...idleStop.value }  // back to the saved state
 }
 
 async function loadLogs() {
@@ -108,6 +118,30 @@ onMounted(load)
     </form>
   </div>
 
+  <div v-if="idleStop" class="card">
+    <h2 style="margin:0 0 12px">Sessions</h2>
+    <div class="setting-row">
+      <div>
+        <div class="setting-title">Fermer l'application après {{ idleStop.idle_minutes }} minutes d'inactivité</div>
+        <div class="muted" style="margin-top:2px">
+          Quand plus personne ne regarde une session (Moonlight fermé, réduit ou déconnecté sans « Quitter »),
+          elle s'arrête comme avec Quitter : l'application se ferme et libère le serveur. Les sauvegardes
+          non enregistrées du jeu en cours sont perdues.
+        </div>
+      </div>
+      <label class="switch" title="Activer">
+        <input type="checkbox" :checked="idleStop.idle_stop" @change="saveIdle($event.target.checked)" /><span></span>
+      </label>
+    </div>
+    <div v-if="idleStop.idle_stop && !idleStop.net_available" class="alert warn small" style="margin-top:12px">
+      <Icon name="alert" />
+      <div>Le service <code>wolfy-net</code> ne tourne pas : sans mesure du flux, aucune session n'est fermée.</div>
+    </div>
+    <div v-else-if="idleStop.idle_last_stop" class="muted small" style="margin-top:12px">
+      Dernière fermeture : session de {{ idleStop.idle_last_stop.client }}, {{ ago(new Date(idleStop.idle_last_stop.at * 1000).toISOString()) }}.
+    </div>
+  </div>
+
   <div v-if="wolf" class="card">
     <div class="row between">
       <div>
@@ -119,7 +153,7 @@ onMounted(load)
       </div>
       <div class="row">
         <button @click="wolfAction('restart', 'Redémarrage de Wolf')"><Icon name="refresh" />Redémarrer</button>
-        <button v-if="wolf.running" class="danger" @click="wolfAction('stop', 'Arrêt de Wolf')">⏹ Arrêter</button>
+        <button v-if="wolf.running" class="danger" @click="wolfAction('stop', 'Arrêt de Wolf')"><Icon name="stop" />Arrêter</button>
         <button v-else class="primary" @click="wolfAction('start', 'Démarrage de Wolf')"><Icon name="play" />Démarrer</button>
       </div>
     </div>
@@ -243,3 +277,8 @@ onMounted(load)
 
   <JobLog v-if="jobId" :job-id="jobId" @close="jobId = ''" @done="load" />
 </template>
+
+<style scoped>
+.setting-row { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
+.setting-title { font-weight: 600; font-size: 15px; }
+</style>

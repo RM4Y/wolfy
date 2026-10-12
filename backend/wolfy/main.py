@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import auth, combos, dolphin_config, docker_ops, eden_config, espbar, espbar_relay, eden_paths, ps_paths, ra_config, ra_paths, steam, emulators, settings, store, wolf_api, wolf_config
+from . import auth, combos, idle, dolphin_config, docker_ops, eden_config, espbar, espbar_relay, eden_paths, ps_paths, ra_config, ra_paths, steam, emulators, settings, store, wolf_api, wolf_config
 
 app = FastAPI(title="Wolfy", docs_url="/api/docs", openapi_url="/api/openapi.json")
 public = APIRouter(prefix="/api")
@@ -88,6 +88,8 @@ async def overview():
     if status["api"]:
         try:
             data["sessions"] = (await wolf_api.get("sessions")).get("sessions", [])
+            for sess in data["sessions"]:
+                sess.pop("aes_key", None), sess.pop("aes_iv", None)  # the stream's keys
             data["pending"] = (await wolf_api.get("pair/pending")).get("requests", [])
             data["clients"] = len((await wolf_api.get("clients")).get("clients", []))
         except HTTPException as exc:
@@ -185,10 +187,24 @@ async def sessions():
         apps = {a["id"]: a["title"] for a in (await wolf_api.get("apps")).get("apps", [])}
     except HTTPException:
         pass
+    net = idle.netstat()
+    idle.update(data, net)
+    now = time.time()
     for s in data:
-        s["client_name"] = names.get(str(s.get("client_id")), {}).get("name", "")
+        for secret in ("aes_key", "aes_iv"):  # the stream's keys: nothing for the browser
+            s.pop(secret, None)
+        key = str(s.get("client_id"))
+        s["client_name"] = names.get(key, {}).get("name", "")
         s["app_title"] = apps.get(str(s.get("app_id")), "")
-    return {"sessions": data}
+        s["started_at"] = _session_seen.setdefault(key, now)
+        s["net"] = net.get(s.get("client_ip")) if net is not None else None
+        s["idle_stop_at"] = idle.stop_at(s)
+    for key in set(_session_seen) - {str(s.get("client_id")) for s in data}:
+        del _session_seen[key]
+    return {"sessions": data, "net_available": net is not None}
+
+
+_session_seen: dict[str, float] = {}  # client_id -> first seen (start of the session, about)
 
 
 class SessionStop(BaseModel):
@@ -662,17 +678,25 @@ def wolf_logs(tail: int = 300):
 
 class WolfySettings(BaseModel):
     # address of Wolfy from outside (reverse proxy), e.g. wolfy.rm4.fr; empty = none
-    public_host: str = Field("", max_length=200, pattern=r"^([A-Za-z0-9.-]+(:\d+)?)?$")
+    public_host: str | None = Field(None, max_length=200, pattern=r"^([A-Za-z0-9.-]+(:\d+)?)?$")
+    # close the sessions nobody watches after 5 min (idle.py)
+    idle_stop: bool | None = None
 
 
 @api.get("/settings")
 def get_settings():
-    return {"public_host": store.get("settings").get("public_host", "")}
+    st = store.get("settings")
+    return {"public_host": st.get("public_host", ""), "idle_stop": bool(st.get("idle_stop")),
+            "idle_minutes": idle.IDLE_SECONDS // 60, "idle_last_stop": st.get("idle_last_stop"),
+            "net_available": idle.netstat() is not None}
 
 
 @api.put("/settings")
 def set_settings(body: WolfySettings):
-    store.put("settings", "public_host", body.public_host.strip().lower() or None)
+    if body.public_host is not None:
+        store.put("settings", "public_host", body.public_host.strip().lower() or None)
+    if body.idle_stop is not None:
+        store.put("settings", "idle_stop", body.idle_stop or None)
     return get_settings()
 
 
@@ -780,6 +804,11 @@ try:  # PS3 / PS Vita: data folders and the ROM folders list read by the session
     ra_paths.write_ps_dirs(ra_paths.current()["roms"])
 except Exception as exc:
     print(f"PlayStation folders not prepared: {exc}", flush=True)
+
+
+@app.on_event("startup")
+async def start_idle_watch():
+    asyncio.create_task(idle.run())
 
 
 @app.on_event("startup")

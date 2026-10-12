@@ -9,6 +9,8 @@ def _env(name: str, default: str) -> str:
 
 
 DATA_DIR = Path(_env("WOLFY_DATA", "/data"))
+# stream bandwidth per client IP, written by the wolfy-net service (wolfy/netstat.py)
+NETSTAT = Path(_env("WOLFY_NETSTAT", "/net/netstat.json"))
 ADMIN_PASSWORD = _env("WOLFY_ADMIN_PASSWORD", "")
 SESSION_HOURS = int(_env("WOLFY_SESSION_HOURS", "168"))
 

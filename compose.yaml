@@ -45,6 +45,24 @@ services:
     network_mode: host
     restart: unless-stopped
 
+  # bandwidth of the Moonlight streams (Wolf gives none): counts on the host network what Wolf
+  # sends from its RTP ports, for Wolfy's Sessions page (netstat.json in the wolfy-net volume)
+  wolfy-net:
+    image: wolfy:latest
+    container_name: wolfy-net
+    depends_on:
+      - wolfy
+    network_mode: host
+    cap_drop: [ALL]
+    cap_add: [NET_RAW]
+    read_only: true
+    environment:
+      - WOLFY_NETSTAT=/net/netstat.json
+    volumes:
+      - wolfy-net:/net
+    command: ["python", "-m", "wolfy.netstat"]
+    restart: unless-stopped
+
   wolfy:
     build: .
     image: wolfy:latest
@@ -63,6 +81,8 @@ services:
       - "127.0.0.1:8421:8421"
     volumes:
       - ./data:/data
+      # stream bandwidth, written by wolfy-net
+      - wolfy-net:/net:ro
       # start/stop Wolf, list app containers, build/pull images
       - /var/run/docker.sock:/var/run/docker.sock
       # Wolf state: cfg/config.toml, covers, crash dumps (same path as in the Wolf container)
@@ -121,3 +141,4 @@ volumes:
     external: true
   wolf-api:
     name: wolf-api
+  wolfy-net:
