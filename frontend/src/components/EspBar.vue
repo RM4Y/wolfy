@@ -112,7 +112,7 @@ async function flash() {
         break
       } catch (e) {
         if (e.final || baudrate === 115200) throw e
-        write(`\n⚠️ ${e.message}\nNouvel essai à 115200 bauds (plus lent)...\n\n`)
+        write(`\n[!] ${e.message}\nNouvel essai à 115200 bauds (plus lent)...\n\n`)
         flashing.value = 0
         await transport.disconnect().catch(() => {})
         transport = null
@@ -120,16 +120,16 @@ async function flash() {
       }
     }
     write({
-      dual: '\n✅ Programme écrit, l\'ESP32 Wi-Fi redémarre et met à jour l\'ESP32 Bluetooth si besoin (~15 s).\n',
-      bt: '\n✅ Programme écrit dans l\'ESP32 Bluetooth : débranche-le de l\'USB et relie-le à l\'ESP32 Wi-Fi.\n',
-    }[kind] || '\n✅ Programme écrit, l\'ESP32 redémarre.\n')
+      dual: '\nProgramme écrit, l\'ESP32 Wi-Fi redémarre et met à jour l\'ESP32 Bluetooth si besoin (~15 s).\n',
+      bt: '\nProgramme écrit dans l\'ESP32 Bluetooth : débranche-le de l\'USB et relie-le à l\'ESP32 Wi-Fi.\n',
+    }[kind] || '\nProgramme écrit, l\'ESP32 redémarre.\n')
     toast('Programme injecté dans l\'ESP32')
     if (mac && withConfig && injectClient.value) {
       await api.put(`/espbar/boards/${mac}`, { client_id: injectClient.value })
       load()
     }
   } catch (e) {
-    write(`\n❌ ${e.message}\n`)
+    write(`\nÉchec : ${e.message}\n`)
     toast(e.message, 'error')
   } finally {
     flashing.value = null
@@ -152,7 +152,7 @@ onUnmounted(() => clearTimeout(timer))
   <div v-if="error" class="alert bad">{{ error }}</div>
   <template v-if="data">
     <div class="card">
-      <h2 style="margin:0 0 4px">📡 EspBar</h2>
+      <h2 style="margin:0 0 4px">EspBar</h2>
       <div class="muted small" style="margin-bottom:12px">
         Une EspBar connecte les Wiimotes en Bluetooth et les envoie, par le Wi-Fi, au Dolphin de la session Wii
         de son appareil (une EspBar par appareil). Pendant une session Wii, elle cherche tant qu'aucune Wiimote
@@ -173,25 +173,25 @@ onUnmounted(() => clearTimeout(timer))
               {{ clientLabel(c) }}{{ c.client_ip ? ` (${c.client_ip})` : '' }}
             </option>
           </select>
-          <button v-if="!b.status" type="button" class="ghost sm" title="Oublier cette EspBar" @click="forget(b)">🗑️</button>
+          <button v-if="!b.status" type="button" class="ghost sm" title="Oublier cette EspBar" aria-label="Oublier cette EspBar" @click="forget(b)"><Icon name="trash" /></button>
         </div>
         <div v-if="!b.status" class="small muted" style="margin-top:6px">
-          ⚪ Non connectée à Wolfy (LED bleue clignotante : Wi-Fi ou adresse de Wolfy à vérifier)
+          <span class="dot lead"></span>Non connectée à Wolfy (LED bleue clignotante : Wi-Fi ou adresse de Wolfy à vérifier)
         </div>
         <template v-else>
           <div class="small" style="margin-top:6px">
-            ✅ Connectée depuis {{ b.status.esp.since }} — {{ b.status.esp.ip }}
+            <span class="dot ok lead"></span>Connectée depuis {{ b.status.esp.since }} — {{ b.status.esp.ip }}
             <span class="muted">· v{{ b.status.esp.version }}{{ b.status.esp.boards === '2' ? ' · 2 ESP32' : '' }}</span>
           </div>
           <div class="small" style="margin-top:4px">
             <template v-if="b.status.session">
-              🎮 Session Wii de {{ clientName(b.client_id) }} en cours : elle reçoit les Wiimotes
+              <Icon name="gamepad" class="sm lead" />Session Wii de {{ clientName(b.client_id) }} en cours : elle reçoit les Wiimotes
             </template>
             <span v-else-if="b.client_id" class="muted">Pas de session Wii de {{ clientName(b.client_id) }} : les Wiimotes s'éteignent</span>
             <span v-else class="muted">Reliée à aucun appareil : choisis-en un</span>
           </div>
           <div v-for="w in b.status.wiimotes" :key="w.slot" class="small" style="margin-top:4px">
-            🕹️ Wiimote {{ w.slot }} <span class="muted">{{ w.addr }}</span>
+            <Icon name="gamepad" class="sm lead" />Wiimote {{ w.slot }} <span class="muted">{{ w.addr }}</span>
           </div>
           <div v-if="b.status.flow && (b.status.wiimotes.length || b.status.esp.boards === '2')" class="small muted" style="margin-top:4px">
             Flux : {{ b.status.flow }}
@@ -201,7 +201,7 @@ onUnmounted(() => clearTimeout(timer))
     </div>
 
     <div class="card">
-      <h2 style="margin:0 0 4px">📶 Wi-Fi des EspBar</h2>
+      <h2 style="margin:0 0 4px">Wi-Fi des EspBar</h2>
       <div class="muted small" style="margin-bottom:14px">
         Écrit dans l'ESP32 avec le programme : réinjecte après un changement.
       </div>
@@ -213,7 +213,7 @@ onUnmounted(() => clearTimeout(timer))
       <div class="row" style="gap:8px;margin-top:8px;align-items:center">
         <span class="small" style="white-space:nowrap">Adresse de Wolfy</span>
         <input v-model="wifi.url" maxlength="200" style="flex:1;min-width:220px" />
-        <button type="button" class="ghost sm" title="Adresse externe (Paramètres)" @click="wifi.url = defaultUrl()">↺</button>
+        <button type="button" class="ghost sm icon" title="Adresse externe (Paramètres)" @click="wifi.url = defaultUrl()" aria-label="Valeur par défaut"><Icon name="undo" /></button>
       </div>
       <div class="muted small" style="margin-top:6px">
         L'ESP32 joint Wolfy à cette adresse : <code>wss://&lt;adresse externe&gt;/…</code> (Paramètres › Adresse
@@ -224,7 +224,7 @@ onUnmounted(() => clearTimeout(timer))
     </div>
 
     <div class="card">
-      <h2 style="margin:0 0 4px">💉 Injecter le programme dans l'ESP32</h2>
+      <h2 style="margin:0 0 4px">Injecter le programme dans l'ESP32</h2>
       <div class="muted small" style="margin-bottom:14px">
         Branche l'ESP32 en USB sur cet ordinateur, clique sur « Injecter » et choisis son port série. Si la
         carte ne répond pas, maintiens le bouton BOOT au début de l'injection.
@@ -286,7 +286,7 @@ onUnmounted(() => clearTimeout(timer))
         </div>
         <div class="row" style="align-items:center;gap:12px">
           <button type="button" class="primary" :disabled="flashing !== null" @click="flash">
-            {{ flashing !== null ? `${Math.round(flashing * 100)} %` : '💉 Injecter' }}
+            {{ flashing !== null ? `${Math.round(flashing * 100)} %` : 'Injecter' }}
           </button>
           <label v-if="fw().merged" class="row" style="gap:10px;align-items:center">
             <span class="switch"><input v-model="eraseAll" type="checkbox" :disabled="flashing !== null" /><span></span></span>
@@ -310,15 +310,15 @@ onUnmounted(() => clearTimeout(timer))
 <style scoped>
 .variants label {
   flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 2px; cursor: pointer;
-  border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
 }
-.variants label.on { border-color: var(--accent); }
+.variants label.on { border-color: var(--brand); }
 .variants input { display: none; }
-.wiring { margin-bottom: 12px; padding: 10px; background: var(--card-2); border-radius: 8px; }
+.wiring { margin-bottom: 12px; padding: 10px; background: var(--surface-raised); border-radius: 8px; }
 .wiring td { padding: 1px 8px 1px 0; }
-.board + .board { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.board + .board { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
 .flash-log {
   margin: 12px 0 0; max-height: 260px; overflow: auto; white-space: pre-wrap;
-  background: var(--card-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 12px;
+  background: var(--surface-raised); border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-size: 12px;
 }
 </style>

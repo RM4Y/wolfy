@@ -22,9 +22,11 @@ async function stop(s) {
 
 <template>
   <div v-if="!sessions.length" class="empty">
-    <div class="big">📡</div>Aucune session en cours
+    <div class="icon"><Icon name="radio" /></div>
+    <div class="title">Aucune session en cours</div>
+    <div class="text">Lance une application depuis Moonlight pour la voir ici.</div>
   </div>
-  <div v-else class="table-wrap">
+  <div v-else class="table-wrap cards">
     <table>
       <thead><tr><th>Application</th><th>Appareil</th><th>Flux</th><th></th></tr></thead>
       <tbody>
@@ -38,7 +40,7 @@ async function stop(s) {
             <span v-if="res(s)" class="badge">{{ res(s) }}</span>
             <span v-if="s.audio_channel_count" class="badge">{{ s.audio_channel_count }} canaux</span>
           </td>
-          <td style="text-align:right"><button class="danger sm" @click="stop(s)">⏹ Arrêter</button></td>
+          <td class="act"><button class="danger sm" @click="stop(s)"><Icon name="stop" />Arrêter</button></td>
         </tr>
       </tbody>
     </table>

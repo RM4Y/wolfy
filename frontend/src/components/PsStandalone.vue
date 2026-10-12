@@ -12,9 +12,9 @@ const jobId = ref('')
 const showGames = ref({})
 
 const SYSTEMS = [
-  { id: 'ps3', title: '🎮 PS3 (RPCS3)',
+  { id: 'ps3', title: 'PS3 (RPCS3)',
     help: 'Jeux disque : dossiers décryptés (<jeu>/PS3_GAME/…) dans un dossier de jeux, utilisés tels quels. Jeux PSN, mises à jour, DLC : .pkg (+ licence .rap) à installer ci-dessous.' },
-  { id: 'vita', title: '🎮 PS Vita (Vita3K)',
+  { id: 'vita', title: 'PS Vita (Vita3K)',
     help: 'Les jeux sont installés dans Vita3K : .vpk / .zip / dossier (dumps NoNpDrm), ou .pkg + licence zRIF.' },
 ]
 const KINDS = {
@@ -42,7 +42,7 @@ async function install(item) {
       <div v-for="s in SYSTEMS" :key="s.id" class="card box">
         <h3>{{ s.title }}</h3>
         <button type="button" class="ghost sm" @click="showGames[s.id] = !showGames[s.id]">
-          {{ showGames[s.id] ? '▾' : '▸' }} {{ data[s.id].games.length }} jeu(x)
+          <Icon :name="showGames[s.id] ? 'chevron-down' : 'chevron-right'" class="sm" />{{ data[s.id].games.length }} jeu(x)
         </button>
         <ul v-if="showGames[s.id]" class="games small">
           <li v-for="g in data[s.id].games" :key="g.path"><b>{{ g.title }}</b> <span class="muted">{{ g.id }} · {{ g.where }}</span>
@@ -55,7 +55,7 @@ async function install(item) {
     </div>
 
     <div class="field" style="margin-top:14px">
-      <label>📦 À installer (trouvé dans les dossiers de jeux)</label>
+      <label>À installer (trouvé dans les dossiers de jeux)</label>
       <div v-for="it in data.installables" :key="it.path" class="row install" style="flex-wrap:nowrap">
         <span class="badge">{{ KINDS[it.kind] }}</span>
         <span class="mono small grow" :title="it.path">{{ it.name }} <span class="muted">{{ it.size != null ? bytes(it.size) : '' }}</span></span>
@@ -77,7 +77,7 @@ async function install(item) {
 </template>
 
 <style scoped>
-.box { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; background: var(--card-2); }
+.box { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; background: var(--surface-raised); }
 .box h3, .box p { margin: 0; }
 .games { margin: 0; padding-left: 18px; max-height: 200px; overflow: auto; align-self: stretch; }
 .install { padding: 6px 0; border-bottom: 1px solid var(--border, rgba(127,127,127,.2)); gap: 8px; }

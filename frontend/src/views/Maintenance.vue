@@ -97,14 +97,14 @@ onMounted(load)
   <div v-if="error" class="alert bad">{{ error }}</div>
 
   <div v-if="wolf" class="card">
-    <h2 style="margin:0 0 4px">🌐 Adresse externe</h2>
+    <h2 style="margin:0 0 4px">Adresse externe</h2>
     <div class="muted small" style="margin-bottom:12px">
       Nom de domaine de Wolfy depuis internet (proxy https, ex. <code>wolfy.rm4.fr</code>). Utilisé par l'EspBar
       (Wii › EspBar) : <code>wss://{{ cleanHost(publicHost) || 'nom-de-domaine' }}/api/espbar/ws</code>.
     </div>
     <form class="row" style="gap:8px" @submit.prevent="saveHost">
       <input v-model="publicHost" placeholder="wolfy.exemple.fr" maxlength="200" style="flex:1;min-width:220px" />
-      <button type="submit" class="primary" :disabled="cleanHost(publicHost) === savedHost">💾 Enregistrer</button>
+      <button type="submit" class="primary" :disabled="cleanHost(publicHost) === savedHost"><Icon name="save" />Enregistrer</button>
     </form>
   </div>
 
@@ -118,9 +118,9 @@ onMounted(load)
         </div>
       </div>
       <div class="row">
-        <button @click="wolfAction('restart', 'Redémarrage de Wolf')">🔄 Redémarrer</button>
+        <button @click="wolfAction('restart', 'Redémarrage de Wolf')"><Icon name="refresh" />Redémarrer</button>
         <button v-if="wolf.running" class="danger" @click="wolfAction('stop', 'Arrêt de Wolf')">⏹ Arrêter</button>
-        <button v-else class="primary" @click="wolfAction('start', 'Démarrage de Wolf')">▶ Démarrer</button>
+        <button v-else class="primary" @click="wolfAction('start', 'Démarrage de Wolf')"><Icon name="play" />Démarrer</button>
       </div>
     </div>
   </div>
@@ -136,7 +136,7 @@ onMounted(load)
           <option :value="1000">1000 lignes</option>
           <option :value="5000">5000 lignes</option>
         </select>
-        <button @click="loadLogs">📜 {{ logs ? 'Actualiser' : 'Afficher' }}</button>
+        <button @click="loadLogs"><Icon name="file" />{{ logs ? 'Actualiser' : 'Afficher' }}</button>
       </div>
     </div>
     <pre v-if="logs" class="logbox">{{ shownLogs }}</pre>
@@ -146,7 +146,7 @@ onMounted(load)
     <div class="card">
       <div class="row between" style="margin-bottom:10px">
         <h2 style="margin:0">Conteneurs d'applications</h2>
-        <button class="sm" @click="prune">🧹 Supprimer les conteneurs arrêtés</button>
+        <button class="sm" @click="prune"><Icon name="broom" />Supprimer les conteneurs arrêtés</button>
       </div>
       <div v-if="!m.containers.length" class="empty">Aucun conteneur d'application.</div>
       <div v-else class="table-wrap">
@@ -160,7 +160,7 @@ onMounted(load)
               <td class="small muted">{{ ago(c.created) }}</td>
               <td style="text-align:right;white-space:nowrap">
                 <button v-if="c.status === 'running'" class="sm" @click="containerAction(c, 'stop')">⏹</button>
-                <button class="sm danger" @click="containerAction(c, 'remove')">🗑</button>
+                <button class="sm danger" @click="containerAction(c, 'remove')"><Icon name="trash" />Supprimer</button>
               </td>
             </tr>
           </tbody>
@@ -180,7 +180,7 @@ onMounted(load)
                 <span v-else class="badge bad">absente</span>
               </td>
               <td style="text-align:right">
-                <button v-if="img.ref.includes('/')" class="sm" title="Mettre à jour" @click="pull(img)">⬇</button>
+                <button v-if="img.ref.includes('/')" class="sm" title="Mettre à jour" @click="pull(img)"><Icon name="download" />Mettre à jour</button>
                 <router-link v-else to="/emulateurs" class="small">construire</router-link>
               </td>
             </tr>
@@ -191,9 +191,11 @@ onMounted(load)
       <div class="card">
         <div class="row between" style="margin-bottom:10px">
           <h2 style="margin:0">Rapports de plantage ({{ m.backtraces.length }})</h2>
-          <button v-if="m.backtraces.length" class="sm danger" @click="clearBacktraces">🗑 Tout supprimer</button>
+          <button v-if="m.backtraces.length" class="sm danger" @click="clearBacktraces"><Icon name="trash" />Tout supprimer</button>
         </div>
-        <div v-if="!m.backtraces.length" class="empty">Aucun plantage enregistré 🎉</div>
+        <div v-if="!m.backtraces.length" class="empty">
+          <div class="icon"><Icon name="check" /></div><div class="title">Aucun plantage enregistré</div>
+        </div>
         <table v-else class="small">
           <tbody>
             <tr v-for="b in m.backtraces.slice(0, 8)" :key="b.name">
@@ -215,8 +217,8 @@ onMounted(load)
               <td class="mono">{{ b.name.replace('config.toml.', '') }}</td>
               <td class="muted">{{ date(b.mtime) }}</td>
               <td style="text-align:right;white-space:nowrap">
-                <a class="btn sm" :href="`/api/backups/${b.name}`" download>⬇</a>
-                <button class="sm" @click="restore(b)">↺ Restaurer</button>
+                <a class="btn sm" :href="`/api/backups/${b.name}`" download><Icon name="download" />Télécharger</a>
+                <button class="sm" @click="restore(b)"><Icon name="undo" />Restaurer</button>
               </td>
             </tr>
           </tbody>

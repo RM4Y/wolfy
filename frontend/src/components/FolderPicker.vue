@@ -28,13 +28,13 @@ onMounted(() => open(props.start || '/mnt'))
     <div class="modal narrow">
       <h2>Choisir un dossier</h2>
       <div v-if="listing" class="row" style="flex-wrap:nowrap;margin-bottom:10px">
-        <button type="button" class="sm" :disabled="!listing.parent" @click="open(listing.parent)">⬆</button>
+        <button type="button" class="sm" :disabled="!listing.parent" aria-label="Dossier parent" @click="open(listing.parent)"><Icon name="arrow-up" />Parent</button>
         <input class="mono small" :value="listing.path" @change="open($event.target.value)" />
       </div>
       <div v-if="error" class="alert bad small" style="margin-bottom:10px">{{ error }}</div>
       <div v-if="listing" class="list">
         <button v-for="d in listing.dirs" :key="d" type="button" class="ghost item" @click="open(join(listing.path, d))">
-          📁 {{ d }}
+          <Icon name="folder" />{{ d }}
         </button>
         <div v-if="!listing.dirs.length" class="muted small" style="padding:10px">Aucun sous-dossier</div>
       </div>
@@ -47,6 +47,6 @@ onMounted(() => open(props.start || '/mnt'))
 </template>
 
 <style scoped>
-.list { max-height: 50vh; overflow: auto; border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
+.list { max-height: 50vh; overflow: auto; border: 1px solid var(--border); border-radius: 10px; padding: 4px; }
 .item { width: 100%; justify-content: flex-start; padding: 6px 10px; }
 </style>

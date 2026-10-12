@@ -30,7 +30,7 @@ async function pair(p) {
     pair_secret: p.pair_secret, pin: f.pin, name: f.name, client_ip: p.client_ip || '',
   }))
   if (r) {
-    toast(r.client_id ? 'Appareil appairé 🎉' : 'PIN envoyé — vérifie Moonlight')
+    toast(r.client_id ? 'Appareil appairé' : 'PIN envoyé, vérifie Moonlight')
     delete forms[p.pair_secret]
     load()
     emit('refresh')
@@ -75,23 +75,26 @@ onUnmounted(() => clearTimeout(timer))
 
 <template>
   <div class="page-head">
-    <h1>Appairage</h1>
-    <div class="spacer"></div>
+    <div>
+      <h1>Appairage</h1>
+      <div class="sub">Relie un appareil Moonlight à Wolf avec son code PIN</div>
+    </div>
   </div>
-  <div v-if="error" class="alert bad" style="margin-bottom:16px">{{ error }}</div>
+  <div v-if="error" class="alert bad" style="margin-bottom:16px"><Icon name="alert" /><div>{{ error }}</div></div>
 
   <div class="card">
     <h2>Demandes en attente</h2>
     <div v-if="!pending.length" class="empty">
-      <div class="big">🔑</div>
-      Aucune demande. Dans Moonlight, ajoute le PC (IP du serveur) : il affiche un code PIN
-      et la demande apparaît ici automatiquement.
+      <div class="icon"><Icon name="key" /></div>
+      <div class="title">Aucune demande</div>
+      <div class="text">Dans Moonlight, ajoute le PC (IP du serveur) : il affiche un code PIN
+        et la demande apparaît ici automatiquement.</div>
     </div>
     <div v-else class="grid cols-2">
-      <form v-for="p in pending" :key="p.pair_secret" class="card" style="background:var(--card-2)"
+      <form v-for="p in pending" :key="p.pair_secret" class="card"
             @submit.prevent="pair(p)">
         <div class="row between" style="margin-bottom:12px">
-          <h3>📱 Nouvel appareil</h3>
+          <h3 class="row" style="gap:8px"><Icon name="phone" />Nouvel appareil</h3>
           <span class="badge mono">{{ p.client_ip || 'IP inconnue' }}</span>
         </div>
         <div class="field">
@@ -103,15 +106,18 @@ onUnmounted(() => clearTimeout(timer))
           <label>Nom de l'appareil (facultatif)</label>
           <input v-model="forms[p.pair_secret].name" placeholder="ex. Steam Deck, TV salon…" />
         </div>
-        <button class="primary" :disabled="!/^\d{4}$/.test(forms[p.pair_secret].pin)">✔ Appairer</button>
+        <button class="primary" :disabled="!/^\d{4}$/.test(forms[p.pair_secret].pin)"><Icon name="check" />Appairer</button>
       </form>
     </div>
   </div>
 
   <div class="card">
     <h2>Appareils appairés ({{ clients.length }})</h2>
-    <div v-if="!clients.length" class="empty">Aucun appareil appairé.</div>
-    <div v-else class="table-wrap">
+    <div v-if="!clients.length" class="empty">
+      <div class="icon"><Icon name="phone" /></div>
+      <div class="title">Aucun appareil appairé</div>
+    </div>
+    <div v-else class="table-wrap cards">
       <table>
         <thead><tr><th>Appareil</th><th>Manette</th><th>Dossier d'état</th><th></th></tr></thead>
         <tbody>
@@ -123,9 +129,11 @@ onUnmounted(() => clearTimeout(timer))
             </td>
             <td><span class="badge">{{ c.settings?.controllers_override?.[0] || 'Auto' }}</span></td>
             <td class="mono small muted">{{ c.app_state_folder }}</td>
-            <td style="text-align:right;white-space:nowrap">
-              <button class="sm" @click="edit(c)">✏️ Modifier</button>
-              <button class="sm danger" @click="unpair(c)">✖</button>
+            <td class="act">
+              <div class="row" style="gap:6px;flex-wrap:nowrap">
+                <button class="sm" @click="edit(c)"><Icon name="edit" />Modifier</button>
+                <button class="sm danger" @click="unpair(c)"><Icon name="x" />Désappairer</button>
+              </div>
             </td>
           </tr>
         </tbody>

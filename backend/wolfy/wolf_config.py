@@ -219,7 +219,7 @@ def move_app(doc, profile_id: str, index: int, delta: int) -> None:
     if not 0 <= target < len(apps):
         return
     items = [apps[i] for i in range(len(apps))]
-    items[index], items[target] = items[target], items[index]
+    items.insert(target, items.pop(index))  # moved there, the others shift (dragged in the UI)
     new = tomlkit.aot()
     for item in items:
         new.append(item)

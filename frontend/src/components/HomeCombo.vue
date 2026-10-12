@@ -15,10 +15,10 @@ const MODIFIERS = [
 ]
 // Xbox labels, as printed on the pad; Eden uses Nintendo positions
 const BUTTONS = [
-  { id: 'a', label: 'A', hint: 'en bas', color: '#3ecf8e' },
-  { id: 'b', label: 'B', hint: 'à droite', color: '#ff5c7a' },
-  { id: 'x', label: 'X', hint: 'à gauche', color: '#4ea3ff' },
-  { id: 'y', label: 'Y', hint: 'en haut', color: '#f5b041' },
+  { id: 'a', label: 'A', hint: 'en bas' },
+  { id: 'b', label: 'B', hint: 'à droite' },
+  { id: 'x', label: 'X', hint: 'à gauche' },
+  { id: 'y', label: 'Y', hint: 'en haut' },
 ]
 
 const QUIT_COMBOS = [
@@ -49,7 +49,7 @@ onMounted(load)
   <div v-if="form" class="card" style="margin-bottom:18px">
     <div class="row between">
       <div>
-        <h2 style="margin:0">🏠 Retour au {{ menuName }}</h2>
+        <h2 style="margin:0">Retour au {{ menuName }}</h2>
         <div class="muted small">Combinaison de la manette qui ouvre le {{ menuName }} de la session.</div>
       </div>
       <label class="switch" title="Activer"><input v-model="form.enabled" type="checkbox" /><span></span></label>
@@ -59,9 +59,9 @@ onMounted(load)
       <div>
         <label>Maintenir</label>
         <div class="row">
-          <button v-for="m in MODIFIERS" :key="m.id" type="button" class="pick" :class="{ primary: form.modifier === m.id }"
+          <button v-for="m in MODIFIERS" :key="m.id" type="button" class="choice" :class="{ active: form.modifier === m.id }"
                   :disabled="!form.enabled" @click="form.modifier = m.id">
-            <b>{{ m.label }}</b><span class="small">{{ m.hint }}</span>
+            <span class="t">{{ m.label }}</span><span class="s">{{ m.hint }}</span>
           </button>
         </div>
       </div>
@@ -70,7 +70,7 @@ onMounted(load)
         <label>Appuyer sur</label>
         <div class="row">
           <button v-for="b in BUTTONS" :key="b.id" type="button" class="face" :class="{ selected: form.button === b.id }"
-                  :style="{ '--c': b.color }" :disabled="!form.enabled" :title="`${b.label} (${b.hint})`"
+                  :disabled="!form.enabled" :title="`${b.label} (${b.hint})`"
                   @click="form.button = b.id">{{ b.label }}</button>
         </div>
       </div>
@@ -93,7 +93,7 @@ onMounted(load)
 
     <div class="row between">
       <div>
-        <h2 style="margin:0">⏏️ Quitter l'émulateur</h2>
+        <h2 style="margin:0">Quitter l'émulateur</h2>
         <div class="muted small">Combinaison maintenue qui ferme {{ ({ eden: 'Eden', retroarch: 'RetroArch', steam: 'Steam' })[emulator] }} et termine proprement la session Moonlight.</div>
       </div>
       <label class="switch" title="Activer"><input v-model="form.quit_enabled" type="checkbox" /><span></span></label>
@@ -102,9 +102,9 @@ onMounted(load)
       <div>
         <label>Maintenir ensemble</label>
         <div class="row">
-          <button v-for="q in QUIT_COMBOS" :key="q.id" type="button" class="pick" :class="{ primary: form.quit_combo === q.id }"
+          <button v-for="q in QUIT_COMBOS" :key="q.id" type="button" class="choice" :class="{ active: form.quit_combo === q.id }"
                   :disabled="!form.quit_enabled" @click="form.quit_combo = q.id">
-            <b>{{ q.label }}</b><span v-if="q.hint" class="small">{{ q.hint }}</span>
+            <span class="t">{{ q.label }}</span><span v-if="q.hint" class="s">{{ q.hint }}</span>
           </button>
         </div>
       </div>
@@ -120,7 +120,7 @@ onMounted(load)
 
     <div v-if="dirty" class="row end" style="margin-top:12px">
       <button type="button" class="ghost" @click="form = { ...saved }">Annuler</button>
-      <button type="button" class="primary" @click="save">💾 Enregistrer</button>
+      <button type="button" class="primary" @click="save"><Icon name="save" />Enregistrer</button>
     </div>
   </div>
 </template>
@@ -128,12 +128,13 @@ onMounted(load)
 <style scoped>
 .combo { display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; margin-top: 16px; }
 .combo.off { opacity: .45; }
-.sep { border: none; border-top: 1px solid var(--line); margin: 20px 0 16px; }
-.plus { font-size: 26px; font-weight: 700; color: var(--muted); padding-bottom: 10px; }
-.pick { flex-direction: column; align-items: flex-start; gap: 0; min-width: 150px; }
+.sep { border: none; border-top: 1px solid var(--border); margin: 20px 0 16px; }
+.plus { font-size: 26px; font-weight: 700; color: var(--ink-faint); padding-bottom: 10px; }
+.choice { min-width: 170px; }
 .face {
-  width: 48px; height: 48px; border-radius: 50%; justify-content: center; padding: 0;
-  font-weight: 700; font-size: 18px; color: var(--c); border: 2px solid var(--line); background: var(--bg-2);
+  width: 44px; height: 44px; border-radius: 50%; justify-content: center; padding: 0;
+  font: 600 16px/1 var(--font-mono); color: var(--ink); border: 1px solid var(--border-control); border-bottom-width: 2px;
+  background: var(--surface-raised);
 }
-.face.selected { background: var(--c); color: #0e0f14; border-color: var(--c); box-shadow: 0 0 14px var(--c); }
+.face.selected { background: var(--brand-soft); color: var(--brand-text); border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand) inset, 0 0 20px -6px var(--glow-brand); }
 </style>

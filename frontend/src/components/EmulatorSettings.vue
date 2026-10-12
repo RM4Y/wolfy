@@ -125,30 +125,33 @@ defineExpose({ pending })
       <code>{{ data.path }}</code> · réglages et libellés issus de {{ data.version || `Eden ${data.eden_tag}` }}.
     </div>
     <div v-if="data.host_running" class="alert warn small" style="margin-bottom:16px">
-      {{ name }} est ouvert sur le PC : ferme-le avant d'enregistrer (il réécrit sa config en quittant).
+      <Icon name="alert" />{{ name }} est ouvert sur le PC : ferme-le avant d'enregistrer (il réécrit sa config en quittant).
     </div>
 
     <div class="row" style="margin-bottom:14px">
-      <input v-model="search" placeholder="🔍 Rechercher un réglage (résolution, vsync, langue…)" style="flex:1;min-width:220px" />
+      <div class="search" style="flex:1;min-width:220px">
+        <Icon name="search" />
+        <input v-model="search" placeholder="Rechercher un réglage" />
+      </div>
       <select style="width:auto" @change="restore($event.target.value); $event.target.value = ''">
-        <option value="">↺ Restaurer une sauvegarde…</option>
+        <option value="">Restaurer une sauvegarde…</option>
         <option v-for="b in data.backups" :key="b.name" :value="b.name">{{ backupLabel(b.name) }}</option>
       </select>
     </div>
 
     <div v-if="!search" class="tabs">
-      <button type="button" :class="{ active: tab === 'wolfy' }" @click="tab = 'wolfy'">🐺 Wolfy-{{ name }}</button>
+      <button type="button" :class="{ active: tab === 'wolfy' }" @click="tab = 'wolfy'">Wolfy-{{ name }}</button>
       <button v-if="emulator === 'dolphin'" type="button" :class="{ active: tab === 'espbar' }" @click="tab = 'espbar'">
-        📡 EspBar
+        EspBar
       </button>
       <button v-for="t in data.tabs" :key="t.id" type="button" :class="{ active: tab === t.id }" @click="tab = t.id">
-        {{ t.label }} <span class="muted small">{{ counts[t.id] || 0 }}</span>
+        {{ t.label }} <span class="n">{{ counts[t.id] || 0 }}</span>
       </button>
     </div>
     <div v-else class="muted small" style="margin-bottom:10px">{{ visible.length }} résultat(s)</div>
 
     <div v-if="tab === 'raw' && !search" class="alert warn small" style="margin-bottom:12px">
-      Valeurs brutes du fichier (liaisons de boutons, listes, chemins…) : modifie seulement si tu sais ce que tu fais.
+      <Icon name="alert" />Valeurs brutes du fichier (liaisons de boutons, listes, chemins…) : modifie seulement si tu sais ce que tu fais.
     </div>
 
     <template v-if="tab === 'wolfy' && !search">
@@ -161,20 +164,22 @@ defineExpose({ pending })
 
     <div v-for="g in groups" :key="g.name" class="card" style="padding:8px 4px;margin-bottom:14px">
       <h3 class="group-title" @click="toggle(g)">
-        {{ isOpen(g) ? '▾' : '▸' }} {{ g.name }} <span class="muted small">{{ g.items.length }}</span>
+        <Icon :name="isOpen(g) ? 'chevron-down' : 'chevron-right'" class="sm" />{{ g.name }} <span class="muted small">{{ g.items.length }}</span>
       </h3>
       <template v-if="isOpen(g)">
         <SettingField v-for="it in g.items" :key="id(it)" :item="it" :value="valueOf(it)"
                       :modified="!!draft[id(it)]" @update="v => update(it, v)" @reset="reset(it)" />
       </template>
     </div>
-    <div v-if="!groups.length && (!['wolfy', 'espbar'].includes(tab) || search)" class="empty card">Aucun réglage.</div>
+    <div v-if="!groups.length && (!['wolfy', 'espbar'].includes(tab) || search)" class="empty card">
+      <div class="icon"><Icon name="search" /></div><div class="title">Aucun réglage</div>
+    </div>
 
     <div v-if="pending" class="savebar">
       <span><b>{{ pending }}</b> modification(s) non enregistrée(s)</span>
       <div class="row">
         <button type="button" class="ghost" @click="draft = {}">Annuler</button>
-        <button type="button" class="primary" @click="save">💾 Enregistrer</button>
+        <button type="button" class="primary" @click="save"><Icon name="save" />Enregistrer</button>
       </div>
     </div>
   </template>
@@ -182,11 +187,12 @@ defineExpose({ pending })
 </template>
 
 <style scoped>
-.group-title { padding: 8px 14px 4px; color: var(--accent-2); cursor: pointer; user-select: none; }
+.group-title { padding: 8px 14px 4px; color: var(--ink); font: 600 16px/22px var(--font-display); cursor: pointer; user-select: none; display: flex; align-items: center; gap: 8px; }
 .savebar {
   position: sticky; bottom: 16px; z-index: 20;
   display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
-  background: var(--card-2); border: 1px solid var(--accent); border-radius: 12px;
-  padding: 12px 16px; box-shadow: var(--shadow);
+  background: var(--surface-solid); border: 1px solid var(--brand); border-radius: var(--radius-lg);
+  padding: 12px 16px; box-shadow: var(--shadow-pop);
 }
+@media (max-width: 899px) { .savebar { bottom: calc(84px + env(safe-area-inset-bottom)); } }
 </style>

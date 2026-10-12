@@ -6,10 +6,10 @@ import { act, api, toast } from '../api'
 import HomeCombo from './HomeCombo.vue'
 
 const SOURCES = [
-  { value: 'pad', label: '🎮 Manette Moonlight', help: 'Wiimote simulée sur la manette de l\'appareil Moonlight (Xbox : pointeur au stick droit)' },
-  { value: 'host', label: '🕹️ Manette du PC', help: 'Manette branchée sur le serveur (USB ou Bluetooth), Wiimote simulée' },
-  { value: 'real', label: '📡 Vraie Wiimote', help: 'Wiimote connectée au Bluetooth du serveur ou à l\'EspBar (1 + 2 pour l\'appairer)' },
-  { value: 'none', label: '⛔ Aucune', help: 'Emplacement vide' },
+  { value: 'pad', label: 'Manette Moonlight', help: 'Wiimote simulée sur la manette de l\'appareil Moonlight (Xbox : pointeur au stick droit)' },
+  { value: 'host', label: 'Manette du PC', help: 'Manette branchée sur le serveur (USB ou Bluetooth), Wiimote simulée' },
+  { value: 'real', label: 'Vraie Wiimote', help: 'Wiimote connectée au Bluetooth du serveur ou à l\'EspBar (1 + 2 pour l\'appairer)' },
+  { value: 'none', label: 'Aucune', help: 'Emplacement vide' },
 ]
 const saved = ref(null)
 const form = ref(null)
@@ -65,7 +65,7 @@ onMounted(load)
   <HomeCombo emulator="dolphin" />
 
   <div v-if="form" class="card">
-    <h2 style="margin:0">🎯 Joueurs</h2>
+    <h2 style="margin:0">Joueurs</h2>
     <div class="muted small" style="margin-bottom:14px">
       Chaque joueur Wii (et le port GameCube du même numéro) est la manette d'un appareil Moonlight, une manette
       branchée sur le PC, ou une vraie Wiimote connectée au Bluetooth du serveur. Une manette ou une Wiimote
@@ -75,7 +75,7 @@ onMounted(load)
       <div class="row" style="align-items:center">
         <b style="width:90px">Joueur {{ i + 1 }}</b>
         <div class="row" style="flex:1;gap:6px">
-          <button v-for="s in SOURCES" :key="s.value" type="button" class="sm" :class="{ primary: slot === s.value }"
+          <button v-for="s in SOURCES" :key="s.value" type="button" class="sm" :class="{ on: slot === s.value }"
                   :title="s.help" @click="setSource(i, s.value)">{{ s.label }}</button>
         </div>
         <span v-if="slot === 'pad'" class="muted small">manette n° {{ padIndex(i) }} de la session</span>
@@ -86,7 +86,7 @@ onMounted(load)
           <option v-for="p in choices(i)" :key="padKey(p)" :value="padKey(p)">{{ padLabel(p) }}</option>
         </select>
         <button type="button" class="ghost sm" :disabled="detecting" @click="detect">
-          {{ detecting ? '…' : '🔄 Détecter' }}
+          <Icon name="refresh" />{{ detecting ? 'Détection…' : 'Détecter' }}
         </button>
       </div>
       <div v-if="slot === 'host' && pads && !pads.length" class="muted small" style="margin:4px 0 0 90px">
@@ -99,7 +99,7 @@ onMounted(load)
     </label>
     <div v-if="dirty" class="row end" style="margin-top:12px">
       <button type="button" class="ghost" @click="form = clone(saved)">Annuler</button>
-      <button type="button" class="primary" @click="save">💾 Enregistrer</button>
+      <button type="button" class="primary" @click="save"><Icon name="save" />Enregistrer</button>
     </div>
   </div>
 </template>

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { act, api, coverUrl, toast } from '../api'
+import { act, api, toast } from '../api'
+import Cover from './Cover.vue'
 import ListEditor from './ListEditor.vue'
 
 const props = defineProps({
@@ -94,7 +95,7 @@ async function save() {
     <form class="modal" @submit.prevent="save">
       <div class="row between" style="margin-bottom:14px">
         <h2 style="margin:0">{{ isNew ? 'Nouvelle application' : `Modifier « ${app.title} »` }}</h2>
-        <button type="button" class="ghost sm" @click="emit('close')">✖</button>
+        <button type="button" class="ghost sm icon" @click="emit('close')" aria-label="Fermer"><Icon name="x" /></button>
       </div>
 
       <div class="tabs">
@@ -106,12 +107,12 @@ async function save() {
       <div v-show="tab === 'general'">
         <div class="field">
           <label>Émulateur principal</label>
-          <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px">
-            <button v-for="e in emulators" :key="e.id" type="button"
-                    :class="{ primary: form.emulator === e.id }" style="flex-direction:column;align-items:flex-start;gap:2px"
+          <div class="choices" role="radiogroup">
+            <button v-for="e in emulators" :key="e.id" type="button" class="choice" role="radio"
+                    :aria-checked="form.emulator === e.id" :class="{ active: form.emulator === e.id }"
                     @click="applyPreset(e.id)">
-              <b>{{ e.name }}</b>
-              <span class="small" :style="{ opacity: .8 }">{{ e.systems.join(', ') || 'Image au choix' }}</span>
+              <span class="t">{{ e.name }}</span>
+              <span class="s">{{ e.systems.join(', ') || 'Image au choix' }}</span>
             </button>
           </div>
           <div v-if="emu" class="help">
@@ -140,22 +141,19 @@ async function save() {
         <div class="field">
           <label>Jaquette (PNG, ratio 3:4 conseillé)</label>
           <div class="row" style="align-items:flex-start;flex-wrap:nowrap">
-            <div style="width:90px;flex:none">
-              <img v-if="form.icon" :src="coverUrl(form.icon)" class="cover" alt="" />
-              <div v-else class="cover placeholder">🎮</div>
-            </div>
+            <Cover :app="form" :label="false" style="width:96px;aspect-ratio:1;flex:none;border-radius:var(--radius-lg)" />
             <div style="flex:1">
               <div class="row" style="margin-bottom:8px">
                 <button v-for="c in covers" :key="c" type="button" class="sm"
-                        :class="{ primary: form.icon.endsWith('/' + c) }" @click="pickCover(c)">{{ c }}</button>
+                        :class="{ on: form.icon.endsWith('/' + c) }" @click="pickCover(c)">{{ c }}</button>
               </div>
               <div class="row">
-                <label class="btn sm" style="margin:0;color:var(--text)">
-                  ⬆ Envoyer un PNG
+                <label class="btn sm" style="margin:0;color:var(--ink)">
+                  <Icon name="upload" />Envoyer un PNG
                   <input type="file" accept="image/png" hidden @change="uploadCover" />
                 </label>
                 <button v-if="emu?.icon && form.icon !== emu.icon" type="button" class="sm"
-                        @click="form.icon = emu.icon">↺ Image par défaut</button>
+                        @click="form.icon = emu.icon"><Icon name="undo" />Image par défaut</button>
                 <button v-if="form.icon" type="button" class="ghost sm" @click="form.icon = ''">Retirer</button>
               </div>
               <input v-model="form.icon" class="mono small" style="margin-top:8px" placeholder="chemin ou URL" />
@@ -211,7 +209,7 @@ async function save() {
       </div>
       <div class="row end">
         <button type="button" class="ghost" @click="emit('close')">Annuler</button>
-        <button class="primary" :disabled="!!jsonError">💾 Enregistrer</button>
+        <button class="primary" :disabled="!!jsonError"><Icon name="save" />Enregistrer</button>
       </div>
     </form>
   </div>

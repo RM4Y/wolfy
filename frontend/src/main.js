@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
+import Icon from './components/Icon.vue'
 import './style.css'
 
 const routes = [
@@ -17,4 +18,4 @@ const routes = [
 const router = createRouter({ history: createWebHistory(), routes })
 router.afterEach(to => { document.title = `${to.meta.title} · Wolfy` })
 
-createApp(App).use(router).mount('#app')
+createApp(App).use(router).component('Icon', Icon).mount('#app')

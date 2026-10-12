@@ -25,18 +25,19 @@ async function submit() {
 <template>
   <div style="min-height:100vh;display:grid;place-items:center;padding:16px">
     <form class="card" style="width:min(380px,100%);padding:28px" @submit.prevent="submit">
-      <div class="brand" style="justify-content:center;padding-bottom:22px">
-        <img src="/wolfy.svg" alt="" style="width:42px;height:42px" />
-        <div style="font-size:24px">Wolfy<small>Administration de Wolf</small></div>
+      <div class="brand" style="justify-content:center;padding-bottom:24px">
+        <img src="/wolfy.svg" alt="" style="width:44px;height:44px" />
+        <div><div class="brand-name" style="font-size:24px">Wolfy</div><div class="brand-sub">Administration de Wolf</div></div>
       </div>
       <div v-if="!configured" class="alert warn" style="margin-bottom:14px">
-        Aucun mot de passe configuré : définis <code>WOLFY_ADMIN_PASSWORD</code> dans le fichier <code>.env</code>.
+        <Icon name="alert" />
+        <div>Aucun mot de passe configuré : définis <code>WOLFY_ADMIN_PASSWORD</code> dans le fichier <code>.env</code>.</div>
       </div>
       <div class="field">
         <label>Mot de passe administrateur</label>
         <input v-model="password" type="password" autofocus autocomplete="current-password" />
       </div>
-      <div v-if="error" class="alert bad" style="margin-bottom:14px">{{ error }}</div>
+      <div v-if="error" class="alert bad" style="margin-bottom:14px"><Icon name="alert" /><div>{{ error }}</div></div>
       <button class="primary" style="width:100%;justify-content:center" :disabled="loading || !password">
         {{ loading ? 'Connexion…' : 'Se connecter' }}
       </button>

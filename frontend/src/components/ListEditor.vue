@@ -12,8 +12,8 @@ function set(i, v) { model.value = model.value.map((x, j) => (j === i ? v : x)) 
   <div class="stack" style="--gap:6px">
     <div v-for="(item, i) in model" :key="i" class="row" style="margin-top:6px;flex-wrap:nowrap">
       <input class="mono" :value="item" :placeholder="placeholder" @input="set(i, $event.target.value)" />
-      <button type="button" class="ghost sm danger" title="Retirer" @click="remove(i)">✖</button>
+      <button type="button" class="ghost sm danger" title="Retirer" aria-label="Retirer" @click="remove(i)"><Icon name="x" /></button>
     </div>
-    <button type="button" class="sm" style="margin-top:6px" @click="add">＋ Ajouter</button>
+    <button type="button" class="sm" style="margin-top:6px" @click="add"><Icon name="plus" />Ajouter</button>
   </div>
 </template>

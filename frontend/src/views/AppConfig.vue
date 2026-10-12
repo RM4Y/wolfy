@@ -2,9 +2,10 @@
 // Configuration page of one application: emulator settings + Wolf container settings.
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { api, coverUrl } from '../api'
+import { api } from '../api'
 import AppEditor from '../components/AppEditor.vue'
 import EmulatorSettings from '../components/EmulatorSettings.vue'
+import Cover from '../components/Cover.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -42,16 +43,13 @@ onMounted(load)
 
 <template>
   <div class="page-head">
-    <button class="ghost sm" @click="router.push('/applications')">← Applications</button>
+    <button class="ghost sm" @click="router.push('/applications')"><Icon name="arrow-left" />Applications</button>
   </div>
-  <div v-if="error" class="alert bad">{{ error }}</div>
+  <div v-if="error" class="alert bad"><Icon name="alert" /><div>{{ error }}</div></div>
 
   <template v-if="app">
-    <div class="card row" style="flex-wrap:nowrap;gap:18px;margin-bottom:18px">
-      <div style="width:84px;flex:none">
-        <img v-if="app.icon" :src="coverUrl(app.icon)" class="cover" alt="" />
-        <div v-else class="cover placeholder">🎮</div>
-      </div>
+    <div class="card row app-head">
+      <Cover :app="app" :label="false" class="app-thumb" />
       <div style="flex:1;min-width:0">
         <h1>{{ app.title }}</h1>
         <div class="row" style="margin-top:6px">
@@ -59,16 +57,16 @@ onMounted(load)
           <span v-for="s in emu?.systems || []" :key="s" class="badge">{{ s }}</span>
           <span class="badge mono">{{ app.image }}</span>
         </div>
-        <div v-if="app.rom_dir" class="muted small mono" style="margin-top:6px">📁 {{ app.rom_dir }}</div>
+        <div v-if="app.rom_dir" class="muted mono row" style="margin-top:6px;gap:6px"><Icon name="folder" class="sm" />{{ app.rom_dir }}</div>
       </div>
-      <button @click="editContainer = true">🐳 Conteneur Wolf</button>
+      <button @click="editContainer = true"><Icon name="box" />Conteneur Wolf</button>
     </div>
 
     <EmulatorSettings v-if="settingsPage" :key="settingsPage" :emulator="settingsPage" />
     <div v-else class="card empty">
-      <div class="big">🧩</div>
-      Pas encore de page de réglages pour {{ emu?.name || 'cet émulateur' }}.<br />
-      <button class="primary" style="margin-top:12px" @click="editContainer = true">Configurer le conteneur Wolf</button>
+      <div class="icon"><Icon name="layers" /></div>
+      <div class="title">Pas encore de page de réglages pour {{ emu?.name || 'cet émulateur' }}</div>
+      <button style="margin-top:8px" @click="editContainer = true"><Icon name="box" />Configurer le conteneur Wolf</button>
     </div>
   </template>
 
@@ -76,3 +74,10 @@ onMounted(load)
              :base-create-json="baseCreateJson" :sessions="sessions"
              @close="editContainer = false" @saved="saved" />
 </template>
+
+<style scoped>
+.app-head { flex-wrap: nowrap; gap: var(--space-4); padding: var(--space-4); margin-bottom: var(--space-5); }
+.app-thumb { width: 88px; aspect-ratio: 1; flex: none; border-radius: var(--radius-lg); padding: 10px; }
+.app-thumb :deep(.glyph) { font-size: 80px; top: -8px; }
+@media (max-width: 600px) { .app-head { flex-wrap: wrap; } .app-thumb { width: 64px; } }
+</style>

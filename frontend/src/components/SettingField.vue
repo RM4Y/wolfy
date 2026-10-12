@@ -27,7 +27,7 @@ function num(v) { const n = Number(v); if (!Number.isNaN(n)) set(n) }
         <span v-else-if="isDefault" class="badge">défaut</span>
       </div>
       <div class="mono muted setting-key">[{{ it.section }}] {{ it.key }}</div>
-      <div v-if="it.forced" class="small" style="color:var(--warn)">🔒 Imposé à chaque session Wolf : {{ it.forced }}</div>
+      <div v-if="it.forced" class="small" style="color:var(--warning);display:flex;gap:6px;align-items:center"><Icon name="lock" class="sm" />Imposé à chaque session Wolf : {{ it.forced }}</div>
       <div v-if="shortHelp" class="small muted help-text" :class="{ open: showHelp }" @click="showHelp = !showHelp">
         {{ shortHelp }}
       </div>
@@ -67,11 +67,11 @@ function num(v) { const n = Number(v); if (!Number.isNaN(n)) set(n) }
       <div v-else class="row" style="flex-wrap:nowrap">
         <input :type="it.secret && !reveal ? 'password' : 'text'" class="mono" :value="value"
                :disabled="!!it.forced" @change="set($event.target.value)" />
-        <button v-if="it.secret" type="button" class="ghost sm" @click="reveal = !reveal">👁</button>
+        <button v-if="it.secret" type="button" class="ghost sm icon" aria-label="Afficher" @click="reveal = !reveal"><Icon name="eye" /></button>
       </div>
 
       <button v-if="!it.forced && it.default != null && !isDefault" type="button" class="ghost sm reset"
-              title="Remettre la valeur par défaut" @click="emit('reset')">↺ défaut</button>
+              title="Remettre la valeur par défaut" @click="emit('reset')"><Icon name="undo" />Défaut</button>
     </div>
   </div>
 </template>
@@ -81,8 +81,8 @@ function num(v) { const n = Number(v); if (!Number.isNaN(n)) set(n) }
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 340px); gap: 16px;
   padding: 12px 14px; border-radius: 10px; align-items: center;
 }
-.setting:hover { background: var(--bg-2); }
-.setting.modified { background: rgba(124, 92, 255, .08); box-shadow: inset 3px 0 0 var(--accent); }
+.setting:hover { background: var(--surface-sunken); }
+.setting.modified { background: var(--brand-soft); }
 .setting-label { font-weight: 500; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .setting-key { font-size: 11px; margin-top: 1px; word-break: break-all; }
 .help-text { margin-top: 4px; white-space: pre-line; cursor: pointer; display: -webkit-box;

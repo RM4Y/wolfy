@@ -28,22 +28,21 @@ onMounted(load)
   <HomeCombo />
 
   <div v-if="data" class="card">
-    <h2 style="margin:0">✨ Netteté du menu HOME</h2>
+    <h2 style="margin:0">Netteté du menu HOME</h2>
     <div class="muted small" style="margin-bottom:14px">
       Le menu HOME de la Switch est dessiné en 720p, même en mode dock : à la résolution globale 1X il est
       étiré sur le flux 1080p et paraît pixelisé. Ce réglage ne concerne que le menu, pas les jeux.
     </div>
-    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px">
-      <button type="button" class="pick" :class="{ primary: menuRes === null }" @click="menuRes = null">
-        <b>Comme les jeux</b>
-        <span class="small">global : {{ label(data.global_resolution) }}</span>
+    <div class="choices" role="radiogroup">
+      <button type="button" class="choice" role="radio" :aria-checked="menuRes === null" :class="{ active: menuRes === null }" @click="menuRes = null">
+        <span class="t">Comme les jeux</span>
+        <span class="s">global : {{ label(data.global_resolution) }}</span>
       </button>
       <button v-for="o in data.resolution_options.filter(o => o.value >= 3 && o.value <= 8)" :key="o.value" type="button"
-              class="pick" :class="{ primary: menuRes === o.value }" @click="menuRes = o.value">
-        <b>{{ o.label.split(' ')[0] }}</b>
-        <span class="small">
+              class="choice" role="radio" :aria-checked="menuRes === o.value" :class="{ active: menuRes === o.value }" @click="menuRes = o.value">
+        <span class="t">{{ o.label.split(' ')[0] }}<span v-if="o.value === 5" class="badge ok">Recommandé</span></span>
+        <span class="s">
           menu en {{ { 3: '720p', 4: '900p', 5: '1080p', 6: '1440p', 7: '2160p (4K)', 8: '2880p' }[o.value] }}
-          <template v-if="o.value === 5"> · recommandé</template>
         </span>
       </button>
     </div>
@@ -53,11 +52,10 @@ onMounted(load)
     </div>
     <div v-if="dirty" class="row end" style="margin-top:12px">
       <button type="button" class="ghost" @click="menuRes = data.menu_resolution">Annuler</button>
-      <button type="button" class="primary" @click="saveRes">💾 Enregistrer</button>
+      <button type="button" class="primary" @click="saveRes"><Icon name="save" />Enregistrer</button>
     </div>
   </div>
 </template>
 
 <style scoped>
-.pick { flex-direction: column; align-items: flex-start; gap: 0; }
 </style>

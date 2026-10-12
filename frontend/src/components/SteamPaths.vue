@@ -58,13 +58,13 @@ onMounted(load)
   <div class="modal-back" @click.self="emit('close')">
     <div class="modal">
       <div class="row between" style="margin-bottom:14px">
-        <h2 style="margin:0">🎮 Steam — bibliothèques et compte</h2>
-        <button type="button" class="ghost sm" @click="emit('close')">✖</button>
+        <h2 style="margin:0">Steam — bibliothèques et compte</h2>
+        <button type="button" class="ghost sm icon" @click="emit('close')" aria-label="Fermer"><Icon name="x" /></button>
       </div>
 
       <template v-if="libs">
         <div class="card box" style="margin-bottom:16px">
-          <h3>👤 Données Steam partagées</h3>
+          <h3>Données Steam partagées</h3>
           <span class="badge" :class="badge(status?.data).cls">{{ badge(status?.data).text }}</span>
           <p class="muted small">
             <code>{{ dataPath }}</code> : installation de Steam, connexion au compte et réglages, communs à tous les
@@ -75,16 +75,16 @@ onMounted(load)
         </div>
 
         <div class="field">
-          <label>📚 Bibliothèques Steam (SteamLibrary)</label>
+          <label>Bibliothèques Steam (SteamLibrary)</label>
           <div v-for="(d, i) in libs" :key="i" style="margin-bottom:8px">
             <div class="row" style="flex-wrap:nowrap">
               <input v-model="libs[i]" class="mono" />
-              <button type="button" class="sm" title="Parcourir" @click="picking = { index: i }">📂</button>
-              <button type="button" class="ghost sm danger" title="Retirer" @click="libs.splice(i, 1)">✖</button>
+              <button type="button" class="sm icon" title="Parcourir" @click="picking = { index: i }" aria-label="Parcourir"><Icon name="folder-open" /></button>
+              <button type="button" class="ghost sm danger icon" title="Retirer" @click="libs.splice(i, 1)" aria-label="Retirer"><Icon name="x" /></button>
             </div>
             <span class="badge" style="margin-top:4px" :class="badge(status?.libraries?.[i]).cls">{{ badge(status?.libraries?.[i]).text }}</span>
           </div>
-          <button type="button" class="sm" @click="picking = {}">＋ Ajouter une bibliothèque</button>
+          <button type="button" class="sm" @click="picking = {}"><Icon name="plus" />Ajouter une bibliothèque</button>
           <div class="help">
             Dossier contenant <code>steamapps</code>. Monté dans les sessions (Steam peut y installer et mettre à jour
             les jeux) et ajouté automatiquement aux bibliothèques de Steam au démarrage.
@@ -97,7 +97,7 @@ onMounted(load)
         </div>
         <div class="row end">
           <button type="button" class="ghost" @click="emit('close')">Fermer</button>
-          <button type="button" class="primary" :disabled="!dirty" @click="save">💾 Enregistrer</button>
+          <button type="button" class="primary" :disabled="!dirty" @click="save"><Icon name="save" />Enregistrer</button>
         </div>
       </template>
       <div v-else class="empty"><div class="spinner" style="margin:auto"></div></div>
@@ -109,6 +109,6 @@ onMounted(load)
 </template>
 
 <style scoped>
-.box { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; background: var(--card-2); }
+.box { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; background: var(--surface-raised); }
 .box h3, .box p { margin: 0; }
 </style>

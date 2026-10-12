@@ -119,8 +119,8 @@ onMounted(load)
   <div class="modal-back" @click.self="emit('close')">
     <div class="modal">
       <div class="row between" style="margin-bottom:14px">
-        <h2 style="margin:0">🎮 PlayStation — BIOS et firmwares, jeux, sauvegardes</h2>
-        <button type="button" class="ghost sm" @click="emit('close')">✖</button>
+        <h2 style="margin:0">PlayStation — BIOS et firmwares, jeux, sauvegardes</h2>
+        <button type="button" class="ghost sm icon" @click="emit('close')" aria-label="Fermer"><Icon name="x" /></button>
       </div>
 
       <template v-if="form">
@@ -128,7 +128,7 @@ onMounted(load)
           RetroArch est ouvert sur le PC : ferme-le avant de changer les chemins (il réécrit sa config en quittant).
         </div>
 
-        <h3 style="margin:0 0 10px">💿 BIOS et firmwares</h3>
+        <h3 style="margin:0 0 10px">BIOS et firmwares</h3>
         <div class="grid cols-3" style="gap:12px">
           <div v-for="c in CARDS" :key="c.id" class="card box">
             <template v-if="c.kind === 'bios'">
@@ -136,7 +136,7 @@ onMounted(load)
               <span class="badge" :class="badge(status?.[`bios_${c.id}`]).cls">{{ badge(status?.[`bios_${c.id}`]).text }}</span>
               <p class="muted small">{{ c.help }}</p>
               <label class="btn sm" :class="{ disabled: progress[c.id] != null }">
-                ⬆ Envoyer le BIOS {{ c.title }}
+                <Icon name="upload" />Envoyer le BIOS {{ c.title }}
                 <input type="file" multiple :accept="c.accept" hidden
                        @change="sendBios(c.id, $event.target.files); $event.target.value = ''" />
               </label>
@@ -149,7 +149,7 @@ onMounted(load)
               <span v-else class="badge">…</span>
               <p class="muted small">Fichier officiel {{ c.pup }} de Sony, installé dans {{ c.emu }}.</p>
               <label class="btn sm" :class="{ disabled: progress[c.id] != null }">
-                ⬆ Envoyer {{ c.pup }}
+                <Icon name="upload" />Envoyer {{ c.pup }}
                 <input type="file" accept=".pup,.PUP" hidden @change="sendFirmware(c.id, $event.target.files); $event.target.value = ''" />
               </label>
             </template>
@@ -162,10 +162,10 @@ onMounted(load)
           </div>
         </div>
 
-        <h3 style="margin:18px 0 10px">💾 Sauvegardes</h3>
+        <h3 style="margin:18px 0 10px">Sauvegardes</h3>
         <div class="grid cols-2" style="gap:12px">
           <div class="card box">
-            <h3>💾 Sauvegardes</h3>
+            <h3>Sauvegardes</h3>
             <span class="badge" :class="badge(status?.saves).cls">{{ badge(status?.saves).text }}</span>
             <p class="muted small">Memory cards PS1 / PS2, sauvegardes PSP. Partagées par toutes les sessions et RetroArch sur le PC.</p>
           </div>
@@ -177,16 +177,16 @@ onMounted(load)
         </div>
 
         <div class="field" style="margin-top:18px">
-          <label>🎮 Dossiers de jeux (ROMs)</label>
+          <label>Dossiers de jeux (ROMs)</label>
           <div v-for="(d, i) in form.roms" :key="i" style="margin-bottom:8px">
             <div class="row" style="flex-wrap:nowrap">
               <input v-model="form.roms[i]" class="mono" />
-              <button type="button" class="sm" title="Parcourir" @click="picking = { field: 'roms', index: i }">📂</button>
-              <button type="button" class="ghost sm danger" title="Retirer" @click="form.roms.splice(i, 1)">✖</button>
+              <button type="button" class="sm icon" title="Parcourir" @click="picking = { field: 'roms', index: i }" aria-label="Parcourir"><Icon name="folder-open" /></button>
+              <button type="button" class="ghost sm danger icon" title="Retirer" @click="form.roms.splice(i, 1)" aria-label="Retirer"><Icon name="x" /></button>
             </div>
             <span class="badge" style="margin-top:4px" :class="badge(status?.roms?.[i]).cls">{{ badge(status?.roms?.[i]).text }}</span>
           </div>
-          <button type="button" class="sm" @click="picking = { field: 'roms' }">＋ Ajouter un dossier</button>
+          <button type="button" class="sm" @click="picking = { field: 'roms' }"><Icon name="plus" />Ajouter un dossier</button>
           <div class="help">Montés en lecture seule dans les sessions. PS1 / PS2 / PSP : ajoute les jeux dans RetroArch avec
             « Importer du contenu ». PS3 / PS Vita : listés automatiquement dans le XMB.</div>
         </div>
@@ -194,15 +194,15 @@ onMounted(load)
         <h3 style="margin:18px 0 10px">PS3 et PS Vita : jeux</h3>
         <PsStandalone :data="ps" @reload="loadPs" />
 
-        <button type="button" class="ghost sm" @click="advanced = !advanced">{{ advanced ? '▾' : '▸' }} Avancé : emplacements</button>
+        <button type="button" class="ghost sm" @click="advanced = !advanced"><Icon :name="advanced ? 'chevron-down' : 'chevron-right'" class="sm" />Avancé : emplacements</button>
         <div v-if="advanced" style="margin-top:10px">
           <div v-for="p in PATHS" :key="p.id" class="field">
             <label>{{ p.label }}</label>
             <div class="row" style="flex-wrap:nowrap">
               <input v-model="form[p.id]" class="mono small" />
-              <button type="button" class="sm" title="Parcourir" @click="picking = { field: p.id }">📂</button>
-              <button v-if="form[p.id] !== defaults[p.id]" type="button" class="ghost sm" title="Emplacement Wolfy"
-                      @click="form[p.id] = defaults[p.id]">↺</button>
+              <button type="button" class="sm icon" title="Parcourir" @click="picking = { field: p.id }" aria-label="Parcourir"><Icon name="folder-open" /></button>
+              <button v-if="form[p.id] !== defaults[p.id]" type="button" class="ghost sm icon" title="Emplacement Wolfy"
+                      @click="form[p.id] = defaults[p.id]" aria-label="Valeur par défaut"><Icon name="undo" /></button>
             </div>
           </div>
           <div class="help">Par défaut dans le projet : <code>config/playstation/bios</code>, <code>saves</code>, <code>states</code>.</div>
@@ -210,7 +210,7 @@ onMounted(load)
 
         <div class="row end" style="margin-top:16px">
           <button type="button" class="ghost" @click="emit('close')">Fermer</button>
-          <button type="button" class="primary" :disabled="!dirty" @click="save">💾 Enregistrer</button>
+          <button type="button" class="primary" :disabled="!dirty" @click="save"><Icon name="save" />Enregistrer</button>
         </div>
       </template>
       <div v-else class="empty"><div class="spinner" style="margin:auto"></div></div>
@@ -223,8 +223,8 @@ onMounted(load)
 </template>
 
 <style scoped>
-.box { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; background: var(--card-2); }
+.box { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; background: var(--surface-raised); }
 .box h3, .box p { margin: 0; }
 .btn.disabled { pointer-events: none; opacity: .5; }
-progress { width: 100%; accent-color: var(--accent); }
+progress { width: 100%; accent-color: var(--brand); }
 </style>

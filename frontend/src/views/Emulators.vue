@@ -40,17 +40,19 @@ onMounted(load)
 
 <template>
   <div class="page-head">
-    <h1>Émulateurs</h1>
-    <span class="muted">catalogue des émulateurs principaux utilisables par les applications</span>
+    <div>
+      <h1>Émulateurs</h1>
+      <div class="sub">Catalogue des émulateurs utilisables par les applications</div>
+    </div>
   </div>
-  <div v-if="error" class="alert bad">{{ error }}</div>
+  <div v-if="error" class="alert bad" style="margin-bottom:16px"><Icon name="alert" /><div>{{ error }}</div></div>
 
   <div class="grid cols-2">
     <div v-for="emu in emulators.filter(e => e.id !== 'custom')" :key="emu.id" class="card">
       <div class="row between">
         <h2 style="margin:0">{{ emu.name }}</h2>
-        <span v-if="emu.image_info.present" class="badge ok">image prête</span>
-        <span v-else class="badge bad">image absente</span>
+        <span v-if="emu.image_info.present" class="badge ok">Image prête</span>
+        <span v-else class="badge bad">Image absente</span>
       </div>
       <div class="row" style="margin:8px 0">
         <span v-for="s in emu.systems" :key="s" class="badge">{{ s }}</span>
@@ -75,17 +77,18 @@ onMounted(load)
         </tbody>
       </table>
       <div class="row end" style="margin-top:12px">
-        <button v-if="emu.paths_page" class="primary" @click="pathsFor = emu.paths_page">⚙️ {{ { eden: 'Clés, firmware, jeux', retroarch: 'BIOS, jeux, sauvegardes', steam: 'Bibliothèques, compte' }[emu.paths_page] }}</button>
-        <button v-if="emu.buildable" @click="build(emu)">🔨 {{ emu.image_info.present ? 'Reconstruire' : 'Construire' }}</button>
-        <button v-else-if="emu.pullable" @click="pull(emu)">⬇ {{ emu.image_info.present ? 'Mettre à jour' : 'Télécharger' }}</button>
+        <button v-if="emu.paths_page" class="primary" @click="pathsFor = emu.paths_page"><Icon name="sliders" />{{ { eden: 'Clés, firmware, jeux', retroarch: 'BIOS, jeux, sauvegardes', steam: 'Bibliothèques, compte' }[emu.paths_page] }}</button>
+        <button v-if="emu.buildable" @click="build(emu)"><Icon name="hammer" />{{ emu.image_info.present ? 'Reconstruire' : 'Construire' }}</button>
+        <button v-else-if="emu.pullable" @click="pull(emu)"><Icon name="download" />{{ emu.image_info.present ? 'Mettre à jour' : 'Télécharger' }}</button>
         <span v-else class="muted small">Pas de Dockerfile dans <code>images/{{ emu.build_dir }}</code></span>
       </div>
     </div>
   </div>
 
-  <div class="alert info" style="margin-top:16px">
-    Les images locales sont construites depuis <code>images/&lt;émulateur&gt;</code> du dépôt Wolfy (sinon <code>/opt/stacks/wolf/images</code>).
-    Une reconstruction ne touche pas aux sessions en cours : les nouvelles sessions utiliseront la nouvelle image.
+  <div class="alert" style="margin-top:24px">
+    <Icon name="info" />
+    <div>Les images locales sont construites depuis <code>images/&lt;émulateur&gt;</code> du dépôt Wolfy (sinon <code>/opt/stacks/wolf/images</code>).
+    Une reconstruction ne touche pas aux sessions en cours : les nouvelles sessions utiliseront la nouvelle image.</div>
   </div>
 
   <EdenPaths v-if="pathsFor === 'eden'" @close="pathsFor = ''; load()" />

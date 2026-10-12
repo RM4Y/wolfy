@@ -405,7 +405,7 @@ def delete_app(profile_id: str, index: int):
 
 
 class Move(BaseModel):
-    delta: int = Field(ge=-1, le=1)
+    delta: int = Field(ge=-100, le=100)
 
 
 @api.post("/profiles/{profile_id}/apps/{index}/move")

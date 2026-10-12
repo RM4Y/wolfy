@@ -91,29 +91,29 @@ onMounted(load)
   <div class="modal-back" @click.self="emit('close')">
     <div class="modal">
       <div class="row between" style="margin-bottom:14px">
-        <h2 style="margin:0">🎮 Switch (Eden) — clés, firmware, jeux</h2>
-        <button type="button" class="ghost sm" @click="emit('close')">✖</button>
+        <h2 style="margin:0">Switch (Eden) — clés, firmware, jeux</h2>
+        <button type="button" class="ghost sm icon" @click="emit('close')" aria-label="Fermer"><Icon name="x" /></button>
       </div>
 
       <template v-if="form">
         <div class="grid cols-3" style="gap:12px">
           <div class="card box">
-            <h3>🔑 Clés</h3>
+            <h3>Clés</h3>
             <span class="badge" :class="badge(status?.keys).cls">{{ badge(status?.keys).text }}</span>
             <p class="muted small">prod.keys et title.keys (ou un .zip les contenant).</p>
             <label class="btn sm" :class="{ disabled: progress.keys !== undefined }">
-              ⬆ Envoyer les clés
+              <Icon name="upload" />Envoyer les clés
               <input type="file" multiple accept=".keys,.zip" hidden @change="send('keys', $event.target.files); $event.target.value = ''" />
             </label>
             <progress v-if="progress.keys !== undefined" :value="progress.keys" max="1"></progress>
           </div>
 
           <div class="card box">
-            <h3>💾 Firmware</h3>
+            <h3>Firmware</h3>
             <span class="badge" :class="badge(status?.firmware).cls">{{ badge(status?.firmware).text }}</span>
             <p class="muted small">Archive .zip du firmware (fichiers .nca). Remplace l'actuel, gardé en sauvegarde.</p>
             <label class="btn sm" :class="{ disabled: progress.firmware !== undefined }">
-              ⬆ Installer un firmware
+              <Icon name="upload" />Installer un firmware
               <input type="file" accept=".zip" hidden @change="send('firmware', $event.target.files); $event.target.value = ''" />
             </label>
             <template v-if="progress.firmware !== undefined">
@@ -123,35 +123,35 @@ onMounted(load)
           </div>
 
           <div class="card box">
-            <h3>👤 Utilisateurs</h3>
+            <h3>Utilisateurs</h3>
             <span class="badge" :class="badge(status?.users).cls">{{ badge(status?.users).text }}</span>
             <p class="muted small">Profils et sauvegardes, partagés par toutes les sessions et Eden sur le PC.</p>
           </div>
         </div>
 
         <div class="field" style="margin-top:18px">
-          <label>🎮 Dossiers de jeux (ROMs)</label>
+          <label>Dossiers de jeux (ROMs)</label>
           <div v-for="(d, i) in form.roms" :key="i" style="margin-bottom:8px">
             <div class="row" style="flex-wrap:nowrap">
               <input v-model="form.roms[i]" class="mono" />
-              <button type="button" class="sm" title="Parcourir" @click="picking = { field: 'roms', index: i }">📂</button>
-              <button type="button" class="ghost sm danger" title="Retirer" @click="form.roms.splice(i, 1)">✖</button>
+              <button type="button" class="sm icon" title="Parcourir" @click="picking = { field: 'roms', index: i }" aria-label="Parcourir"><Icon name="folder-open" /></button>
+              <button type="button" class="ghost sm danger icon" title="Retirer" @click="form.roms.splice(i, 1)" aria-label="Retirer"><Icon name="x" /></button>
             </div>
             <span class="badge" style="margin-top:4px" :class="badge(status?.roms?.[i]).cls">{{ badge(status?.roms?.[i]).text }}</span>
           </div>
-          <button type="button" class="sm" @click="picking = { field: 'roms' }">＋ Ajouter un dossier</button>
+          <button type="button" class="sm" @click="picking = { field: 'roms' }"><Icon name="plus" />Ajouter un dossier</button>
           <div class="help">Listés dans le menu HOME, montés en lecture seule dans les sessions.</div>
         </div>
 
-        <button type="button" class="ghost sm" @click="advanced = !advanced">{{ advanced ? '▾' : '▸' }} Avancé : emplacements</button>
+        <button type="button" class="ghost sm" @click="advanced = !advanced"><Icon :name="advanced ? 'chevron-down' : 'chevron-right'" class="sm" />Avancé : emplacements</button>
         <div v-if="advanced" style="margin-top:10px">
           <div v-for="p in PATHS" :key="p.id" class="field">
             <label>{{ p.label }}</label>
             <div class="row" style="flex-wrap:nowrap">
               <input v-model="form[p.id]" class="mono small" />
-              <button type="button" class="sm" title="Parcourir" @click="picking = { field: p.id }">📂</button>
-              <button v-if="form[p.id] !== defaults[p.id]" type="button" class="ghost sm" title="Emplacement Wolfy"
-                      @click="form[p.id] = defaults[p.id]">↺</button>
+              <button type="button" class="sm icon" title="Parcourir" @click="picking = { field: p.id }" aria-label="Parcourir"><Icon name="folder-open" /></button>
+              <button v-if="form[p.id] !== defaults[p.id]" type="button" class="ghost sm icon" title="Emplacement Wolfy"
+                      @click="form[p.id] = defaults[p.id]" aria-label="Valeur par défaut"><Icon name="undo" /></button>
             </div>
           </div>
           <div class="help">Par défaut dans le projet : <code>config/switch/keys</code>, <code>nand</code>, <code>users</code>.</div>
@@ -159,7 +159,7 @@ onMounted(load)
 
         <div class="row end" style="margin-top:16px">
           <button type="button" class="ghost" @click="emit('close')">Fermer</button>
-          <button type="button" class="primary" :disabled="!dirty" @click="save">💾 Enregistrer</button>
+          <button type="button" class="primary" :disabled="!dirty" @click="save"><Icon name="save" />Enregistrer</button>
         </div>
       </template>
       <div v-else class="empty"><div class="spinner" style="margin:auto"></div></div>
@@ -171,9 +171,9 @@ onMounted(load)
 </template>
 
 <style scoped>
-.box { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; background: var(--card-2); }
+.box { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; background: var(--surface-raised); }
 .box h3 { margin: 0; }
 .box p { margin: 0; }
 .btn.disabled { pointer-events: none; opacity: .5; }
-progress { width: 100%; accent-color: var(--accent); }
+progress { width: 100%; accent-color: var(--brand); }
 </style>

@@ -1,8 +1,9 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { act, api, coverUrl } from '../api'
+import { act, api } from '../api'
 import AppEditor from '../components/AppEditor.vue'
+import Cover from '../components/Cover.vue'
 
 const profiles = ref([])
 const current = ref('')
@@ -51,6 +52,21 @@ async function move(app, delta) {
   load()
 }
 
+// reorder by dragging the handle (desktop); the arrows stay for touch screens
+const dragging = ref(null)
+const over = ref(null)
+function dragStart(app, ev) {
+  dragging.value = app
+  ev.dataTransfer.effectAllowed = 'move'
+  ev.dataTransfer.setData('text/plain', String(app.index))
+}
+function dragEnd() { dragging.value = over.value = null }
+function drop(target) {
+  const from = dragging.value
+  dragging.value = over.value = null
+  if (from && from.index !== target.index) move(from, target.index - from.index)
+}
+
 function saved() {
   editing.value = undefined
   load()
@@ -61,45 +77,68 @@ onMounted(load)
 
 <template>
   <div class="page-head">
-    <h1>Applications</h1>
+    <div>
+      <h1>Applications</h1>
+      <div v-if="profile" class="sub">{{ profile.apps.length }} application(s) visibles dans Moonlight · glisser la poignée pour réordonner</div>
+    </div>
     <div class="spacer"></div>
-    <button class="primary" @click="editing = null">＋ Nouvelle application</button>
+    <button class="primary" @click="editing = null"><Icon name="plus" />Nouvelle application</button>
   </div>
-  <div v-if="error" class="alert bad">{{ error }}</div>
+  <div v-if="error" class="alert bad" style="margin-bottom:16px"><Icon name="alert" /><div>{{ error }}</div></div>
 
-  <div v-if="profile" class="grid cols-4">
-    <div v-for="app in profile.apps" :key="app.index + app.title" class="card" style="padding:12px">
-      <img v-if="app.icon" :src="coverUrl(app.icon)" class="cover" alt="" loading="lazy" />
-      <div v-else class="cover placeholder">🎮</div>
-      <div style="margin-top:10px">
-        <div class="row between">
-          <h3>{{ app.title }}</h3>
+  <div v-if="profile && profile.apps.length" class="apps">
+    <article v-for="app in profile.apps" :key="app.index + app.title" class="card app"
+             :class="{ dragging: dragging === app, over: over === app && dragging !== app }"
+             @dragover.prevent="over = app" @dragleave="over === app && (over = null)" @drop.prevent="drop(app)">
+      <Cover :app="app" class="app-cover" />
+      <div class="app-body">
+        <div class="row between" style="gap:8px;flex-wrap:nowrap">
+          <span class="app-name">{{ app.title }}</span>
           <span class="badge accent">{{ emuName(app.emulator) }}</span>
         </div>
-        <div class="muted small mono" style="margin-top:4px;word-break:break-all">{{ app.image }}</div>
-        <div v-if="app.rom_dir" class="muted small mono">📁 {{ app.rom_dir }}</div>
-        <div class="row" style="margin-top:6px">
-          <span v-if="imagePresent(app) === false" class="badge bad">image absente</span>
+        <span class="muted mono" style="word-break:break-all">{{ app.image }}</span>
+        <span v-if="app.rom_dir" class="muted mono row" style="gap:6px;flex-wrap:nowrap"><Icon name="folder" class="sm" />{{ app.rom_dir }}</span>
+        <div v-if="imagePresent(app) === false || app.runner_type !== 'docker'" class="row" style="gap:6px">
+          <span v-if="imagePresent(app) === false" class="badge bad">Image absente</span>
           <span v-if="app.runner_type !== 'docker'" class="badge warn">{{ app.runner_type }}</span>
         </div>
-        <div v-if="app.notes" class="small muted" style="margin-top:6px">{{ app.notes }}</div>
+        <div v-if="app.notes" class="small muted">{{ app.notes }}</div>
       </div>
-      <div class="row between" style="margin-top:10px">
-        <div class="row" style="gap:2px">
-          <button class="ghost sm" :disabled="app.index === 0" title="Monter" @click="move(app, -1)">◀</button>
-          <button class="ghost sm" :disabled="app.index === profile.apps.length - 1" title="Descendre" @click="move(app, 1)">▶</button>
-        </div>
-        <div class="row" style="gap:4px">
-          <button class="sm" :disabled="app.runner_type !== 'docker'"
-                  @click="router.push(`/applications/${current}/${app.index}`)">⚙️ Configurer</button>
-          <button class="sm danger" title="Supprimer" @click="remove(app)">🗑</button>
-        </div>
+      <div class="app-foot">
+        <span class="handle" draggable="true" title="Glisser pour réordonner"
+              @dragstart="dragStart(app, $event)" @dragend="dragEnd"><Icon name="grip" /></span>
+        <button class="ghost sm icon touch" :disabled="app.index === 0" aria-label="Monter" @click="move(app, -1)"><Icon name="chevron-left" /></button>
+        <button class="ghost sm icon touch" :disabled="app.index === profile.apps.length - 1" aria-label="Descendre" @click="move(app, 1)"><Icon name="chevron-right" /></button>
+        <span style="flex:1"></span>
+        <button class="sm" :disabled="app.runner_type !== 'docker'"
+                @click="router.push(`/applications/${current}/${app.index}`)"><Icon name="sliders" />Configurer</button>
+        <button class="ghost sm icon" aria-label="Supprimer" title="Supprimer" @click="remove(app)"><Icon name="trash" /></button>
       </div>
-    </div>
-    <div v-if="!profile.apps.length" class="empty card">Aucune application dans ce profil.</div>
+    </article>
+  </div>
+  <div v-else-if="profile" class="card empty">
+    <div class="icon"><Icon name="gamepad" /></div>
+    <div class="title">Aucune application</div>
+    <div class="text">Ajoute une application pour la voir dans Moonlight.</div>
   </div>
 
   <AppEditor v-if="editing !== undefined" :app="editing" :profile-id="current" :emulators="emulators"
              :base-create-json="baseCreateJson" :sessions="sessions"
              @close="editing = undefined" @saved="saved" />
 </template>
+
+<style scoped>
+.apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-6); }
+.app { padding: 0; overflow: hidden; display: flex; flex-direction: column; transition: transform .18s, box-shadow .18s, opacity .18s; }
+.app:hover { transform: translateY(-2px); box-shadow: var(--shadow-card), 0 0 40px -14px var(--glow-brand); }
+.app.dragging { opacity: .45; }
+.app.over { box-shadow: 0 0 0 2px var(--brand), var(--shadow-glow); }
+.app-cover { aspect-ratio: 4 / 3; margin: 8px 8px 0; }
+.app-body { flex: 1; padding: var(--space-4); display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.app-name { font-weight: 600; font-size: 15px; }
+.app-foot { display: flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-4) var(--space-4); }
+.handle { color: var(--ink-faint); cursor: grab; display: grid; place-items: center; width: 28px; height: 30px; border-radius: var(--radius-sm); }
+.handle:hover { background: var(--surface-raised); color: var(--ink); }
+.touch { display: none; }
+@media (hover: none) { .handle { display: none; } .touch { display: inline-flex; } }
+</style>
