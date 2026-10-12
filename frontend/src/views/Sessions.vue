@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { act, api } from '../api'
 import Cover from '../components/Cover.vue'
 
@@ -88,24 +88,13 @@ async function stop(s) {
   load()
 }
 
-const live = computed(() => sessions.value.filter(s => state(s).id === 'live').length)
-const total = computed(() => sessions.value.reduce((a, s) => a + (s.net ? s.net.video_bps + s.net.audio_bps : 0), 0))
-
 onMounted(() => { load(); loadApps(); clock = setInterval(() => { now.value = Date.now() / 1000 }, 1000) })
 onUnmounted(() => { clearTimeout(timer); clearInterval(clock) })
 </script>
 
 <template>
   <div class="page-head">
-    <div>
-      <h1>Sessions</h1>
-      <div class="sub">
-        <template v-if="sessions.length">
-          {{ sessions.length }} session(s) · {{ live }} en direct<template v-if="netAvailable"> · {{ rate(total) }} au total</template>
-        </template>
-        <template v-else>Actualisé toutes les 2 s</template>
-      </div>
-    </div>
+    <h1>Sessions</h1>
   </div>
   <div v-if="error" class="alert bad" style="margin-bottom:16px"><Icon name="alert" /><div>{{ error }}</div></div>
 

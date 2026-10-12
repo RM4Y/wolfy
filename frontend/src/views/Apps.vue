@@ -77,10 +77,7 @@ onMounted(load)
 
 <template>
   <div class="page-head">
-    <div>
-      <h1>Applications</h1>
-      <div v-if="profile" class="sub">{{ profile.apps.length }} application(s) visibles dans Moonlight · glisser la poignée pour réordonner</div>
-    </div>
+    <h1>Applications</h1>
     <div class="spacer"></div>
     <button class="primary" @click="editing = null"><Icon name="plus" />Nouvelle application</button>
   </div>

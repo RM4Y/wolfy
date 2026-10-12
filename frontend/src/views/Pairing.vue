@@ -75,10 +75,7 @@ onUnmounted(() => clearTimeout(timer))
 
 <template>
   <div class="page-head">
-    <div>
-      <h1>Appairage</h1>
-      <div class="sub">Relie un appareil Moonlight à Wolf avec son code PIN</div>
-    </div>
+    <h1>Appairage</h1>
   </div>
   <div v-if="error" class="alert bad" style="margin-bottom:16px"><Icon name="alert" /><div>{{ error }}</div></div>
 
