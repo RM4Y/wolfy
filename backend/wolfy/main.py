@@ -121,11 +121,14 @@ class PairBody(BaseModel):
 async def pairing():
     pending = (await wolf_api.get("pair/pending")).get("requests", [])
     clients = (await wolf_api.get("clients")).get("clients", [])
-    names = store.get("clients")
+    live = {str(s.get("client_id")) for s in (await wolf_api.get("sessions")).get("sessions", [])}
+    names, seen = store.get("clients"), store.get("last_seen")
     for c in clients:
         c["name"] = names.get(c["client_id"], {}).get("name", "")
         c["paired_at"] = names.get(c["client_id"], {}).get("paired_at")
         c["client_ip"] = names.get(c["client_id"], {}).get("client_ip", "")
+        c["connected"] = c["client_id"] in live
+        c["last_seen"] = seen.get(c["client_id"])  # noted by idle.py (unknown before it)
     return {"pending": pending, "clients": clients}
 
 
@@ -387,7 +390,8 @@ def emulator_catalog():
         info = docker_ops.image_info(emu["image"]) if emu["image"] else {"present": False}
         ctx = docker_ops.build_context(emu["build_dir"])
         out.append({**emu, "image_info": info, "buildable": ctx is not None,
-                    "pullable": ctx is None and "/" in emu["image"], "icon": emulators.cover_path(emu)})
+                    "pullable": ctx is None and "/" in emu["image"], "icon": emulators.cover_path(emu),
+                    "backup": emulators.backup_ref(emu)})
     return {"emulators": out, "base_create_json": emulators.BASE_CREATE_JSON}
 
 
@@ -768,6 +772,33 @@ def build(body: ImageJob):
     return docker_ops.build_image(emu["image"], emu["build_dir"]).as_dict()
 
 
+@api.get("/registry")
+def registry():
+    """Where the images built here are kept (Émulateurs), and whether Wolfy can reach it."""
+    return {"registry": settings.REGISTRY, "token": bool(settings.REGISTRY_TOKEN)}
+
+
+def _backup_emulator(body: "ImageJob") -> dict:
+    emu = emulators.BY_ID.get(body.emulator or "")
+    if not emu or not emulators.backup_ref(emu):
+        raise HTTPException(400, "Cet émulateur n'a pas de copie dans le registre")
+    return emu
+
+
+@api.post("/images/restore")
+def restore(body: ImageJob):
+    emu = _backup_emulator(body)
+    return docker_ops.restore_image(emulators.backup_ref(emu), emu["image"]).as_dict()
+
+
+@api.post("/images/backup")
+def backup(body: ImageJob):
+    emu = _backup_emulator(body)
+    if not docker_ops.image_info(emu["image"]).get("present"):
+        raise HTTPException(400, "Image absente : rien à sauvegarder")
+    return docker_ops.backup_image(emu["image"], emulators.backup_ref(emu)).as_dict()
+
+
 @api.post("/images/pull")
 def pull(body: ImageJob):
     if "/" not in body.image:
@@ -819,7 +850,7 @@ async def start_espbar_relay():
     try:
         await espbar_relay.start()
     except OSError as exc:
-        print(f"EspBar relay not started: {exc}", flush=True)
+        print(f"WolfyBar relay not started: {exc}", flush=True)
 
 
 # ------------------------------------------------------------------- frontend (built SPA)

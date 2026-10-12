@@ -253,7 +253,7 @@ def build_image(ref: str, build_dir: str) -> Job:
 
 def pull_image(ref: str) -> Job:
     def work(job: Job):
-        repo, _, tag = ref.rpartition(":") if ":" in ref.split("/")[-1] else (ref, "", "latest")
+        repo, tag = _split(ref)
         job.log(f"Téléchargement de {repo}:{tag}")
         seen = set()
         for chunk in client().api.pull(repo, tag=tag, stream=True, decode=True):
@@ -266,6 +266,62 @@ def pull_image(ref: str) -> Job:
         job.log("Image à jour.")
 
     return run_job(f"Mise à jour {ref}", work)
+
+
+def _registry_auth(required: bool = True) -> dict | None:
+    """Login to the registry: needed to save; to restore only while the images are private."""
+    if not settings.REGISTRY_TOKEN:
+        if not required:
+            return None
+        raise RuntimeError("Jeton du registre absent : ajoute WOLFY_REGISTRY_TOKEN dans .env (jeton GitHub "
+                           "avec write:packages), puis redémarre Wolfy")
+    return {"username": settings.REGISTRY_USER, "password": settings.REGISTRY_TOKEN}
+
+
+def _split(ref: str) -> tuple[str, str]:
+    repo, _, tag = ref.rpartition(":") if ":" in ref.split("/")[-1] else (ref, "", "latest")
+    return repo, tag
+
+
+def restore_image(backup: str, ref: str) -> Job:
+    """Download the registry's copy of a local image (BACKUP) and give it its local name REF."""
+    def work(job: Job):
+        repo, tag = _split(backup)
+        job.log(f"Téléchargement de {repo}:{tag}")
+        seen = set()
+        for chunk in client().api.pull(repo, tag=tag, stream=True, decode=True,
+                                       auth_config=_registry_auth(required=False)):
+            if "error" in chunk:
+                raise RuntimeError(chunk["error"])
+            key = (chunk.get("id"), chunk.get("status"))
+            if key not in seen and "Downloading" not in chunk.get("status", ""):
+                seen.add(key)
+                job.log(f"{chunk.get('id', '')} {chunk.get('status', '')}")
+        local, local_tag = _split(ref)
+        client().api.tag(f"{repo}:{tag}", local, local_tag)
+        job.log(f"Image restaurée : {ref}")
+
+    return run_job(f"Restauration {ref}", work)
+
+
+def backup_image(ref: str, backup: str) -> Job:
+    """Send a local image to the registry: as BACKUP (latest) and with its build date."""
+    def work(job: Job):
+        auth = _registry_auth()
+        img = client().images.get(ref)
+        repo, tag = _split(backup)
+        dated = (img.attrs.get("Created") or "")[:10] or "sans-date"
+        for t in dict.fromkeys((tag, dated)):
+            img.tag(repo, t)
+            job.log(f"Envoi de {repo}:{t}")
+            for chunk in client().api.push(repo, tag=t, stream=True, decode=True, auth_config=auth):
+                if "error" in chunk:
+                    raise RuntimeError(chunk["error"])
+                if chunk.get("status") in ("Pushed", "Mounted from", "Layer already exists") or "digest" in chunk.get("status", ""):
+                    job.log(f"{chunk.get('id', '')} {chunk.get('status', '')}")
+        job.log(f"Image sauvegardée : {repo} ({tag}, {dated})")
+
+    return run_job(f"Sauvegarde {ref}", work)
 
 
 def run_container(job: Job, image: str, command: list[str], mounts: list[str], user: str,

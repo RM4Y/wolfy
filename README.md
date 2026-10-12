@@ -107,6 +107,28 @@ Facultatif (valeurs par défaut entre parenthèses) :
 | `RETROARCH_CORES_DIR` | cœurs du RetroArch flatpak, montés dans les sessions PlayStation (`<HOST_HOME>/.local/share/flatpak/app/org.libretro.RetroArch/current/active/files/share/libretro`) |
 | `DOLPHIN_DIR` | Dolphin flatpak du PC, dont la configuration est copiée dans les sessions Wii (`<HOST_HOME>/.var/app/org.DolphinEmu.dolphin-emu`) |
 | `EDEN_CONFIG_DIR`, `EDEN_DATA_DIR` | configuration et données d'Eden sur le PC (`<HOST_HOME>/.config/eden`, `<HOST_HOME>/.local/share/eden`) |
+| `WOLFY_REGISTRY`, `WOLFY_REGISTRY_USER` | registre public qui garde une copie des images construites ici (`ghcr.io/rm4y`, `RM4Y`) |
+| `WOLFY_REGISTRY_TOKEN` | jeton GitHub (`write:packages`) pour Émulateurs › Sauvegarder sur GitHub (la restauration n'en demande pas) |
+
+### Copie des images (registre public)
+
+Les images construites ici ont une copie publique sur GitHub, avec `latest` et la date de construction :
+
+| Image locale | Copie |
+|---|---|
+| `wolfy:latest` (interface, `wolfy-net`) | `ghcr.io/rm4y/wolfy` |
+| `wolfy-eden:latest` | `ghcr.io/rm4y/wolfy-eden` |
+| `wolfy-retroarch:latest` | `ghcr.io/rm4y/wolfy-retroarch` |
+| `wolfy-dolphin:latest` | `ghcr.io/rm4y/wolfy-dolphin` |
+| `wolfy-steam:latest` | `ghcr.io/rm4y/wolfy-steam` |
+
+Les images des émulateurs se restaurent (sans compte) et se sauvegardent (jeton) depuis Wolfy
+(Émulateurs). À la main (l'envoi demande `docker login ghcr.io`) :
+
+```sh
+docker pull ghcr.io/rm4y/wolfy-eden:latest && docker tag ghcr.io/rm4y/wolfy-eden:latest wolfy-eden:latest
+docker tag wolfy:latest ghcr.io/rm4y/wolfy:latest && docker push ghcr.io/rm4y/wolfy:latest
+```
 
 Si `RETROARCH_DIR` ou les dossiers d'Eden sont ailleurs que sous `HOST_HOME`, adapter aussi les
 montages correspondants du service `wolfy` dans `compose.yaml`.

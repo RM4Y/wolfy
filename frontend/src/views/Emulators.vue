@@ -11,10 +11,12 @@ const apps = ref([])
 const jobId = ref('')
 const pathsFor = ref('')
 const error = ref('')
+const registry = ref(null)  // { registry, token }
 
 async function load() {
   try {
-    const [e, p] = await Promise.all([api.get('/emulators'), api.get('/profiles')])
+    const [e, p, r] = await Promise.all([api.get('/emulators'), api.get('/profiles'), api.get('/registry')])
+    registry.value = r
     emulators.value = e.emulators
     apps.value = p.profiles.flatMap(pr => pr.apps.map(a => ({ ...a, moonlight: pr.moonlight })))
     error.value = ''
@@ -27,6 +29,23 @@ const usedBy = emu => apps.value.filter(a => a.emulator === emu.id && a.moonligh
 
 async function build(emu) {
   const j = await act('Lancement', () => api.post('/images/build', { image: emu.image, emulator: emu.id }))
+  if (j) jobId.value = j.id
+}
+
+// ghcr.io/<owner>/<name>:tag -> the package's page on GitHub
+function packageUrl(ref) {
+  const m = /^ghcr\.io\/([^/]+)\/([^:]+)/.exec(ref || '')
+  return m ? `https://github.com/users/${m[1]}/packages/container/package/${m[2]}` : ''
+}
+
+async function restore(emu) {
+  if (emu.image_info.present && !confirm(`Remplacer l'image locale ${emu.image} par la copie de GitHub ?`)) return
+  const j = await act('Lancement', () => api.post('/images/restore', { image: emu.image, emulator: emu.id }))
+  if (j) jobId.value = j.id
+}
+
+async function backup(emu) {
+  const j = await act('Lancement', () => api.post('/images/backup', { image: emu.image, emulator: emu.id }))
   if (j) jobId.value = j.id
 }
 
@@ -63,6 +82,13 @@ onMounted(load)
             <td class="muted">Construite</td>
             <td>{{ ago(emu.image_info.created) }} · {{ bytes(emu.image_info.size) }}</td>
           </tr>
+          <tr v-if="emu.backup">
+            <td class="muted">Sauvegarde</td>
+            <td class="mono">
+              <a v-if="packageUrl(emu.backup)" :href="packageUrl(emu.backup)" target="_blank" rel="noopener">{{ emu.backup }}</a>
+              <template v-else>{{ emu.backup }}</template>
+            </td>
+          </tr>
           <tr><td class="muted">ROMs</td><td class="mono">{{ emu.rom_dir || '—' }}</td></tr>
           <tr>
             <td class="muted">Utilisé par</td>
@@ -78,6 +104,10 @@ onMounted(load)
         <button v-if="emu.buildable" @click="build(emu)"><Icon name="hammer" />{{ emu.image_info.present ? 'Reconstruire' : 'Construire' }}</button>
         <button v-else-if="emu.pullable" @click="pull(emu)"><Icon name="download" />{{ emu.image_info.present ? 'Mettre à jour' : 'Télécharger' }}</button>
         <span v-else class="muted small">Pas de Dockerfile dans <code>images/{{ emu.build_dir }}</code></span>
+        <template v-if="emu.backup">
+          <button :class="{ primary: !emu.image_info.present }" @click="restore(emu)"><Icon name="download" />Restaurer depuis GitHub</button>
+          <button v-if="emu.image_info.present && registry?.token" @click="backup(emu)"><Icon name="upload" />Sauvegarder sur GitHub</button>
+        </template>
       </div>
     </div>
   </div>
@@ -86,6 +116,12 @@ onMounted(load)
     <Icon name="info" />
     <div>Les images locales sont construites depuis <code>images/&lt;émulateur&gt;</code> du dépôt Wolfy (sinon <code>/opt/stacks/wolf/images</code>).
     Une reconstruction ne touche pas aux sessions en cours : les nouvelles sessions utiliseront la nouvelle image.</div>
+  </div>
+  <div v-if="registry && !registry.token" class="alert" style="margin-top:16px">
+    <Icon name="info" />
+    <div>Une copie publique des images est gardée sur <code>{{ registry.registry }}</code> : « Restaurer depuis
+      GitHub » la récupère. Pour la mettre à jour d'ici, ajoute <code>WOLFY_REGISTRY_TOKEN</code> (jeton GitHub
+      avec <code>write:packages</code>) dans <code>.env</code>, puis redémarre Wolfy.</div>
   </div>
 
   <EdenPaths v-if="pathsFor === 'eden'" @close="pathsFor = ''; load()" />

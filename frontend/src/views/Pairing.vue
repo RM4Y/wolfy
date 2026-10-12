@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, onUnmounted, reactive, ref } from 'vue'
-import { act, api, toast } from '../api'
+import { act, ago, api, toast } from '../api'
 
 const emit = defineEmits(['refresh'])
 const pending = ref([])
@@ -116,7 +116,7 @@ onUnmounted(() => clearTimeout(timer))
     </div>
     <div v-else class="table-wrap cards">
       <table>
-        <thead><tr><th>Appareil</th><th>Manette</th><th>Dossier d'état</th><th></th></tr></thead>
+        <thead><tr><th>Appareil</th><th>Dernière connexion</th><th>Dossier d'état</th><th></th></tr></thead>
         <tbody>
           <tr v-for="c in clients" :key="c.client_id">
             <td>
@@ -124,7 +124,11 @@ onUnmounted(() => clearTimeout(timer))
               <div class="muted small mono">{{ c.client_id }}<span v-if="c.client_ip"> · {{ c.client_ip }}</span></div>
               <div v-if="c.paired_at" class="muted small">appairé le {{ c.paired_at }}</div>
             </td>
-            <td><span class="badge">{{ c.settings?.controllers_override?.[0] || 'Auto' }}</span></td>
+            <td>
+              <span v-if="c.connected" class="badge ok">En ce moment</span>
+              <span v-else-if="c.last_seen" :title="new Date(c.last_seen * 1000).toLocaleString('fr-FR')">{{ ago(new Date(c.last_seen * 1000).toISOString()) }}</span>
+              <span v-else class="muted">Inconnue</span>
+            </td>
             <td class="mono small muted">{{ c.app_state_folder }}</td>
             <td class="act">
               <div class="row" style="gap:6px;flex-wrap:nowrap">

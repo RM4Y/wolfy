@@ -57,6 +57,13 @@ ESPBAR_PORT = int(_env("WOLFY_ESPBAR_PORT", "8421"))
 # the EspBar's ESP32 program, injected from the browser (espbar/ in this project)
 ESPBAR_FIRMWARE = Path(_env("WOLFY_ESPBAR_FIRMWARE", str(Path(__file__).resolve().parents[2] / "espbar" / "firmware.bin")))
 
+# private registry keeping a copy of the images built here (ghcr.io/<user>/wolfy-eden...):
+# restored from it when one is lost (public images: no login), and saved to it from Émulateurs
+# (GitHub token with write:packages)
+REGISTRY = _env("WOLFY_REGISTRY", "ghcr.io/rm4y").rstrip("/")
+REGISTRY_USER = _env("WOLFY_REGISTRY_USER", "RM4Y")
+REGISTRY_TOKEN = _env("WOLFY_REGISTRY_TOKEN", "")
+
 STATIC_DIR = Path(_env("WOLFY_STATIC", str(Path(__file__).resolve().parent.parent / "static")))
 
 

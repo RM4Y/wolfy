@@ -42,6 +42,10 @@ def update(sessions: list[dict], net: dict | None) -> None:
     """Note which sessions are watched now; forget the ended ones."""
     now = time.time()
     keys = {str(s.get("client_id")) for s in sessions}
+    seen = store.get("last_seen")  # client_id -> last time it had a session (Appairage)
+    for key in keys:
+        if now - seen.get(key, 0) >= 60:  # a write a minute at most
+            store.put("last_seen", key, round(now))
     for key in set(_last_active) - keys:
         del _last_active[key]
     for s in sessions:
