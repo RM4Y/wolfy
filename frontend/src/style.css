@@ -224,7 +224,7 @@ main { padding: var(--space-8); max-width: 1280px; width: 100%; min-width: 0; }
   -webkit-backdrop-filter: var(--glass); backdrop-filter: var(--glass);
   padding: var(--space-5);
 }
-.card + .card, .stack > * + * { margin-top: var(--space-6); }
+.card + .card, .card + .grid, .grid + .card, .grid + .grid, .stack > * + * { margin-top: var(--space-6); }
 .card .card { box-shadow: none; background-image: none; background: var(--surface-raised); }
 .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-4); }
 .card-head h2 { margin: 0; }

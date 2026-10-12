@@ -213,7 +213,7 @@ onMounted(load)
       </div>
     </div>
 
-    <div class="grid cols-2" style="margin-top:16px">
+    <div class="grid cols-2">
       <div class="card">
         <h2>Images des applications</h2>
         <table class="small">
