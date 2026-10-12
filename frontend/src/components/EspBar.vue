@@ -49,7 +49,7 @@ async function link(b, clientId) {
 
 async function forget(b) {
   if (!confirm(`Oublier ${boardLabel(b)} ? Elle réapparaîtra à sa prochaine connexion.`)) return
-  if (await act('Suppression', () => api.delete(`/espbar/boards/${b.key}`), 'EspBar oubliée')) load()
+  if (await act('Suppression', () => api.del(`/espbar/boards/${b.key}`), 'EspBar oubliée')) load()
 }
 
 function write(text) {
