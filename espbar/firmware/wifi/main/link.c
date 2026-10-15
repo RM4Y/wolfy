@@ -24,8 +24,13 @@
 
 #include "protocol.h"
 
-#define VERSION "12"
+#define VERSION "13"
 #define LED GPIO_NUM_2  // blue LED of the DevKit: blinks = looking for Wolfy, on = linked
+// The radio goes quiet now and then (~1 s every 30 s seen at home): each report is its own TCP
+// segment(s), lwIP's send queue fills within that time and a send waits for room. Waiting 1 s
+// dropped the link (and Dolphin's Wii Remotes); a link that is really gone is caught by
+// the 6 s silence rule below.
+#define SEND_TIMEOUT_MS 4000
 
 // exported by tcp_transport but only declared in its private headers (ESP-IDF 5.3)
 int esp_transport_get_socket(esp_transport_handle_t t);
@@ -104,7 +109,7 @@ void link_send(uint8_t type, uint8_t slot, const uint8_t *data, uint16_t len)
 static bool ws_send(esp_transport_handle_t ws, const uint8_t *buf, size_t len)
 {
     return esp_transport_ws_send_raw(ws, WS_TRANSPORT_OPCODES_BINARY | WS_TRANSPORT_OPCODES_FIN,
-                                     (const char *)buf, len, 1000) == (int)len;
+                                     (const char *)buf, len, SEND_TIMEOUT_MS) == (int)len;
 }
 
 static bool send_hello(esp_transport_handle_t ws)
