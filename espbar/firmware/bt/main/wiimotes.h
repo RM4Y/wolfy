@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// The button (to 3V3) and the LED of the EspBar (on the Bluetooth ESP32 with two)
+// The button (to 3V3) and the LED of the EspBar (on the Wi-Fi ESP32 with two: ../../wifi/main/button.c)
 #define WIIMOTES_BUTTON 4
 #define WIIMOTES_LED 15
 #define SETUP_HOLD_MS 10000  // button held: the setup page (setup_request), or closes it

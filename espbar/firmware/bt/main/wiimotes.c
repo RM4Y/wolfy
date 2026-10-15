@@ -23,8 +23,16 @@ static const char *TAG = "wiimotes";
 // after the button (D4 to 3V3) is held 3 s and released (to add one). Not otherwise: an inquiry
 // takes the radio from the connected Wii Remotes (their reports drop from ~37 to ~25/s).
 // Held 10 s: the Wi-Fi setup page. The LED blinks once a second while it is held.
+// Two ESP32: the button and the LED are on the Wi-Fi one, which sends EB_SEARCH (bt/main/CMakeLists.txt).
 #define BUTTON WIIMOTES_BUTTON
 #define SEARCH_LED WIIMOTES_LED  // blinks while searching, on while the setup page is up
+#ifdef WIIMOTES_REMOTE_BUTTON
+#define button_pressed() false
+#define set_led(on) ((void)(on))
+#else
+#define button_pressed() gpio_get_level(BUTTON)
+#define set_led(on) gpio_set_level(SEARCH_LED, on)
+#endif
 #define BUTTON_HOLD_MS 3000
 #define SETUP_ALIVE_MS 3000  // the Wi-Fi ESP32 says its setup page is up every second
 #define SETUP_BOOT_MS 8000   // LED on while the Wi-Fi ESP32 restarts into it (no dark gap)
@@ -155,6 +163,15 @@ static void schedule_inquiry(uint32_t ms);
 
 // only with the button: no search by itself during a Wii session
 static bool want_search(void) { return s_search_left; }
+
+static void start_inquiry(void);
+
+static void start_search(void)
+{
+    ESP_LOGI(TAG, "search for %d s", SEARCH_MS / 1000);
+    s_search_left = SEARCH_MS;
+    start_inquiry();
+}
 
 static void start_inquiry(void)
 {
@@ -410,6 +427,9 @@ static void handle_frame(const inbound_t *f)
     case EB_SETUP:
         s_setup_left = SETUP_ALIVE_MS;
         break;
+    case EB_SEARCH:
+        start_search();
+        break;
     }
 }
 
@@ -427,7 +447,7 @@ void wiimotes_stats(char *out, size_t size, uint32_t ms)
 static void tick(btstack_timer_source_t *ts)
 {
     s_ticks++;
-    if (gpio_get_level(BUTTON)) {
+    if (button_pressed()) {
         s_button_held += TICK_MS;
         if (s_button_held == SETUP_HOLD_MS) {  // once per press, held longer = no repeat
             ESP_LOGI(TAG, "setup page");
@@ -436,11 +456,8 @@ static void tick(btstack_timer_source_t *ts)
             setup_request();
         }
     } else {
-        if (s_button_held >= BUTTON_HOLD_MS && s_button_held < SETUP_HOLD_MS) {
-            ESP_LOGI(TAG, "search for %d s", SEARCH_MS / 1000);
-            s_search_left = SEARCH_MS;
-            start_inquiry();
-        }
+        if (s_button_held >= BUTTON_HOLD_MS && s_button_held < SETUP_HOLD_MS)
+            start_search();
         s_button_held = 0;
     }
     if (s_setup_left)
@@ -460,7 +477,7 @@ static void tick(btstack_timer_source_t *ts)
         led = true;
     else
         led = want_search() && (s_ticks / 3) % 2;  // ~3 blinks per second
-    gpio_set_level(SEARCH_LED, led);
+    set_led(led);
     btstack_run_loop_set_timer(ts, TICK_MS);
     btstack_run_loop_add_timer(ts);
 }
@@ -480,12 +497,14 @@ void wiimotes_init(void)
     l2cap_register_service(l2cap_handler, PSM_HID_CONTROL, 0xffff, LEVEL_0);
     l2cap_register_service(l2cap_handler, PSM_HID_INTERRUPT, 0xffff, LEVEL_0);
 
+#ifndef WIIMOTES_REMOTE_BUTTON
     gpio_reset_pin(BUTTON);
     gpio_set_direction(BUTTON, GPIO_MODE_INPUT);
     gpio_set_pull_mode(BUTTON, GPIO_PULLDOWN_ONLY);
     gpio_reset_pin(SEARCH_LED);
     gpio_set_direction(SEARCH_LED, GPIO_MODE_OUTPUT);
     gpio_set_level(SEARCH_LED, 0);
+#endif
     btstack_run_loop_set_timer_handler(&s_tick, tick);
     btstack_run_loop_set_timer(&s_tick, TICK_MS);
     btstack_run_loop_add_timer(&s_tick);

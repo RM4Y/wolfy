@@ -25,6 +25,8 @@
 // wifi esp <-> bt esp only: the setup page (Wi-Fi network, Wolfy's address) of the Wi-Fi ESP32
 #define EB_SETUP 13      // bt -> wifi: the button was held 10 s (open the page, or close it)
                          // wifi -> bt: the page is up (every second: its LED stays on)
+                         // (older builds: the button is now on the Wi-Fi ESP32)
+#define EB_SEARCH 14     // wifi -> bt: its button was held 3 s: look for Wii Remotes for 30 s
 
 #define EB_SLOTS 4
 #define EB_MAX_PAYLOAD 64

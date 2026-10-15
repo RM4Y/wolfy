@@ -36,7 +36,7 @@ Deux variantes, au choix à l'injection (Wolfy › Wii › WolfyBar) :
 
 Sur un DevKit 30 broches, GPIO0 n'est pas sorti : on s'en passe (injection USB une fois de l'ESP32
 Bluetooth), ou on soude le fil sur la patte du bouton BOOT côté puce (l'autre va à GND). Le bouton de recherche (D4 ↔ 3V3) et la LED de recherche (D15) vont sur
-l'ESP32 Bluetooth. Ne pas brancher l'ESP32 Bluetooth en USB pendant qu'il est relié (son
+l'ESP32 Wi-Fi, qui demande la recherche à l'ESP32 Bluetooth. Ne pas brancher l'ESP32 Bluetooth en USB pendant qu'il est relié (son
 convertisseur USB-série est sur les mêmes broches RX0 / TX0).
 
 - **ESP32** (`firmware/`) : ESP-IDF + [BTstack](https://github.com/bluekitchen/btstack)
@@ -51,8 +51,8 @@ convertisseur USB-série est sur les mêmes broches RX0 / TX0).
   http://192.168.4.1) : réseau Wi-Fi (liste des réseaux autour), mot de passe, adresse de Wolfy. Le
   jeton de Wolfy est gardé (une première injection depuis Wolfy reste nécessaire). Enregistrer
   redémarre la WolfyBar ; sans enregistrement, elle repart avec ses réglages au bout de 10 min, ou
-  quand on maintient de nouveau 10 s le bouton. Avec 2 ESP32, le bouton de l'ESP32 Bluetooth le
-  demande à l'ESP32 Wi-Fi par l'UART (`EB_SETUP`).
+  quand on maintient de nouveau 10 s le bouton. Avec 2 ESP32, le bouton est sur l'ESP32 Wi-Fi, qui
+  demande la recherche à l'ESP32 Bluetooth par l'UART (`EB_SEARCH`).
 - **Wolfy** (`backend/wolfy/espbar_relay.py`) : l'ESP32 le joint par un WebSocket sur sa propre
   adresse, `wss://wolfy.rm4.fr/api/espbar/ws` (via SWAG, de n'importe où ; certificat vérifié)
   ou `ws://<IP du serveur>:8420/api/espbar/ws` (réseau local). Les Dolphin des sessions le

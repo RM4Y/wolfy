@@ -1,4 +1,4 @@
-# EspBar on two ESP32, the Wi-Fi one: Wi-Fi to Wolfy, UART2 (TX2 / RX2) + EN / BOOT to the
+# EspBar on two ESP32, the Wi-Fi one: Wi-Fi to Wolfy, UART2 (TX2 / D34) + EN / BOOT to the
 # Bluetooth ESP32, which it updates with the program it carries: through that program (OTA), or
 # through its ROM bootloader (esp-serial-flasher) when GPIO0 is wired
 CONFIG_IDF_TARGET="esp32"

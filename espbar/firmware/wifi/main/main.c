@@ -2,13 +2,14 @@
 // UART -> Wi-Fi -> Wolfy -> Dolphin of the linked device's Wii session. See ../../../README.md.
 #include "nvs_flash.h"
 
+#include "button.h"
 #include "config.h"
 #include "link.h"
 #include "radio.h"
 #include "setup.h"
 
-// the setup page: the Bluetooth ESP32 keeps its LED on, its button held 10 s closes it
-void setup_poll(void) { radio_setup_poll(); }
+// the setup page: LED on, the button held 10 s closes it
+void setup_poll(void) { button_setup_poll(); }
 
 void app_main(void)
 {
@@ -19,9 +20,10 @@ void app_main(void)
     }
 
     static espbar_config_t cfg;
-    bool setup = setup_requested();  // the Bluetooth ESP32's button held 10 s
+    bool setup = setup_requested();  // the button held 10 s
     if (!config_load(&cfg) || setup)
         setup_run(&cfg);  // Wi-Fi from the setup page (or injected again from Wolfy)
     radio_start();  // the Bluetooth ESP32, flashed first when it doesn't run our build
     link_start(&cfg);
+    button_start();
 }
