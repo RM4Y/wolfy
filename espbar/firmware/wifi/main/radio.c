@@ -17,14 +17,16 @@
 #include "setup.h"
 #include "wire.h"
 
-// Wiring to the Bluetooth ESP32 (README.md): our TX2 -> its RX0, our RX2 <- its TX0,
-// D25 -> its EN, and D26 -> its GPIO0 (BOOT) if it has that pin: only to write a Bluetooth ESP32
+// Wiring to the Bluetooth ESP32 (README.md): our TX2 -> its RX0, our D34 <- its TX0 (UART2 RX
+// moved off GPIO16, damaged on our board; input-only pin, no pull-up: crc8 drops the noise
+// while it is in reset),
+// D25 -> its EN, and D27 -> its GPIO0 (BOOT) if it has that pin: only to write a Bluetooth ESP32
 // that has no program of ours (else inject it once over USB from Wolfy)
 #define UART UART_NUM_2
 #define PIN_TX GPIO_NUM_17
-#define PIN_RX GPIO_NUM_16
+#define PIN_RX GPIO_NUM_34
 #define PIN_EN GPIO_NUM_25
-#define PIN_BOOT GPIO_NUM_26
+#define PIN_BOOT GPIO_NUM_27
 #define SILENCE_MS 6000  // it sends its stats every 2 s
 #define RETRY_MS 10000   // after a failed flash (not wired?)
 #define FLASH_BLOCK 1024

@@ -28,9 +28,9 @@ Deux variantes, au choix à l'injection (Wolfy › Wii › WolfyBar) :
 | ESP32 Wi-Fi (USB, injecté par Wolfy) |   | ESP32 Bluetooth |
 |---|---|---|
 | TX2 (GPIO17) | → | RX0 (GPIO3) |
-| RX2 (GPIO16) | ← | TX0 (GPIO1) |
+| D34 (RX de l'UART2) | ← | TX0 (GPIO1) |
 | D25 | → | EN |
-| D26 | → | GPIO0 (BOOT), facultatif |
+| D27 | → | GPIO0 (BOOT), facultatif |
 | VIN (5 V) | — | VIN (5 V) |
 | GND | — | GND |
 
