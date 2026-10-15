@@ -153,7 +153,8 @@ static void release(wiimote_t *w)
 
 static void schedule_inquiry(uint32_t ms);
 
-static bool want_search(void) { return s_search_left || (s_scan && free_slots() == EB_SLOTS); }
+// only with the button: no search by itself during a Wii session
+static bool want_search(void) { return s_search_left; }
 
 static void start_inquiry(void)
 {
