@@ -42,6 +42,7 @@ static const char *TAG = "wiimotes";
 typedef struct {
     bool used;
     bool ready;  // both HID channels open, announced to Wolfy
+    bool pairing;  // found by the search, its HID control channel asks for pairing first
     bd_addr_t addr;
     hci_con_handle_t handle;
     uint16_t ctrl_cid, intr_cid;
@@ -66,6 +67,12 @@ static btstack_packet_callback_registration_t s_hci_cb;
 
 // reports from the Wii Remotes since the last wiimotes_stats(), longest wait between two (us)
 static uint32_t s_bt_reports;
+// shown in the stats (no log here: UART0 is the link to the Wi-Fi ESP32)
+static const char *s_last_link = "-";  // how the last Wii Remote came (search or by itself)
+static const char *s_pairing = "-";    // the last pairing (ok / ko)
+static uint32_t s_calls;               // incoming Bluetooth connections (a paired Wii Remote waking up)
+static int s_call_status = -1;         // HCI status of the last one (0: connected)
+static bool s_call_pending;
 static int64_t s_bt_last, s_bt_gap;
 
 // ---------------------------------------------------------------- frames from Wolfy
@@ -205,7 +212,16 @@ static void connect_candidate(void)
     wiimote_t *w = alloc(s_candidate);
     ESP_LOGI(TAG, "connecting to Wii Remote %s", bd_addr_to_str(w->addr));
     s_connecting = true;
-    if (l2cap_create_channel(l2cap_handler, w->addr, PSM_HID_CONTROL, 0xffff, &w->ctrl_cid) != 0) {
+    // Pair before the HID channels, as BlueZ does: a Wii Remote woken with SYNC then remembers us
+    // and comes back by itself at any button (it doesn't when paired after them). The channel
+    // takes the security level asked when it is created. Woken with 1 + 2, the pairing fails
+    // (PIN: hci_handler): channel_opened() connects it again without.
+    w->pairing = true;
+    gap_drop_link_key_for_bd_addr(w->addr);  // a fresh pairing: its key may be stale (paired elsewhere)
+    gap_set_security_level(LEVEL_2);
+    uint8_t err = l2cap_create_channel(l2cap_handler, w->addr, PSM_HID_CONTROL, 0xffff, &w->ctrl_cid);
+    gap_set_security_level(LEVEL_0);
+    if (err != 0) {
         release(w);
         s_connecting = false;
         schedule_inquiry(1000);
@@ -222,6 +238,14 @@ static void channel_opened(uint8_t *packet)
     wiimote_t *w = by_cid(cid);
     if (!w)
         w = by_addr(addr);
+    if (w && w->pairing && !incoming && psm == PSM_HID_CONTROL &&
+        l2cap_event_channel_opened_get_status(packet) == L2CAP_CONNECTION_RESPONSE_RESULT_REFUSED_SECURITY) {
+        // pairing refused: woken with 1 + 2, linked without (to search again next time)
+        s_pairing = "ko";
+        w->pairing = false;
+        if (l2cap_create_channel(l2cap_handler, w->addr, PSM_HID_CONTROL, 0xffff, &w->ctrl_cid) == 0)
+            return;
+    }
     if (l2cap_event_channel_opened_get_status(packet) != 0) {
         ESP_LOGW(TAG, "HID channel 0x%02x of %s failed (0x%02x)", psm, bd_addr_to_str(addr),
                  l2cap_event_channel_opened_get_status(packet));
@@ -253,6 +277,7 @@ static void channel_opened(uint8_t *packet)
     w->ready = true;
     ESP_LOGI(TAG, "Wii Remote %s ready (slot %d)", bd_addr_to_str(w->addr), slot_of(w) + 1);
     announce(w);
+    s_last_link = incoming ? "seule" : "rech";
     if (!incoming)
         s_connecting = false;
     if (s_inquiring && !want_search())
@@ -346,6 +371,16 @@ static void hci_handler(uint8_t type, uint16_t channel, uint8_t *packet, uint16_
     if (type != HCI_EVENT_PACKET)
         return;
     switch (hci_event_packet_get_type(packet)) {
+    case HCI_EVENT_CONNECTION_REQUEST:
+        s_calls++;
+        s_call_pending = true;
+        break;
+    case HCI_EVENT_CONNECTION_COMPLETE:
+        if (s_call_pending) {
+            s_call_pending = false;
+            s_call_status = hci_event_connection_complete_get_status(packet);
+        }
+        break;
     case BTSTACK_EVENT_STATE:
         if (btstack_event_state_get_state(packet) == HCI_STATE_WORKING) {
             bd_addr_t local;
@@ -373,17 +408,25 @@ static void hci_handler(uint8_t type, uint16_t channel, uint8_t *packet, uint16_
             schedule_inquiry(100);
         break;
     case HCI_EVENT_PIN_CODE_REQUEST: {
-        // SYNC button: the PIN is our address, 1 + 2: the Wii Remote's (both byte-reversed)
+        // pairing a Wii Remote woken with SYNC: the PIN is our address, byte-reversed (1 + 2
+        // would take its own, but such a pairing isn't remembered by the Wii Remote: not tried)
         bd_addr_t addr, pin;
         hci_event_pin_code_request_get_bd_addr(packet, addr);
-        if (s_connecting)
-            memcpy(pin, addr, 6);
-        else
-            gap_local_bd_addr(pin);
+        gap_local_bd_addr(pin);
         uint8_t rev[6];
         for (int i = 0; i < 6; i++)
             rev[i] = pin[5 - i];
         gap_pin_code_response_binary(addr, rev, 6);
+        break;
+    }
+    case HCI_EVENT_LINK_KEY_NOTIFICATION: {
+        // BTstack keeps a key only when bonding was asked in Secure Simple Pairing, which Wii
+        // Remotes don't do: kept here (NVS), for the Wii Remote to reconnect later
+        bd_addr_t addr;
+        reverse_bd_addr(&packet[2], addr);
+        gap_store_link_key_for_bd_addr(addr, &packet[8], (link_key_type_t)packet[24]);
+        s_pairing = "ok";
+        ESP_LOGI(TAG, "Wii Remote %s paired (SYNC): it comes back at any button", bd_addr_to_str(addr));
         break;
     }
     }
@@ -435,9 +478,13 @@ static void handle_frame(const inbound_t *f)
 
 void wiimotes_stats(char *out, size_t size, uint32_t ms)
 {
-    snprintf(out, size, "bt %lu/s (trou max %lld ms), recherche %s",
+    // EB_MAX_PAYLOAD: 64 bytes
+    char call[12] = "-";
+    if (s_call_status >= 0)
+        snprintf(call, sizeof(call), "%02x", (unsigned)s_call_status & 0xff);
+    snprintf(out, size, "bt %lu/s, trou %lldms, wii %s, venue %s, app %s, appel %lu/%s",
              (unsigned long)(s_bt_reports * 1000 / (ms ? ms : 1)), s_bt_gap / 1000,
-             want_search() ? "oui" : "non");
+             s_scan ? "oui" : "non", s_last_link, s_pairing, (unsigned long)s_calls, call);
     s_bt_reports = 0;
     s_bt_gap = 0;
 }
@@ -494,6 +541,9 @@ void wiimotes_init(void)
     gap_set_class_of_device(0x000104);  // shown as a computer
     gap_set_default_link_policy_settings(LM_LINK_POLICY_ENABLE_ROLE_SWITCH);
     gap_connectable_control(1);         // Wii Remotes paired with SYNC connect to us
+    // a Wii Remote whose batteries are pulled is gone after 2 s, not 20 (when we are master:
+    // found by the search), and can come back at once
+    gap_set_link_supervision_timeout(3200);
     l2cap_register_service(l2cap_handler, PSM_HID_CONTROL, 0xffff, LEVEL_0);
     l2cap_register_service(l2cap_handler, PSM_HID_INTERRUPT, 0xffff, LEVEL_0);
 

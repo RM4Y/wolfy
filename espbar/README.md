@@ -42,7 +42,10 @@ convertisseur USB-série est sur les mêmes broches RX0 / TX0).
 - **ESP32** (`firmware/`) : ESP-IDF + [BTstack](https://github.com/bluekitchen/btstack)
   (recherche des Wiimotes, canaux HID L2CAP, appairage). Cherche les Wiimotes (1 + 2) seulement
   30 s quand on maintient 3 s le bouton (D4 ↔ 3V3) puis qu'on le relâche ; la LED de D15 clignote
-  alors (les Wiimotes déjà appairées se reconnectent seules pendant une session Wii). Pas de recherche
+  alors. Une Wiimote réveillée par son bouton rouge **SYNC** (sous le cache des piles) pendant cette
+  recherche est appairée : sa clé est gardée (NVS de l'ESP32 Bluetooth) et elle revient ensuite seule,
+  à n'importe quel bouton, pendant une session Wii. Avec 1 + 2, elle est connectée sans appairage
+  (à rechercher de nouveau la fois suivante). Une Wiimote ne retient qu'un hôte. Pas de recherche
   sinon : elle prend la radio aux Wiimotes connectées (~25 rapports/s au lieu de ~37).
   LED bleue de la carte (D2) : clignote = cherche Wolfy, allumée = connecté.
 - **Page de réglage** (`firmware/wifi/main/setup.c`) : bouton maintenu 10 s (la LED de D15 clignote
