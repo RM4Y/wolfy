@@ -15,6 +15,8 @@ const error = ref('')
 const publicHost = ref('')  // Wolfy's address from outside (reverse proxy)
 const savedHost = ref('')
 const idleStop = ref(null)  // { idle_stop, idle_minutes, idle_last_stop, net_available }
+const romarr = ref(null)  // { url, key (typed, never the saved one), keySet, savedUrl }
+const igdb = ref(null)  // { id, savedId, secret (typed, never the saved one), secretSet }
 
 async function load() {
   try {
@@ -22,6 +24,8 @@ async function load() {
       api.get('/settings')])
     savedHost.value = publicHost.value = st.public_host
     idleStop.value = st
+    romarr.value = { url: st.romarr_url, savedUrl: st.romarr_url, key: '', keySet: st.romarr_key_set }
+    igdb.value = { id: st.igdb_client_id, savedId: st.igdb_client_id, secret: '', secretSet: st.igdb_secret_set }
     wolf.value = { ...o.wolf, sessions: o.sessions.length }
     m.value = maint
     jobs.value = j.jobs
@@ -40,6 +44,52 @@ async function saveHost() {
     savedHost.value = publicHost.value = r.public_host
     toast('Adresse externe enregistrée')
   }
+}
+
+// "192.168.1.10:7979/" -> "http://192.168.1.10:7979"
+const cleanUrl = u => {
+  u = u.trim().replace(/\/+$/, '')
+  return u && !/^https?:\/\//i.test(u) ? `http://${u}` : u
+}
+
+async function saveRomarr() {
+  const change = { romarr_url: cleanUrl(romarr.value.url) }
+  if (romarr.value.key) change.romarr_key = romarr.value.key
+  const r = await act('Enregistrement', () => api.put('/settings', change))
+  if (r) {
+    romarr.value = { url: r.romarr_url, savedUrl: r.romarr_url, key: '', keySet: r.romarr_key_set }
+    toast('Connexion à Romarr enregistrée')
+  }
+}
+
+async function testRomarr() {
+  const body = { url: cleanUrl(romarr.value.url) }
+  if (romarr.value.key) body.key = romarr.value.key
+  const r = await act('Test de Romarr', () => api.post('/settings/romarr/test', body))
+  if (r) toast('Romarr répond, clé API acceptée')
+}
+
+async function forgetRomarrKey() {
+  if (!confirm('Effacer la clé API de Romarr ?')) return
+  const r = await act('Enregistrement', () => api.put('/settings', { romarr_key: '' }))
+  if (r) romarr.value = { ...romarr.value, key: '', keySet: false }
+}
+
+async function saveIgdb() {
+  const change = { igdb_client_id: igdb.value.id.trim() }
+  if (igdb.value.secret) change.igdb_secret = igdb.value.secret
+  const r = await act('Enregistrement', () => api.put('/settings', change))
+  if (r) {
+    igdb.value = { id: r.igdb_client_id, savedId: r.igdb_client_id, secret: '', secretSet: r.igdb_secret_set }
+    toast('Identifiants IGDB enregistrés')
+  }
+}
+
+async function testIgdb() {
+  const body = { client_id: igdb.value.id.trim() }
+  if (igdb.value.secret) body.secret = igdb.value.secret
+  const r = await act('Test d\'IGDB', () => api.post('/settings/igdb/test', body))
+  if (r) toast('IGDB répond, identifiants acceptés')
 }
 
 const IDLE_DELAYS = [2, 5, 10, 15, 20, 30, 45, 60, 90, 120]
@@ -117,6 +167,54 @@ onMounted(load)
     <form class="row" style="gap:8px" @submit.prevent="saveHost">
       <input v-model="publicHost" placeholder="wolfy.exemple.fr" maxlength="200" style="flex:1;min-width:220px" />
       <button type="submit" class="primary" :disabled="cleanHost(publicHost) === savedHost"><Icon name="save" />Enregistrer</button>
+    </form>
+  </div>
+
+  <div v-if="romarr" class="card">
+    <h2 style="margin:0 0 4px">Romarr</h2>
+    <div class="muted small" style="margin-bottom:12px">
+      Demandes de jeux de la page Mes jeux. La clé API se trouve dans Romarr › Settings › General.
+    </div>
+    <form @submit.prevent="saveRomarr">
+      <div class="field">
+        <label for="romarr-url">Adresse</label>
+        <input id="romarr-url" v-model="romarr.url" placeholder="http://192.168.1.10:7979" maxlength="300" />
+      </div>
+      <div class="field">
+        <label for="romarr-key">Clé API</label>
+        <input id="romarr-key" v-model="romarr.key" type="password" autocomplete="off" maxlength="200"
+               :placeholder="romarr.keySet ? '•••••••• (enregistrée, laisser vide pour la garder)' : 'Clé API de Romarr'" />
+      </div>
+      <div class="row" style="gap:8px">
+        <button type="submit" class="primary" :disabled="cleanUrl(romarr.url) === romarr.savedUrl && !romarr.key"><Icon name="save" />Enregistrer</button>
+        <button type="button" :disabled="!cleanUrl(romarr.url)" @click="testRomarr"><Icon name="link" />Tester</button>
+        <button v-if="romarr.keySet" type="button" class="ghost" @click="forgetRomarrKey"><Icon name="trash" />Effacer la clé</button>
+      </div>
+    </form>
+  </div>
+
+  <div v-if="igdb" class="card">
+    <h2 style="margin:0 0 4px">IGDB</h2>
+    <div class="muted small" style="margin-bottom:12px">
+      Catalogue et jaquettes des jeux de la page Mes jeux. Crée une application (gratuite) sur
+      <a href="https://dev.twitch.tv/console/apps" target="_blank" rel="noopener">dev.twitch.tv</a>
+      (URL de redirection : <code>http://localhost</code>, catégorie « Application Integration »), puis colle son
+      Client ID et un Client Secret. Ce sont les mêmes que ceux d'IGDB dans Romarr, s'il en a.
+    </div>
+    <form @submit.prevent="saveIgdb">
+      <div class="field">
+        <label for="igdb-id">Client ID</label>
+        <input id="igdb-id" v-model="igdb.id" autocomplete="off" maxlength="100" />
+      </div>
+      <div class="field">
+        <label for="igdb-secret">Client Secret</label>
+        <input id="igdb-secret" v-model="igdb.secret" type="password" autocomplete="off" maxlength="200"
+               :placeholder="igdb.secretSet ? '•••••••• (enregistré, laisser vide pour le garder)' : 'Client Secret'" />
+      </div>
+      <div class="row" style="gap:8px">
+        <button type="submit" class="primary" :disabled="igdb.id.trim() === igdb.savedId && !igdb.secret"><Icon name="save" />Enregistrer</button>
+        <button type="button" :disabled="!igdb.id.trim() || !(igdb.secret || igdb.secretSet)" @click="testIgdb"><Icon name="link" />Tester</button>
+      </div>
     </form>
   </div>
 

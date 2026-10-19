@@ -12,13 +12,11 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import auth, combos, idle, dolphin_config, docker_ops, eden_config, espbar, espbar_relay, eden_paths, ps_paths, ra_config, ra_paths, steam, emulators, settings, store, wolf_api, wolf_config
+from . import auth, combos, idle, dolphin_config, docker_ops, eden_config, espbar, espbar_relay, eden_paths, ps_paths, igdb, ra_config, ra_paths, romarr, steam, emulators, settings, store, wolf_api, wolf_config
 
 app = FastAPI(title="Wolfy", docs_url="/api/docs", openapi_url="/api/openapi.json")
 public = APIRouter(prefix="/api")
 api = APIRouter(prefix="/api", dependencies=[Depends(auth.require_admin)])
-
-
 # ------------------------------------------------------------------- auth
 
 class Login(BaseModel):
@@ -686,6 +684,12 @@ class WolfySettings(BaseModel):
     # close the sessions nobody watches after idle_minutes (idle.py)
     idle_stop: bool | None = None
     idle_minutes: int | None = Field(None, ge=1, le=240)
+    # Romarr (Mes jeux): address, e.g. http://192.168.1.10:7979, and API key (kept when not sent)
+    romarr_url: str | None = Field(None, max_length=300, pattern=r"^(https?://\S+)?$")
+    romarr_key: str | None = Field(None, max_length=200)
+    # IGDB (covers and catalogue of Mes jeux): Twitch application, secret kept when not sent
+    igdb_client_id: str | None = Field(None, max_length=100)
+    igdb_secret: str | None = Field(None, max_length=200)
 
 
 @api.get("/settings")
@@ -693,7 +697,7 @@ def get_settings():
     st = store.get("settings")
     return {"public_host": st.get("public_host", ""), "idle_stop": bool(st.get("idle_stop")),
             "idle_minutes": idle.minutes(), "idle_last_stop": st.get("idle_last_stop"),
-            "net_available": idle.netstat() is not None}
+            "net_available": idle.netstat() is not None, **romarr.public_config(), **igdb.public_config()}
 
 
 @api.put("/settings")
@@ -704,7 +708,72 @@ def set_settings(body: WolfySettings):
         store.put("settings", "idle_stop", body.idle_stop or None)
     if body.idle_minutes is not None:
         store.put("settings", "idle_minutes", body.idle_minutes)
+    if body.romarr_url is not None:
+        store.put("settings", "romarr_url", body.romarr_url.strip().rstrip("/") or None)
+    if body.romarr_key is not None:
+        store.put("settings", "romarr_key", body.romarr_key.strip() or None)
+    if body.igdb_client_id is not None:
+        store.put("settings", "igdb_client_id", body.igdb_client_id.strip() or None)
+    if body.igdb_secret is not None:
+        store.put("settings", "igdb_secret", body.igdb_secret.strip() or None)
     return get_settings()
+
+
+class RomarrTest(BaseModel):
+    url: str = Field(max_length=300, pattern=r"^https?://\S+$")
+    key: str | None = Field(None, max_length=200)  # None = the saved one
+
+
+@api.post("/settings/romarr/test")
+async def test_romarr(body: RomarrTest):
+    return await romarr.test(body.url.strip().rstrip("/"), romarr.config()[1] if body.key is None else body.key.strip())
+
+
+class IgdbTest(BaseModel):
+    client_id: str = Field(min_length=1, max_length=100)
+    secret: str | None = Field(None, max_length=200)  # None = the saved one
+
+
+@api.post("/settings/igdb/test")
+async def test_igdb(body: IgdbTest):
+    return await igdb.test(body.client_id.strip(), igdb.config()[1] if body.secret is None else body.secret.strip())
+
+
+# ------------------------------------------------------------------- games (Romarr)
+
+class GameRequest(BaseModel):
+    game: str = Field(min_length=1, max_length=200)
+    platform: str = Field(min_length=1, max_length=60)
+
+
+@api.get("/games")
+async def games():
+    return await romarr.overview()
+
+
+@api.get("/games/library")
+async def games_library(q: str = "", platform: str = ""):
+    return igdb.dress_library(await romarr.library(), q, platform)
+
+
+@api.get("/games/catalog")
+async def games_catalog(platform: str, q: str = "", offset: int = 0, sort: str = "popular"):
+    return await igdb.catalog(platform, q, max(offset, 0), sort)
+
+
+@api.get("/games/discover")
+async def games_discover(shelf: str = "popular"):
+    return await romarr.discover(shelf)
+
+
+@api.post("/games/request")
+async def request_game(body: GameRequest):
+    return await romarr.request(body.game.strip(), body.platform.strip())
+
+
+@api.delete("/games/wanted")
+async def drop_game(game: str, platform: str):
+    return await romarr.drop(game, platform)
 
 
 @api.get("/maintenance")

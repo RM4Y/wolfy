@@ -49,7 +49,7 @@ function toggleTheme() {
 const more = ref(false)
 const route = useRoute()
 watch(() => route.path, () => { more.value = false })
-const inMore = computed(() => ['/appairage', '/parametres'].some(p => route.path.startsWith(p)))
+const inMore = computed(() => ['/appairage', '/jeux', '/parametres'].some(p => route.path.startsWith(p)))
 onMounted(() => { checkAuth(); window.addEventListener('wolfy:logout', onLogout) })
 onUnmounted(() => { clearTimeout(timer); window.removeEventListener('wolfy:logout', onLogout) })
 </script>
@@ -72,6 +72,7 @@ onUnmounted(() => { clearTimeout(timer); window.removeEventListener('wolfy:logou
           <span v-if="sessions" class="count">{{ sessions }}</span>
         </router-link>
         <router-link to="/applications" :class="{ 'router-link-active': route.path.startsWith('/applications') }"><Icon name="gamepad" />Applications</router-link>
+        <router-link to="/jeux"><Icon name="library" />Mes jeux</router-link>
         <router-link to="/emulateurs"><Icon name="layers" />Émulateurs</router-link>
         <router-link to="/parametres"><Icon name="sliders" />Paramètres</router-link>
       </nav>
@@ -110,6 +111,7 @@ onUnmounted(() => { clearTimeout(timer); window.removeEventListener('wolfy:logou
         <router-link to="/appairage"><Icon name="key" />Appairage
           <span v-if="pending" class="count alert">{{ pending }}</span>
         </router-link>
+        <router-link to="/jeux"><Icon name="library" />Mes jeux</router-link>
         <router-link to="/parametres"><Icon name="sliders" />Paramètres</router-link>
         <a href="#" @click.prevent="logout"><Icon name="logout" />Déconnexion</a>
       </div>

@@ -10,6 +10,7 @@ chacun dans son propre conteneur.
 | **Appairage** | Saisie du code PIN Moonlight, nom des appareils, type de manette forcé, désappairage |
 | **Sessions** | Sessions en cours (appli, appareil, résolution), arrêt d'une session |
 | **Applications** | Les applis affichées dans Moonlight, ordre, ajout/suppression. « Configurer » ouvre la page de l'appli : tous les réglages de son émulateur (Eden : 800+ réglages de `qt-config.ini`, en onglets, en français) + le conteneur Wolf (image, ROMs, jaquette, montages, variables, options Docker) |
+| **Mes jeux** | Catalogue complet d'une console avec jaquettes ([IGDB](https://www.igdb.com)) et demande d'un jeu à [Romarr](https://github.com/BlizzHacker/romarr), jeux demandés et téléchargements en cours, bibliothèque, vitrine « Découvrir ». Adresse et clé API de Romarr, identifiants IGDB (application Twitch) dans Paramètres |
 | **Émulateurs** | Catalogue (Eden, RetroArch, Dolphin…), état des images, construction/mise à jour |
 | **Maintenance** | Redémarrer/arrêter Wolf, journaux, conteneurs d'applis, rapports de plantage, sauvegardes/restauration de `config.toml` |
 
