@@ -194,6 +194,12 @@ async def identify(name: str, platform: str) -> dict:
     rows = (await query("games", f'search "{_quote(name)}"; {fields} where {where}; limit 10;')
             or await _by_alias(name, where, fields)
             or await query("games", f'search "{_quote(name)}"; {fields} where platforms = ({pid}); limit 10;'))
+    # still nothing: words left over from a release name ("… Super"), dropped from the end
+    words = name.split()
+    for n in range(len(words) - 1, max(len(words) - 4, 1), -1):
+        if rows:
+            break
+        rows = await query("games", f'search "{_quote(" ".join(words[:n]))}"; {fields} where {where}; limit 10;')
     if not rows:
         return {}
     # IGDB's search can put "Wii Sports + Wii Sports Resort" first: the very name, then no compilation
@@ -210,7 +216,8 @@ async def _identify_all(games: list[dict]) -> None:
         except HTTPException as exc:  # IGDB unconfigured or down: try again on the next visit
             print(f"IGDB: bibliothèque non identifiée ({exc.detail})", flush=True)
             return
-        store.put("igdb_library", game["id"], found)
+        # with the name looked up: a better cleanup of file names looks the game up again
+        store.put("igdb_library", game["id"], {**found, "name": game["name"]})
 
 
 def dress_library(lib: dict, q: str = "", platform: str = "") -> dict:
@@ -218,7 +225,7 @@ def dress_library(lib: dict, q: str = "", platform: str = "") -> dict:
     global _identify_task
     known = store.get("igdb_library")
     games = lib["items"]
-    missing = [g for g in games if g["id"] not in known]
+    missing = [g for g in games if known.get(g["id"], {}).get("name") != g["name"]]
     if missing and all(config()) and (_identify_task is None or _identify_task.done()):
         _identify_task = asyncio.create_task(_identify_all(missing))
     for g in games:

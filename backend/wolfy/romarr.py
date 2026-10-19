@@ -69,12 +69,23 @@ async def overview() -> dict:
     }
 
 
+# what release names add to a title: version, region, language, dump format
+_NOISE = re.compile(r"\b(v\d+(\.\d+)*|rev\s?\d+|eur|europe|usa|us|jpn|japan|pal|ntsc|multi\d*|eng?|fr|"
+                    r"xci|xcz|nsp|nsz|iso|wbfs|cso|chd|psn|update|dlc)\b", re.I)
+
+
 def clean_name(name: str) -> str:
     """"Wii Sports (USA) (Rev 1)" -> "Wii Sports", "Super_Mario_Galaxy_2" -> "Super Mario Galaxy 2",
-    "Mario Kart Wii RMCP01" -> "Mario Kart Wii": the name to look a game up by."""
-    name = re.sub(r"[_.]+", " ", name)
+    "Mario Kart Wii RMCP01" -> "Mario Kart Wii", "Super Mario Bros Wonder v1.0 Eur XCi - CLC" ->
+    "Super Mario Bros Wonder": the name to look a game up by."""
     name = re.sub(r"\([^)]*\)|\[[^]]*\]", " ", name)
+    # a release group: "… - CLC", "Zelda.Tears.of.the.Kingdom.NSP-VENOM"
+    name = re.sub(r"\s-\s?[A-Z0-9]{3,8}\s*$", " ", name.strip())
+    if "." in name and " " not in name:
+        name = re.sub(r"-[A-Z0-9]{3,8}$", "", name)
     name = re.sub(r"\s[A-Z0-9]{4}\d{2}$", " ", name.strip())  # a Wii / GameCube disc id
+    name = _NOISE.sub(" ", name)
+    name = re.sub(r"[_.]+", " ", name)
     return re.sub(r"\s+", " ", name).strip(" -")
 
 
