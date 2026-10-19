@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { act, ago, api, ApiError, bytes, toast } from '../api'
+import { act, ago, api, ApiError, bytes, isAdmin, toast } from '../api'
 
 const data = ref(null)  // { platforms, wanted, queue }
 const error = ref('')
@@ -157,7 +157,7 @@ onUnmounted(() => { clearTimeout(timer); clearTimeout(libTimer); clearTimeout(ca
     <div class="icon"><Icon name="link" /></div>
     <div class="title">Romarr n'est pas configuré</div>
     <div class="text">Renseigne l'adresse et la clé API de Romarr pour demander des jeux depuis Wolfy.</div>
-    <router-link to="/parametres" class="btn primary" style="margin-top:8px"><Icon name="sliders" />Paramètres</router-link>
+    <router-link v-if="isAdmin()" to="/parametres" class="btn primary" style="margin-top:8px"><Icon name="sliders" />Paramètres</router-link>
   </div>
 
   <template v-else-if="data">

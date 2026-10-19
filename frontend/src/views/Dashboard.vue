@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, onUnmounted, ref, computed } from 'vue'
-import { act, ago, api } from '../api'
+import { act, ago, api, can, isAdmin } from '../api'
 import SessionList from '../components/SessionList.vue'
 
 const data = ref(null)
@@ -37,7 +37,7 @@ onUnmounted(() => clearTimeout(timer))
   <div class="page-head">
     <h1>Tableau de bord</h1>
     <div class="spacer"></div>
-    <button @click="restart"><Icon name="refresh" />Redémarrer Wolf</button>
+    <button v-if="isAdmin()" @click="restart"><Icon name="refresh" />Redémarrer Wolf</button>
   </div>
 
   <div v-if="error" class="alert bad" style="margin-bottom:16px"><Icon name="alert" /><div>{{ error }}</div></div>
@@ -46,7 +46,7 @@ onUnmounted(() => clearTimeout(timer))
     <div v-if="data.pending.length" class="alert">
       <Icon name="key" />
       <div><b>{{ data.pending.length }} appareil(s)</b> attendent l'appairage.
-        <router-link to="/appairage">Saisir le code PIN</router-link></div>
+        <router-link v-if="can('pairing')" to="/appairage">Saisir le code PIN</router-link></div>
     </div>
     <div v-if="!wolf.api" class="alert warn">
       <Icon name="alert" />
@@ -67,12 +67,12 @@ onUnmounted(() => clearTimeout(timer))
       <div class="card stat">
         <span class="overline">Sessions actives</span>
         <span class="value">{{ data.sessions.length }}</span>
-        <span class="hint"><router-link to="/sessions">Gérer les sessions</router-link></span>
+        <span class="hint"><router-link v-if="can('sessions')" to="/sessions">Gérer les sessions</router-link></span>
       </div>
       <div class="card stat">
         <span class="overline">Appareils appairés</span>
         <span class="value">{{ data.clients }}</span>
-        <span class="hint"><router-link to="/appairage">Appairer un appareil</router-link></span>
+        <span class="hint"><router-link v-if="can('pairing')" to="/appairage">Appairer un appareil</router-link></span>
       </div>
       <div class="card stat">
         <span class="overline">Applications</span>
@@ -94,7 +94,7 @@ onUnmounted(() => clearTimeout(timer))
             <h2>Appareils</h2>
             <p class="desc">{{ data.clients }} appairé(s) · {{ data.pending.length ? `${data.pending.length} demande(s)` : 'aucune demande' }}</p>
           </div>
-          <router-link to="/appairage">Tout voir</router-link>
+          <router-link v-if="can('pairing')" to="/appairage">Tout voir</router-link>
         </div>
         <div v-for="c in clients.slice(0, 4)" :key="c.client_id" class="device">
           <div class="empty-icon"><Icon name="phone" /></div>

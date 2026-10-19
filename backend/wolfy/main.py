@@ -17,25 +17,61 @@ from . import auth, combos, idle, dolphin_config, docker_ops, eden_config, espba
 app = FastAPI(title="Wolfy", docs_url="/api/docs", openapi_url="/api/openapi.json")
 public = APIRouter(prefix="/api")
 api = APIRouter(prefix="/api", dependencies=[Depends(auth.require_admin)])
+# pages an account other than an admin can be given (Paramètres › Comptes): checked per route
+member = APIRouter(prefix="/api", dependencies=[Depends(auth.require_user)])
+
+
+def tab(*tabs: str) -> list:
+    return [Depends(auth.require_tab(*tabs))]
+
+
 # ------------------------------------------------------------------- auth
 
 class Login(BaseModel):
-    password: str
+    name: str = Field(max_length=32)
+    password: str = Field(max_length=200)
+
+
+class Setup(BaseModel):
+    name: str = Field(max_length=32)
+    password: str = Field(min_length=8, max_length=200)
+    setup_password: str = Field("", max_length=200)
+
+
+class PasswordChange(BaseModel):
+    current: str = Field(max_length=200)
+    password: str = Field(min_length=8, max_length=200)
 
 
 @public.get("/auth")
 def auth_status(request: Request):
-    return {"logged_in": auth.is_logged_in(request), "configured": bool(settings.ADMIN_PASSWORD)}
+    user = auth.current(request)
+    return {"logged_in": bool(user), "user": user, "setup": not auth.users(),
+            "setup_password": bool(settings.ADMIN_PASSWORD)}
 
 
 @public.post("/auth/login")
 def login(body: Login, response: Response):
-    if not settings.ADMIN_PASSWORD:
-        raise HTTPException(503, "WOLFY_ADMIN_PASSWORD n'est pas défini")
-    if not auth.check_password(body.password):
+    user = auth.check_password(body.name, body.password)
+    if not user:
         time.sleep(1)
-        raise HTTPException(401, "Mot de passe incorrect")
-    auth.open_session(response)
+        raise HTTPException(401, "Identifiant ou mot de passe incorrect")
+    auth.open_session(response, body.name.strip().lower(), user)
+    return {"ok": True}
+
+
+@public.post("/auth/setup")
+def setup(body: Setup, response: Response):
+    """The first account, an admin: only while there is none."""
+    if auth.users():
+        raise HTTPException(409, "Le compte administrateur existe déjà")
+    if not auth.check_setup_password(body.setup_password):
+        time.sleep(1)
+        raise HTTPException(401, "Mot de passe WOLFY_ADMIN_PASSWORD incorrect")
+    name = _account_name(body.name)
+    user = {**auth.hashed(body.password), "role": "admin", "tabs": [], "version": 0}
+    store.put("users", name, user)
+    auth.open_session(response, name, user)
     return {"ok": True}
 
 
@@ -43,6 +79,27 @@ def login(body: Login, response: Response):
 def logout(response: Response):
     auth.close_session(response)
     return {"ok": True}
+
+
+@member.post("/auth/password")
+def change_password(body: PasswordChange, request: Request, response: Response):
+    """Any account changes its own password (its other sessions are closed)."""
+    name = auth.require_user(request)["name"]
+    user = auth.check_password(name, body.current)
+    if not user:
+        time.sleep(1)
+        raise HTTPException(400, "Mot de passe actuel incorrect")
+    user = {**user, **auth.hashed(body.password), "version": user.get("version", 0) + 1}
+    store.put("users", name, user)
+    auth.open_session(response, name, user)
+    return {"ok": True}
+
+
+def _account_name(name: str) -> str:
+    name = name.strip().lower()
+    if not auth.NAME.match(name):
+        raise HTTPException(400, "Identifiant : 2 à 32 caractères, lettres minuscules, chiffres, . _ -")
+    return name
 
 
 # ------------------------------------------------------------------- hooks (called by Wolf sessions)
@@ -77,7 +134,7 @@ async def hook_espbar(session: str, token: str):
 
 # ------------------------------------------------------------------- overview
 
-@api.get("/overview")
+@member.get("/overview")
 async def overview():
     status = await run_in_threadpool(docker_ops.wolf_status)
     doc = await run_in_threadpool(wolf_config.load)
@@ -115,7 +172,7 @@ class PairBody(BaseModel):
     client_ip: str = ""
 
 
-@api.get("/pairing")
+@member.get("/pairing", dependencies=tab("pairing", "dashboard"))
 async def pairing():
     pending = (await wolf_api.get("pair/pending")).get("requests", [])
     clients = (await wolf_api.get("clients")).get("clients", [])
@@ -130,7 +187,7 @@ async def pairing():
     return {"pending": pending, "clients": clients}
 
 
-@api.post("/pairing/pair")
+@member.post("/pairing/pair", dependencies=tab("pairing"))
 async def pair(body: PairBody):
     before = {c["client_id"] for c in (await wolf_api.get("clients")).get("clients", [])}
     await wolf_api.post("pair/client", {"pair_secret": body.pair_secret, "pin": body.pin})
@@ -156,7 +213,7 @@ class ClientUpdate(BaseModel):
     settings: dict | None = None
 
 
-@api.patch("/clients/{client_id}")
+@member.patch("/clients/{client_id}", dependencies=tab("pairing"))
 async def update_client(client_id: str, body: ClientUpdate):
     if body.name is not None:
         meta = store.get("clients").get(client_id, {})
@@ -169,7 +226,7 @@ async def update_client(client_id: str, body: ClientUpdate):
     return {"ok": True}
 
 
-@api.delete("/clients/{client_id}")
+@member.delete("/clients/{client_id}", dependencies=tab("pairing"))
 async def unpair(client_id: str):
     await wolf_api.post("unpair/client", {"client_id": client_id})
     store.put("clients", client_id, None)
@@ -179,7 +236,7 @@ async def unpair(client_id: str):
 
 # ------------------------------------------------------------------- sessions
 
-@api.get("/sessions")
+@member.get("/sessions", dependencies=tab("sessions", "dashboard"))
 async def sessions():
     data = (await wolf_api.get("sessions")).get("sessions", [])
     names = store.get("clients")
@@ -212,7 +269,7 @@ class SessionStop(BaseModel):
     session_id: str
 
 
-@api.post("/sessions/stop")
+@member.post("/sessions/stop", dependencies=tab("sessions", "dashboard"))
 async def stop_session(body: SessionStop):
     await wolf_api.post("sessions/stop", {"session_id": body.session_id})
     return {"ok": True}
@@ -237,7 +294,7 @@ class AppBody(BaseModel):
     notes: str = ""
 
 
-@api.get("/profiles")
+@member.get("/profiles", dependencies=tab("sessions"))
 def profiles():
     return {"profiles": wolf_config.list_profiles(wolf_config.load())}
 
@@ -651,12 +708,77 @@ async def upload_cover(file: UploadFile = File(...)):
     return {"path": str(dest), "name": dest.name}
 
 
-@api.get("/covers/{name}")
+@member.get("/covers/{name}")
 def cover(name: str):
     path = settings.WOLF_COVERS_DIR / name
     if "/" in name or not path.is_file():
         raise HTTPException(404)
     return FileResponse(path, media_type="image/png")
+
+
+# ------------------------------------------------------------------- accounts
+
+class Account(BaseModel):
+    name: str = Field(max_length=32)
+    password: str = Field(min_length=8, max_length=200)
+    role: str = Field("user", pattern="^(admin|user)$")
+    tabs: list[str] = []
+
+
+class AccountChange(BaseModel):
+    password: str | None = Field(None, min_length=8, max_length=200)
+    role: str | None = Field(None, pattern="^(admin|user)$")
+    tabs: list[str] | None = None
+
+
+def _admins(users: dict) -> list[str]:
+    return [n for n, u in users.items() if u.get("role") == "admin"]
+
+
+@api.get("/users")
+def list_users():
+    return {"users": [auth.public(n, u) for n, u in sorted(auth.users().items())], "tabs": auth.TABS}
+
+
+@api.post("/users")
+def add_user(body: Account):
+    name = _account_name(body.name)
+    if name in auth.users():
+        raise HTTPException(409, f"Le compte {name} existe déjà")
+    store.put("users", name, {**auth.hashed(body.password), "role": body.role,
+                              "tabs": [t for t in body.tabs if t in auth.TABS], "version": 0})
+    return {"ok": True}
+
+
+@api.put("/users/{name}")
+def change_user(name: str, body: AccountChange, request: Request, response: Response):
+    users = auth.users()
+    if name not in users:
+        raise HTTPException(404, "Compte inconnu")
+    user = dict(users[name])
+    if body.role is not None:
+        if body.role != "admin" and _admins(users) == [name]:
+            raise HTTPException(400, "Il faut garder au moins un administrateur")
+        user["role"] = body.role
+    if body.tabs is not None:
+        user["tabs"] = [t for t in body.tabs if t in auth.TABS]
+    if body.password:
+        user.update(auth.hashed(body.password), version=user.get("version", 0) + 1)
+    store.put("users", name, user)
+    if body.password and auth.require_user(request)["name"] == name:
+        auth.open_session(response, name, user)  # its own password: stay logged in
+    return {"ok": True}
+
+
+@api.delete("/users/{name}")
+def delete_user(name: str):
+    users = auth.users()
+    if name not in users:
+        raise HTTPException(404, "Compte inconnu")
+    if _admins(users) == [name]:
+        raise HTTPException(400, "Il faut garder au moins un administrateur")
+    store.put("users", name, None)
+    return {"ok": True}
 
 
 # ------------------------------------------------------------------- maintenance
@@ -746,32 +868,32 @@ class GameRequest(BaseModel):
     platform: str = Field(min_length=1, max_length=60)
 
 
-@api.get("/games")
+@member.get("/games", dependencies=tab("games"))
 async def games():
     return await romarr.overview()
 
 
-@api.get("/games/library")
+@member.get("/games/library", dependencies=tab("games"))
 async def games_library(q: str = "", platform: str = ""):
     return igdb.dress_library(await romarr.library(), q, platform)
 
 
-@api.get("/games/catalog")
+@member.get("/games/catalog", dependencies=tab("games"))
 async def games_catalog(platform: str, q: str = "", offset: int = 0, sort: str = "popular"):
     return await igdb.catalog(platform, q, max(offset, 0), sort)
 
 
-@api.get("/games/discover")
+@member.get("/games/discover", dependencies=tab("games"))
 async def games_discover(shelf: str = "popular"):
     return await romarr.discover(shelf)
 
 
-@api.post("/games/request")
+@member.post("/games/request", dependencies=tab("games"))
 async def request_game(body: GameRequest):
     return await romarr.request(body.game.strip(), body.platform.strip())
 
 
-@api.delete("/games/wanted")
+@member.delete("/games/wanted", dependencies=tab("games"))
 async def drop_game(game: str, platform: str):
     return await romarr.drop(game, platform)
 
@@ -891,6 +1013,7 @@ def job(job_id: str):
 
 app.include_router(public)
 app.include_router(api)
+app.include_router(member)
 
 try:
     combos.ensure_hooks()

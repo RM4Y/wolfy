@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { act, ago, api, bytes, toast } from '../api'
+import Accounts from '../components/Accounts.vue'
 import JobLog from '../components/JobLog.vue'
 
 const emit = defineEmits(['refresh'])
@@ -157,6 +158,8 @@ onMounted(load)
 <template>
   <div class="page-head"><h1>Paramètres</h1></div>
   <div v-if="error" class="alert bad">{{ error }}</div>
+
+  <Accounts />
 
   <div v-if="wolf" class="card">
     <h2 style="margin:0 0 4px">Adresse externe</h2>

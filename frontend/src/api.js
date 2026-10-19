@@ -2,6 +2,16 @@ import { reactive } from 'vue'
 
 export const ui = reactive({ toasts: [], busy: '' })
 
+// the logged-in account: { name, role: admin | user, tabs } (an admin has every tab and every page)
+export const session = reactive({ user: null })
+export const TABS = { dashboard: ['/', 'Tableau de bord'], pairing: ['/appairage', 'Appairage'],
+  sessions: ['/sessions', 'Sessions'], games: ['/jeux', 'Mes jeux'] }
+export const isAdmin = () => session.user?.role === 'admin'
+export const can = tab => isAdmin() || !!session.user?.tabs.includes(tab)
+// a page an account may open: its tab's pages for an account, all of them for an admin
+export const allowed = route => isAdmin() || (!!route.meta.tab && can(route.meta.tab))
+export const home = () => (isAdmin() ? '/' : TABS[session.user?.tabs[0]]?.[0]) || null
+
 export function toast(message, kind = 'ok') {
   const t = { id: Math.random(), message, kind }
   ui.toasts.push(t)
@@ -21,7 +31,7 @@ async function request(method, path, body) {
   }
   const resp = await fetch(`/api${path}`, opts)
   const data = await resp.json().catch(() => ({}))
-  if (resp.status === 401 && path !== '/auth/login') {
+  if (resp.status === 401 && !path.startsWith('/auth/')) {
     window.dispatchEvent(new Event('wolfy:logout'))
   }
   if (!resp.ok) {
