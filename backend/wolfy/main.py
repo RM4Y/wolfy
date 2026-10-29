@@ -680,6 +680,16 @@ def save_espbar_board(key: str, body: EspBarBoard):
     return {"ok": True}
 
 
+@api.post("/espbar/boards/{key}/update")
+async def update_espbar_board(key: str):
+    """Send a connected EspBar Wolfy's program (it restarts once written)."""
+    try:
+        espbar_relay.start_update(key.strip().lower())
+    except ValueError as exc:
+        raise HTTPException(409, str(exc))
+    return {"ok": True}
+
+
 @api.delete("/espbar/boards/{key}")
 def forget_espbar_board(key: str):
     espbar.forget(key)

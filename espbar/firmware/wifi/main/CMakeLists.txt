@@ -3,4 +3,4 @@ set(bt_image ${CMAKE_CURRENT_LIST_DIR}/../../.cache/bt-image)
 idf_component_register(SRCS "main.c" "button.c" "config.c" "link.c" "radio.c" "setup.c"
                        INCLUDE_DIRS "." ${bt_image}
                        EMBED_FILES ${bt_image}/bt_image.bin
-                       REQUIRES espbar_wire esp-serial-flasher esp_wifi esp_timer esp_netif nvs_flash esp_partition json driver tcp_transport mbedtls esp_http_server)
+                       REQUIRES espbar_wire esp-serial-flasher app_update esp_wifi esp_timer esp_netif nvs_flash esp_partition json driver tcp_transport mbedtls esp_http_server)

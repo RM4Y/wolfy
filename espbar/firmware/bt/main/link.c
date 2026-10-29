@@ -129,6 +129,20 @@ static void on_frame(uint8_t type, uint8_t slot, const uint8_t *data, uint16_t l
         wiimotes_on_frame(type, slot, data, len);  // EB_HELLO: announce the Wii Remotes
 }
 
+// What the UART holds, once a byte came within <ticks> (uart_read_bytes() alone waits for the
+// whole buffer as long as bytes keep coming: output reports would go to the Wii Remotes in bursts).
+static int read_uart(uint8_t *buf, size_t size, TickType_t ticks)
+{
+    int n = uart_read_bytes(UART, buf, 1, ticks);
+    size_t more = 0;
+    if (n == 1 && uart_get_buffered_data_len(UART, &more) == ESP_OK && more) {
+        int m = uart_read_bytes(UART, buf + 1, more < size - 1 ? more : size - 1, 0);
+        if (m > 0)
+            n += m;
+    }
+    return n;
+}
+
 // Frames from the Wi-Fi ESP32 (handled in this task: an update may block it), and our share of
 // the stats every 2 s (it knows we're alive).
 static void link_task(void *arg)
@@ -137,7 +151,7 @@ static void link_task(void *arg)
     TickType_t last_stats = xTaskGetTickCount();
     send_hello(1);
     for (;;) {
-        int n = uart_read_bytes(UART, buf, sizeof(buf), pdMS_TO_TICKS(20));
+        int n = read_uart(buf, sizeof(buf), pdMS_TO_TICKS(20));
         if (n > 0)
             wire_feed(&s_rx, buf, n, on_frame);
         TickType_t now = xTaskGetTickCount();

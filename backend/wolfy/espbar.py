@@ -54,6 +54,26 @@ def firmware(variant: str) -> dict | None:
     }
 
 
+APP_DESC = 0x20             # esp_app_desc_t, in an app image (after its image and segment headers)
+APP_DESC_MAGIC = 0xABCD5432
+APP_DESC_SHA = APP_DESC + 0x90  # its app_elf_sha256
+BUILD_LEN = 16             # hex chars of it in an ESP32's HELLO ("build")
+
+
+def app(variant: str) -> tuple[bytes, str] | None:
+    """The app of <variant>'s merged image (what an ESP32 writes into its other slot when Wolfy
+    updates it), and its build id: None if not built, or built without two app slots."""
+    try:
+        data = VARIANTS[variant].read_bytes()
+    except OSError:
+        return None
+    image = data[APP_OFFSET:]
+    if not (_inspect(data) or {}).get("merged") or len(image) <= APP_DESC_SHA + 32 or image[0] != ESP_MAGIC \
+            or int.from_bytes(image[APP_DESC:APP_DESC + 4], "little") != APP_DESC_MAGIC:
+        return None
+    return image, image[APP_DESC_SHA:APP_DESC_SHA + 32].hex()[:BUILD_LEN]
+
+
 def token() -> str:
     """Token of the ESP32 for Wolfy's relay (generated once, in the data dir)."""
     path = settings.DATA_DIR / "espbar.token"

@@ -147,13 +147,28 @@ static void on_frame(uint8_t type, uint8_t slot, const uint8_t *data, uint16_t l
     }
 }
 
+// What the UART holds, once a byte came within <ticks>. uart_read_bytes() alone waits for the
+// whole buffer as long as bytes keep coming (its timeout is per chunk): with two Wii Remotes,
+// reports were held ~50 ms and reached Dolphin in bursts.
+static int read_uart(uint8_t *buf, size_t size, TickType_t ticks)
+{
+    int n = uart_read_bytes(UART, buf, 1, ticks);
+    size_t more = 0;
+    if (n == 1 && uart_get_buffered_data_len(UART, &more) == ESP_OK && more) {
+        int m = uart_read_bytes(UART, buf + 1, more < size - 1 ? more : size - 1, 0);
+        if (m > 0)
+            n += m;
+    }
+    return n;
+}
+
 // Reads the UART for <ms> (or until *<until>).
 static void pump(uint32_t ms, volatile bool *until)
 {
     uint8_t buf[256];
     int64_t end = esp_timer_get_time() + ms * 1000LL;
     while (esp_timer_get_time() < end && !(until && *until)) {
-        int n = uart_read_bytes(UART, buf, sizeof(buf), pdMS_TO_TICKS(10));
+        int n = read_uart(buf, sizeof(buf), pdMS_TO_TICKS(10));
         if (n > 0)
             wire_feed(&s_rx, buf, n, on_frame);
     }

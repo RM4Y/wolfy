@@ -3,7 +3,8 @@
 // and between the two ESP32 of the EspBar over a UART (wire.h).
 #pragma once
 
-#define EB_HELLO 1       // esp -> wolfy: JSON {"role": "esp", "token", "version", "id", "mac"}
+#define EB_HELLO 1       // esp -> wolfy: JSON {"role": "esp", "token", "version", "id", "mac",
+                         //   "boards", "build": BT_ID_LEN hex chars of its ELF SHA-256}
                          // wifi esp -> bt esp: who are you (and announce the Wii Remotes)
                          // bt esp -> wifi esp: BD address (6) + build id (BT_ID_LEN hex chars),
                          //   slot 1 when it just started, 0 when answering
@@ -16,11 +17,12 @@
 #define EB_STATS 8       // esp -> wolfy: text, report flow of the last 2 s (Wolfy logs it)
                          // bt esp -> wifi esp: its part of it, every 2 s (also tells it is alive)
 
-// wifi esp <-> bt esp only: update of the Bluetooth ESP32's program, through its own app (OTA)
-#define EB_OTA_BEGIN 9   // wifi -> bt: u32 size of the app
-#define EB_OTA_DATA 10   // wifi -> bt: u32 offset + up to EB_OTA_CHUNK bytes of the app
-#define EB_OTA_END 11    // wifi -> bt: check the app, boot it
-#define EB_OTA_ACK 12    // bt -> wifi: u8 status (0 = ok) + u32 next offset expected
+// update of a program (OTA), one chunk at a time: wolfy -> esp (its Wi-Fi ESP32's or single
+// ESP32's own), and wifi esp -> bt esp (the Bluetooth ESP32's, through its own app)
+#define EB_OTA_BEGIN 9   // u32 size of the app
+#define EB_OTA_DATA 10   // u32 offset + up to EB_OTA_CHUNK bytes of the app
+#define EB_OTA_END 11    // check the app, boot it
+#define EB_OTA_ACK 12    // back: u8 status (0 = ok) + u32 next offset expected
 
 // wifi esp <-> bt esp only: the setup page (Wi-Fi network, Wolfy's address) of the Wi-Fi ESP32
 #define EB_SETUP 13      // bt -> wifi: the button was held 10 s (open the page, or close it)

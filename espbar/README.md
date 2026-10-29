@@ -91,8 +91,22 @@ firmware/
 | 0x1000   | bootloader | |
 | 0x8000   | table des partitions | |
 | 0x9000   | nvs | clés d'appairage Bluetooth (sur l'ESP32 Bluetooth avec 2 ESP32), calibration Wi-Fi |
-| 0x10000  | factory | le programme |
+| 0xD000   | otadata | l'emplacement qui démarre (remis à zéro par l'injection) |
+| 0x10000  | ota_0 | le programme |
+| 0x200000 | ota_1 | le programme suivant, envoyé par Wolfy |
 | 0x3FF000 | espbar | Wi-Fi, adresse et jeton de Wolfy, écrits par Wolfy à l'injection (`EB01` + JSON) |
+
+## Mise à jour à distance
+
+À sa connexion, l'ESP32 (le seul, ou celui du Wi-Fi) donne à Wolfy l'empreinte de son programme
+(`build` du HELLO). Si Wolfy en porte un autre, l'onglet WolfyBar affiche « Nouvelle version
+disponible » et un bouton « Mettre à jour » (refusé tant qu'une Wiimote est allumée ; une Wiimote qui
+arrive pendant l'envoi l'interrompt). Wolfy l'envoie par le même WebSocket : OTA_BEGIN / DATA par 1 Ko /
+END, chacune acquittée par OTA_ACK, écrit dans l'autre emplacement, puis l'ESP32 laisse partir son
+dernier acquittement (~0,7 s) et redémarre dessus. Un programme qui plante avant de rejoindre Wolfy
+est annulé au redémarrage suivant. Avec 2 ESP32, l'ESP32 Wi-Fi met ensuite à jour l'ESP32 Bluetooth
+comme d'habitude. Les programmes d'avant (version 14 et moins, un seul emplacement) demandent une
+dernière injection USB.
 
 ## Protocole (messages WebSocket binaires / TCP, les deux sens)
 

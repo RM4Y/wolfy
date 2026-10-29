@@ -7,7 +7,8 @@ Frames, both ways: u16 length (little endian, of what follows) | u8 type | u8 sl
 Both ends open with HELLO (JSON): the ESP32 with the EspBar token and its id (base MAC: its
 name and device, espbar.boards()), Dolphin with its session id and the session hook token.
 Wolfy routes each EspBar's Wii Remotes to the Dolphin whose session belongs to its device, and
-asks the ESP32 to look for Wii Remotes only then.
+asks the ESP32 to look for Wii Remotes only then. An ESP32 running another program than the one
+Wolfy carries gets it over the same link when asked from the WolfyBar tab (start_update).
 """
 import asyncio
 import hmac
@@ -19,8 +20,9 @@ from fastapi import WebSocket, WebSocketDisconnect
 
 from . import espbar, settings, wolf_api
 
-HELLO, WIIMOTE_ON, WIIMOTE_OFF, REPORT, DROP, PING, SCAN, STATS = range(1, 9)
+HELLO, WIIMOTE_ON, WIIMOTE_OFF, REPORT, DROP, PING, SCAN, STATS, OTA_BEGIN, OTA_DATA, OTA_END, OTA_ACK = range(1, 13)
 SLOTS = 4
+OTA_CHUNK = 1024   # EB_OTA_CHUNK
 
 
 class Peer:
@@ -47,6 +49,10 @@ class Esp:
         self.idle_since: float | None = None       # no session for the Wii Remotes since (monotonic)
         self.last_session: str | None = None       # last session that had the Wii Remotes
         self.flow = ""                             # last report flow sent by the ESP32 (STATS, every 2 s)
+        self.update: asyncio.Task | None = None    # sending it Wolfy's program (_update)
+        self.update_sent = 0                       # bytes of it acknowledged
+        self.update_size = 0
+        self.acks: asyncio.Queue[bytes] = asyncio.Queue()
 
     @property
     def name(self) -> str:
@@ -70,6 +76,7 @@ class Esp:
 
 
 _esps: dict[str, Esp] = {}        # board key -> connected EspBar
+_update_errors: dict[str, str] = {}  # board key -> why its last update failed
 _dolphins: dict[str, Peer] = {}   # session id -> Dolphin of that Wii session
 IDLE_DROP = 30                     # then they are turned off (Dolphin quit without doing it)
                                    # (at once when that session has ended)
@@ -181,6 +188,67 @@ async def _route() -> None:
             esp.give(target)
 
 
+def _variant(esp: Esp) -> str:
+    return "dual" if esp.peer.info.get("boards") == "2" else "single"
+
+
+def _latest(esp: Esp) -> str | None:
+    """Build of the program Wolfy carries for this EspBar, None if not built with two app slots."""
+    return app[1] if (app := espbar.app(_variant(esp))) else None
+
+
+def start_update(key: str) -> None:
+    """Send the EspBar Wolfy's program, which it runs once written (it restarts): only builds
+    that say theirs ("build") have the two app slots this takes. ValueError: why not now."""
+    if not (esp := _esps.get(key)):
+        raise ValueError("WolfyBar non connectée")
+    if esp.update:
+        return
+    if not esp.peer.info.get("build"):
+        raise ValueError("Programme trop ancien pour une mise à jour à distance : injecte-la une fois en USB")
+    if not (app := espbar.app(_variant(esp))):
+        raise ValueError("Wolfy n'a pas de programme à lui envoyer")
+    if app[1] == esp.peer.info.get("build"):
+        raise ValueError("Elle a déjà la dernière version")
+    if esp.wiimotes:  # it restarts: their players would lose them
+        raise ValueError("Des Wiimotes sont connectées : éteins-les avant la mise à jour")
+    _update_errors.pop(key, None)
+    esp.update = asyncio.create_task(_update(esp, *app))
+
+
+async def _update(esp: Esp, image: bytes, build: str) -> None:
+    """One chunk at a time, each acknowledged (EB_OTA_*, as the Wi-Fi ESP32 does with the Bluetooth one)."""
+    async def step(type_: int, payload: bytes, timeout: float = 10) -> None:
+        esp.peer.send(type_, 0, payload)
+        ack = await asyncio.wait_for(esp.acks.get(), timeout)
+        if len(ack) < 5 or ack[0] != 0:
+            raise ConnectionError(f"refused at byte {esp.update_sent}")
+        esp.update_sent = int.from_bytes(ack[1:5], "little")
+
+    print(f"{esp.name}: updating its program {esp.peer.info.get('build')} -> {build} "
+          f"({len(image)} bytes)", flush=True)
+    esp.update_sent, esp.update_size = 0, len(image)
+    while not esp.acks.empty():
+        esp.acks.get_nowait()
+    try:
+        await step(OTA_BEGIN, len(image).to_bytes(4, "little"))
+        while esp.update_sent < len(image):
+            off = esp.update_sent
+            await step(OTA_DATA, off.to_bytes(4, "little") + image[off:off + OTA_CHUNK])
+        await step(OTA_END, b"", 30)  # checks the image
+        print(f"{esp.name}: program updated, the ESP32 restarts", flush=True)
+    except (asyncio.TimeoutError, ConnectionError) as exc:
+        print(f"{esp.name}: update failed ({exc or 'no answer'})", flush=True)
+        _update_errors[esp.key] = f"refusée à l'octet {esp.update_sent}" if isinstance(exc, ConnectionError) \
+            else f"sans réponse à {esp.update_sent * 100 // len(image)} %"
+    except asyncio.CancelledError:
+        if esp.wiimotes:
+            _update_errors[esp.key] = "interrompue : une Wiimote s'est connectée"
+        raise
+    finally:
+        esp.update = None
+
+
 async def _serve_esp(peer: Peer) -> None:
     key = str(peer.info.get("id") or peer.info.get("mac") or "").lower()  # firmware < 10: no id
     if not key:
@@ -203,7 +271,12 @@ async def _serve_esp(peer: Peer) -> None:
                         esp.traffic[slot][0] += 1
             elif type_ == STATS:  # report flow of the ESP32, shown in Wolfy > Wii > EspBar
                 esp.flow = payload.decode(errors="replace")
+            elif type_ == OTA_ACK:
+                esp.acks.put_nowait(payload)
             elif type_ == WIIMOTE_ON and slot < SLOTS:
+                if esp.update:  # someone wants to play: no restart now (tried again later)
+                    esp.update.cancel()
+                    print(f"{esp.name}: update put off, a Wii Remote came", flush=True)
                 esp.wiimotes[slot] = _bdaddr(payload)
                 esp.traffic[slot] = [0, 0]
                 print(f"{esp.name}: Wii Remote {esp.wiimotes[slot]} on slot {slot + 1} -> "
@@ -217,6 +290,8 @@ async def _serve_esp(peer: Peer) -> None:
                 if target:
                     target.send(WIIMOTE_OFF, slot)
     finally:
+        if esp.update:
+            esp.update.cancel()
         if _esps.get(key) is esp:
             del _esps[key]
             if target := esp.target():
@@ -330,7 +405,11 @@ async def start() -> None:
 def status() -> dict[str, dict]:
     """Connected EspBars, by board key."""
     return {key: {
-        "esp": {k: esp.peer.info.get(k) for k in ("mac", "version", "ip", "boards")} | {"since": esp.peer.since},
+        "esp": {k: esp.peer.info.get(k) for k in ("mac", "version", "ip", "boards", "build")} | {"since": esp.peer.since},
+        # % of Wolfy's program sent to it, while updating it
+        "update": esp.update_sent * 100 // esp.update_size if esp.update and esp.update_size else None,
+        "update_error": _update_errors.get(key),
+        "latest": _latest(esp),  # build of Wolfy's program for it: an update when it runs another
         "wiimotes": [{"slot": s + 1, "addr": a} for s, a in sorted(esp.wiimotes.items())],
         "session": esp.active,
         "flow": esp.flow,

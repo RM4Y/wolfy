@@ -47,6 +47,14 @@ async function link(b, clientId) {
   if (ok) load()
 }
 
+// Wolfy's program, sent over its link (it restarts once written): only when no Wii Remote is on
+async function update(b) {
+  if (!confirm(`Mettre à jour ${boardLabel(b)} ? Elle redémarre une fois le programme écrit (~1 min).`)) return
+  if (await act('Mise à jour', () => api.post(`/espbar/boards/${b.key}/update`))) load()
+}
+
+const outdated = s => s.esp.build && s.latest && s.esp.build !== s.latest
+
 async function forget(b) {
   if (!confirm(`Oublier ${boardLabel(b)} ? Elle réapparaîtra à sa prochaine connexion.`)) return
   if (await act('Suppression', () => api.del(`/espbar/boards/${b.key}`), 'WolfyBar oubliée')) load()
@@ -108,7 +116,12 @@ async function flash() {
           eraseAll: fw.merged && eraseAll.value, compress: true,
           reportProgress: (_, written, total) => (flashing.value = written / total),
         })
-        await loader.after('hard_reset')
+        // esptool-js 0.7's 'hard_reset' only releases RTS, never pulls EN low: the ESP32 stayed
+        // in its loader until unplugged. EN low 100 ms, GPIO0 high (DTR off): it boots the program.
+        await transport.setDTR(false)
+        await transport.setRTS(true)
+        await new Promise(r => setTimeout(r, 100))
+        await transport.setRTS(false)
         break
       } catch (e) {
         if (e.final || baudrate === 115200) throw e
@@ -182,6 +195,22 @@ onUnmounted(() => clearTimeout(timer))
           <div class="small" style="margin-top:6px">
             <span class="dot ok lead"></span>Connectée depuis {{ b.status.esp.since }} — {{ b.status.esp.ip }}
             <span class="muted">· v{{ b.status.esp.version }}{{ b.status.esp.boards === '2' ? ' · 2 ESP32' : '' }}</span>
+          </div>
+          <div v-if="b.status.update !== null && b.status.update !== undefined" class="small" style="margin-top:4px">
+            <Icon name="refresh" class="sm lead" />Mise à jour du programme : {{ b.status.update }} % (elle redémarre ensuite)
+          </div>
+          <div v-else-if="!b.status.esp.build" class="small muted" style="margin-top:4px">
+            Programme ancien : injecte-la une fois en USB, elle se mettra ensuite à jour à distance
+          </div>
+          <div v-else-if="outdated(b.status)" class="row small" style="margin-top:4px;gap:8px;align-items:center">
+            <span><Icon name="refresh" class="sm lead" />Nouvelle version disponible
+              <span class="muted">({{ b.status.esp.build.slice(0, 8) }} → {{ b.status.latest.slice(0, 8) }})</span></span>
+            <button type="button" class="sm" :disabled="b.status.wiimotes.length > 0"
+                    :title="b.status.wiimotes.length ? 'Éteins les Wiimotes avant la mise à jour' : ''"
+                    @click="update(b)">Mettre à jour</button>
+          </div>
+          <div v-if="b.status.update_error && b.status.update === null" class="small" style="margin-top:4px;color:var(--danger)">
+            Mise à jour ratée : {{ b.status.update_error }}
           </div>
           <div class="small" style="margin-top:4px">
             <template v-if="b.status.session">

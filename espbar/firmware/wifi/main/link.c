@@ -6,7 +6,9 @@
 #include "driver/gpio.h"
 #include "esp_event.h"
 #include "esp_log.h"
+#include "esp_app_desc.h"
 #include "esp_mac.h"
+#include "esp_ota_ops.h"
 #include "esp_netif.h"
 #include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
@@ -24,7 +26,7 @@
 
 #include "protocol.h"
 
-#define VERSION "13"
+#define VERSION "16"
 #define LED GPIO_NUM_2  // blue LED of the DevKit: blinks = looking for Wolfy, on = linked
 // The radio goes quiet now and then (~1 s every 30 s seen at home): each report is its own TCP
 // segment(s), lwIP's send queue fills within that time and a send waits for room. Waiting 1 s
@@ -131,6 +133,10 @@ static bool send_hello(esp_transport_handle_t ws)
     cJSON_AddStringToObject(hello, "id", id_str);
     cJSON_AddStringToObject(hello, "mac", mac_str);
     cJSON_AddStringToObject(hello, "boards", radio_boards);
+    // build: Wolfy sends its own program when it carries another one (update())
+    char build[BT_ID_LEN + 1];
+    esp_app_get_elf_sha256(build, sizeof(build));
+    cJSON_AddStringToObject(hello, "build", build);
     char *text = cJSON_PrintUnformatted(hello);
     cJSON_Delete(hello);
     uint8_t buf[300];
@@ -140,8 +146,82 @@ static bool send_hello(esp_transport_handle_t ws)
     return ok;
 }
 
-// Bytes from Wolfy (WebSocket messages, frames may span them): complete frames go to Bluetooth.
-static uint8_t s_rx[EB_MAX_PAYLOAD + 4];
+// ---------------------------------------------------------------- update from Wolfy (OTA)
+
+// Our new program, in order, into the other app slot (erased as it is written: no long silence
+// on the link), then checked and booted. The bootloader goes back to this one if the new one
+// crashes before linking to Wolfy (link_task marks it valid then).
+static esp_ota_handle_t s_ota;
+static const esp_partition_t *s_ota_part;
+static uint32_t s_ota_size, s_ota_next;
+static bool s_reboot;  // the update is in: restart once its ack is sent
+
+static uint32_t u32(const uint8_t *p) { return p[0] | p[1] << 8 | p[2] << 16 | (uint32_t)p[3] << 24; }
+
+static void ota_ack(uint8_t status)
+{
+    uint8_t ack[5] = {status, s_ota_next, s_ota_next >> 8, s_ota_next >> 16, s_ota_next >> 24};
+    link_send(EB_OTA_ACK, 0, ack, sizeof(ack));
+}
+
+static void ota_abort(void)
+{
+    if (s_ota_part)
+        esp_ota_abort(s_ota);
+    s_ota_part = NULL;
+}
+
+static void update(uint8_t type, const uint8_t *data, uint16_t len)
+{
+    switch (type) {
+    case EB_OTA_BEGIN:
+        ota_abort();
+        s_ota_next = 0;
+        s_ota_size = len >= 4 ? u32(data) : 0;
+        s_ota_part = esp_ota_get_next_update_partition(NULL);
+        if (!s_ota_part || !s_ota_size || s_ota_size > s_ota_part->size ||
+            esp_ota_begin(s_ota_part, OTA_WITH_SEQUENTIAL_WRITES, &s_ota) != ESP_OK) {
+            s_ota_part = NULL;
+            ota_ack(1);
+            return;
+        }
+        ESP_LOGI(TAG, "update from Wolfy: %lu bytes", (unsigned long)s_ota_size);
+        ota_ack(0);
+        break;
+    case EB_OTA_DATA:
+        if (!s_ota_part || len < 4) {
+            ota_ack(1);
+            return;
+        }
+        if (u32(data) == s_ota_next && len > 4) {  // a chunk sent again is only acknowledged
+            if (s_ota_next + len - 4 > s_ota_size || esp_ota_write(s_ota, data + 4, len - 4) != ESP_OK) {
+                ota_abort();
+                ota_ack(1);
+                return;
+            }
+            s_ota_next += len - 4;
+        }
+        ota_ack(0);
+        break;
+    case EB_OTA_END: {
+        bool ok = s_ota_part && s_ota_next == s_ota_size && esp_ota_end(s_ota) == ESP_OK &&
+                  esp_ota_set_boot_partition(s_ota_part) == ESP_OK;
+        if (!ok)
+            ota_abort();
+        s_ota_part = NULL;
+        ESP_LOGI(TAG, "update %s", ok ? "written, restarting" : "failed");
+        ota_ack(ok ? 0 : 1);
+        s_reboot = ok;
+        break;
+    }
+    }
+}
+
+// ---------------------------------------------------------------- frames from Wolfy
+
+// Bytes from Wolfy (WebSocket messages, frames may span them): complete frames go to Bluetooth,
+// but an update of our program.
+static uint8_t s_rx[4 + 4 + EB_OTA_CHUNK];
 static size_t s_rx_len;
 
 static void feed(const uint8_t *data, size_t len)
@@ -158,7 +238,9 @@ static void feed(const uint8_t *data, size_t len)
         data += n;
         len -= n;
         if (s_rx_len >= 4 && s_rx_len == 2 + (size_t)(s_rx[0] | s_rx[1] << 8)) {
-            if (s_rx[2] != EB_PING)
+            if (s_rx[2] >= EB_OTA_BEGIN && s_rx[2] <= EB_OTA_END)
+                update(s_rx[2], s_rx + 4, s_rx_len - 4);
+            else if (s_rx[2] != EB_PING)
                 radio_send(s_rx[2], s_rx[3], s_rx + 4, s_rx_len - 4);
             s_rx_len = 0;
         }
@@ -201,6 +283,7 @@ static void link_task(void *arg)
         if (fd >= 0)
             setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
         ESP_LOGI(TAG, "linked to Wolfy %s (free heap %u)", s_cfg.url, (unsigned)esp_get_free_heap_size());
+        esp_ota_mark_app_valid_cancel_rollback();  // an update that got this far is kept
         gpio_set_level(LED, 1);
         s_rx_len = 0;
         xMessageBufferReset(s_out);
@@ -222,6 +305,8 @@ static void link_task(void *arg)
                 for (size_t i = 0; i < used; i += 2 + (out[i] | out[i + 1] << 8))
                     s_st.frames++;
             }
+            if (ok && s_reboot)  // its ack is written
+                break;
             TickType_t now = xTaskGetTickCount();
             if (ok && now - last_ping >= pdMS_TO_TICKS(2000)) {
                 last_ping = now;
@@ -258,7 +343,16 @@ static void link_task(void *arg)
             if (xTaskGetTickCount() - last_rx > pdMS_TO_TICKS(6000))  // Wolfy pings every 2 s
                 break;
         }
+        if (s_reboot) {
+            // the ack is only in lwIP's queue: restarting at once dropped it (and the close),
+            // and Wolfy took the update for failed. Let them out, then boot the new program.
+            vTaskDelay(pdMS_TO_TICKS(500));
+            esp_transport_close(ws);
+            vTaskDelay(pdMS_TO_TICKS(200));
+            esp_restart();
+        }
         ESP_LOGW(TAG, "link to Wolfy lost");
+        ota_abort();
         s_linked = false;
         esp_transport_close(ws);
         uint8_t off = 0;
