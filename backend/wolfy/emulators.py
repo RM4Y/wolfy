@@ -50,8 +50,9 @@ EMULATORS = [
             f"{GAMES}/ROMS/switch2:{GAMES}/ROMS/switch2:ro",
         ],
         "env": ["RUN_SWAY=1", *GOW_ENV],
-        # settings and saves mounted read-write: one session at a time
-        "multi_session": False,
+        # several sessions allowed (user's choice), although they share config/switch read-write:
+        # the pads and settings one writes to qt-config.ini can override the other's
+        "multi_session": True,
     },
     {
         "id": "retroarch",
