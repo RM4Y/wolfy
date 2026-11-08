@@ -2,6 +2,7 @@
 
 #include <string.h>
 
+#include <stdint.h>
 #include <stdio.h>
 
 #include "btstack.h"
@@ -19,6 +20,18 @@ static const char *TAG = "wiimotes";
 #define COD_WIIMOTE_TR 0x000508  // RVL-CNT-01-TR (MotionPlus inside)
 #define INQUIRY_LENGTH 3         // x 1.28 s
 #define OUT_QUEUE 16
+// Speaker data (0x18): the Wii Remote plays it as it comes, and it comes in bursts (Dolphin sends
+// a video frame's worth at once, then Wi-Fi and TCP add theirs): it crackled. Held here ~60 ms,
+// then given at the pace it arrives at on average.
+#define SPK_QUEUE 24
+#define SPK_LEN 23                // a2 18 + length/rumble + 20 bytes of ADPCM
+#define SPK_PREBUF_US 60000
+#define SPK_SILENCE_US 100000     // a longer gap: the next report starts a new sound
+#define SPK_STEP_US 13333         // first guess: 75 reports/s (3000 Hz, 4-bit ADPCM)
+// Sniff mode, as a Wii sets it: the Wii Remote then runs at 200 Hz. At 100 Hz (active mode) a
+// Wii Remote before the -TR misses speaker data and its decoder loses the game's encoder: the
+// crackle (bugs.dolphin-emu.org/issues/5977). 8 slots of 0.625 ms = 5 ms, attempt 1, timeout 0.
+#define SNIFF_INTERVAL 8
 // Search: during the linked device's Wii session while no Wii Remote is connected, or for 30 s
 // after the button (D4 to 3V3) is held 3 s and released (to add one). Not otherwise: an inquiry
 // takes the radio from the connected Wii Remotes (their reports drop from ~37 to ~25/s).
@@ -49,6 +62,21 @@ typedef struct {
     uint8_t out[OUT_QUEUE][EB_MAX_PAYLOAD];  // output reports waiting for the radio
     uint8_t out_len[OUT_QUEUE];
     uint8_t out_head, out_count;
+    uint8_t spk[SPK_QUEUE][SPK_LEN];  // speaker reports, given to out[] at a steady pace
+    uint8_t spk_len[SPK_QUEUE];
+    uint8_t spk_head, spk_count;
+    bool spk_playing;
+    int64_t spk_due;    // us: next one goes out then (playing)
+    int64_t spk_since;  // us: the oldest waiting one came then (not playing yet)
+    int64_t spk_last;   // us: last one came then
+    int32_t spk_step;   // us between two of them, on average
+    uint8_t rumble;     // rumble bit of the game's last output report
+    bool master;        // we are master of its link (we poll it: steady speaker data)
+    bool sniff;         // its link is in sniff mode (SNIFF_INTERVAL)
+    int64_t spk_sent;   // us: its last speaker report went on the radio then
+    int64_t spk_gap;    // us: longest gap between two of them within a sound (stats)
+    int64_t out_since;  // us: the first waiting output report was queued then
+    int64_t out_wait;   // us: longest wait of one for the radio (stats)
 } wiimote_t;
 
 static wiimote_t s_wm[EB_SLOTS];
@@ -63,6 +91,7 @@ static bool s_connecting;  // an outgoing connection is being set up (one at a t
 static bool s_have_candidate;
 static bd_addr_t s_candidate;
 static btstack_timer_source_t s_retry_timer;
+static btstack_timer_source_t s_spk_timer;
 static btstack_packet_callback_registration_t s_hci_cb;
 
 // reports from the Wii Remotes since the last wiimotes_stats(), longest wait between two (us)
@@ -70,10 +99,11 @@ static uint32_t s_bt_reports;
 // shown in the stats (no log here: UART0 is the link to the Wi-Fi ESP32)
 static const char *s_last_link = "-";  // how the last Wii Remote came (search or by itself)
 static const char *s_pairing = "-";    // the last pairing (ok / ko)
-static uint32_t s_calls;               // incoming Bluetooth connections (a paired Wii Remote waking up)
-static int s_call_status = -1;         // HCI status of the last one (0: connected)
-static bool s_call_pending;
 static int64_t s_bt_last, s_bt_gap;
+// speaker data, in the stats while it comes (its crackle): received, lost here (and per Wii
+// Remote: longest gap on the radio, longest wait of an output report for it)
+static uint32_t s_spk_in;
+static volatile uint32_t s_spk_lost;
 
 // ---------------------------------------------------------------- frames from Wolfy
 
@@ -101,8 +131,10 @@ void wiimotes_on_frame(uint8_t type, uint8_t slot, const uint8_t *data, uint16_t
     inbound_t f = {.type = type, .slot = slot, .len = len > EB_MAX_PAYLOAD ? EB_MAX_PAYLOAD : len};
     if (f.len)
         memcpy(f.data, data, f.len);
-    if (xQueueSend(s_in, &f, 0) != pdTRUE)
+    if (xQueueSend(s_in, &f, 0) != pdTRUE) {
+        s_spk_lost += type == EB_REPORT && f.len > 1 && f.data[1] == 0x18;
         return;  // full: an output report is lost, the game sends more
+    }
     if (!s_in_scheduled) {
         s_in_scheduled = true;
         btstack_run_loop_execute_on_main_thread(&s_in_cb);
@@ -275,6 +307,15 @@ static void channel_opened(uint8_t *packet)
     }
     w->intr_cid = cid;
     w->ready = true;
+    // a Wii Remote that called us is master of the link: we could only send when it polls us
+    // (two of them: two piconets to share our time), and its speaker data came in bursts.
+    // A Wii takes the master role, as we ask at accept (wiimotes_init): asked again if it didn't take.
+    // Then sniff mode (once the role is settled: a role switch needs active mode).
+    w->master = gap_get_role(w->handle) == HCI_ROLE_MASTER;
+    if (w->master)
+        gap_sniff_mode_enter(w->handle, SNIFF_INTERVAL, SNIFF_INTERVAL, 1, 0);
+    else
+        gap_request_role(w->addr, HCI_ROLE_MASTER);
     ESP_LOGI(TAG, "Wii Remote %s ready (slot %d)", bd_addr_to_str(w->addr), slot_of(w) + 1);
     announce(w);
     s_last_link = incoming ? "seule" : "rech";
@@ -313,11 +354,131 @@ static void send_next(wiimote_t *w)
         return;
     uint8_t i = w->out_head;
     if (l2cap_send(w->intr_cid, w->out[i], w->out_len[i]) == 0) {
+        int64_t now = esp_timer_get_time();
+        if (now - w->out_since > w->out_wait)
+            w->out_wait = now - w->out_since;
+        w->out_since = now;  // the next one waits from now (or from its queuing, later)
+        if (w->out[i][1] == 0x18) {
+            if (now - w->spk_sent < SPK_SILENCE_US && now - w->spk_sent > w->spk_gap)
+                w->spk_gap = now - w->spk_sent;
+            w->spk_sent = now;
+        }
         w->out_head = (i + 1) % OUT_QUEUE;
         w->out_count--;
     }
     if (w->out_count)
         l2cap_request_can_send_now_event(w->intr_cid);
+}
+
+static void out_push(wiimote_t *w, const uint8_t *data, uint8_t len)
+{
+    if (w->out_count == OUT_QUEUE) {  // radio too slow: drop the oldest report
+        s_spk_lost += w->out[w->out_head][1] == 0x18;
+        w->out_head = (w->out_head + 1) % OUT_QUEUE;
+        w->out_count--;
+    }
+    uint8_t i = (w->out_head + w->out_count) % OUT_QUEUE;
+    memcpy(w->out[i], data, len);
+    w->out_len[i] = len;
+    if (++w->out_count == 1) {
+        w->out_since = esp_timer_get_time();
+        l2cap_request_can_send_now_event(w->intr_cid);
+    }
+}
+
+// ---------------------------------------------------------------- speaker pacing
+
+static void spk_release(wiimote_t *w)
+{
+    uint8_t *r = w->spk[w->spk_head];
+    r[2] = (r[2] & ~1) | w->rumble;  // its rumble bit is ~60 ms old: the game's current one
+    out_push(w, r, w->spk_len[w->spk_head]);
+    w->spk_head = (w->spk_head + 1) % SPK_QUEUE;
+    w->spk_count--;
+}
+
+// Before a speaker enable / mute: the sound held here goes first, in order (what fits).
+static void spk_flush(wiimote_t *w)
+{
+    while (w->spk_count && w->out_count < OUT_QUEUE)
+        spk_release(w);
+    w->spk_count = 0;
+    w->spk_playing = false;
+}
+
+static void spk_schedule(void);
+
+static void spk_tick(btstack_timer_source_t *ts)
+{
+    int64_t now = esp_timer_get_time();
+    for (int i = 0; i < EB_SLOTS; i++) {
+        wiimote_t *w = &s_wm[i];
+        if (!w->used || !w->spk_count)
+            continue;
+        if (!w->spk_playing && (w->spk_count * w->spk_step >= SPK_PREBUF_US || now - w->spk_since >= SPK_PREBUF_US)) {
+            w->spk_playing = true;
+            w->spk_due = now;
+        }
+        if (!w->spk_playing)
+            continue;
+        if (w->spk_due < now - SPK_PREBUF_US)  // the radio held us up: no burst to catch up
+            w->spk_due = now;
+        while (w->spk_count && w->spk_due <= now) {
+            // more than twice the margin held (it came faster than it goes): a little faster
+            int32_t step = w->spk_count * w->spk_step > 2 * SPK_PREBUF_US ? w->spk_step - w->spk_step / 8 : w->spk_step;
+            spk_release(w);
+            w->spk_due += step;
+        }
+        if (!w->spk_count)
+            w->spk_playing = false;  // ran dry (end of the sound, or a hole): wait for a margin again
+    }
+    spk_schedule();
+}
+
+static void spk_schedule(void)
+{
+    int64_t wake = INT64_MAX;
+    for (int i = 0; i < EB_SLOTS; i++) {
+        wiimote_t *w = &s_wm[i];
+        if (!w->used || !w->spk_count)
+            continue;
+        int64_t t = w->spk_playing ? w->spk_due : w->spk_since + SPK_PREBUF_US;
+        if (!w->spk_playing && w->spk_count * w->spk_step >= SPK_PREBUF_US)
+            t = 0;
+        if (t < wake)
+            wake = t;
+    }
+    btstack_run_loop_remove_timer(&s_spk_timer);
+    if (wake == INT64_MAX)
+        return;
+    int64_t us = wake - esp_timer_get_time();
+    btstack_run_loop_set_timer_handler(&s_spk_timer, spk_tick);
+    btstack_run_loop_set_timer(&s_spk_timer, us > 1000 ? (uint32_t)((us + 999) / 1000) : 1);
+    btstack_run_loop_add_timer(&s_spk_timer);
+}
+
+static void spk_push(wiimote_t *w, const uint8_t *data, uint8_t len)
+{
+    int64_t now = esp_timer_get_time();
+    int64_t dt = now - w->spk_last;
+    if (!w->spk_step)
+        w->spk_step = SPK_STEP_US;
+    if (w->spk_last && dt < SPK_SILENCE_US)
+        w->spk_step += (int32_t)(dt - w->spk_step) / 16;
+    w->spk_last = now;
+    s_spk_in++;
+    if (w->spk_count == SPK_QUEUE) {  // can't happen at the pace above: drop the oldest
+        s_spk_lost++;
+        w->spk_head = (w->spk_head + 1) % SPK_QUEUE;
+        w->spk_count--;
+    }
+    if (!w->spk_count && !w->spk_playing)
+        w->spk_since = now;
+    uint8_t i = (w->spk_head + w->spk_count) % SPK_QUEUE;
+    memcpy(w->spk[i], data, len);
+    w->spk_len[i] = len;
+    w->spk_count++;
+    spk_schedule();
 }
 
 static void l2cap_handler(uint8_t type, uint16_t channel, uint8_t *packet, uint16_t size)
@@ -371,16 +532,30 @@ static void hci_handler(uint8_t type, uint16_t channel, uint8_t *packet, uint16_
     if (type != HCI_EVENT_PACKET)
         return;
     switch (hci_event_packet_get_type(packet)) {
-    case HCI_EVENT_CONNECTION_REQUEST:
-        s_calls++;
-        s_call_pending = true;
+    case HCI_EVENT_MODE_CHANGE: {
+        hci_con_handle_t handle = hci_event_mode_change_get_handle(packet);
+        for (int i = 0; i < EB_SLOTS; i++)
+            if (s_wm[i].used && s_wm[i].handle == handle) {
+                s_wm[i].sniff = hci_event_mode_change_get_mode(packet) == 2;  // 0 active, 1 hold, 2 sniff
+                ESP_LOGI(TAG, "Wii Remote %s: mode %u, interval %u (status 0x%02x)", bd_addr_to_str(s_wm[i].addr),
+                         hci_event_mode_change_get_mode(packet), hci_event_mode_change_get_interval(packet),
+                         hci_event_mode_change_get_status(packet));
+            }
         break;
-    case HCI_EVENT_CONNECTION_COMPLETE:
-        if (s_call_pending) {
-            s_call_pending = false;
-            s_call_status = hci_event_connection_complete_get_status(packet);
-        }
+    }
+    case HCI_EVENT_ROLE_CHANGE: {
+        bd_addr_t addr;
+        hci_event_role_change_get_bd_addr(packet, addr);
+        wiimote_t *w = by_addr(addr);
+        if (w && hci_event_role_change_get_status(packet) == 0)
+            w->master = hci_event_role_change_get_role(packet) == HCI_ROLE_MASTER;
+        if (w && w->ready)  // asked in channel_opened: sniff mode now, master or not
+            gap_sniff_mode_enter(w->handle, SNIFF_INTERVAL, SNIFF_INTERVAL, 1, 0);
+        ESP_LOGI(TAG, "Wii Remote %s: we are %s (status 0x%02x)", bd_addr_to_str(addr),
+                 hci_event_role_change_get_role(packet) == HCI_ROLE_MASTER ? "master" : "slave",
+                 hci_event_role_change_get_status(packet));
         break;
+    }
     case BTSTACK_EVENT_STATE:
         if (btstack_event_state_get_state(packet) == HCI_STATE_WORKING) {
             bd_addr_t local;
@@ -453,15 +628,16 @@ static void handle_frame(const inbound_t *f)
     case EB_REPORT:
         if (!w || !w->ready || !f->len)
             break;
-        if (w->out_count == OUT_QUEUE) {  // radio too slow: drop the oldest report
-            w->out_head = (w->out_head + 1) % OUT_QUEUE;
-            w->out_count--;
+        if (f->len >= 3 && f->data[0] == 0xa2) {  // output report: a2 + id + rumble bit, ...
+            w->rumble = f->data[2] & 1;
+            if (f->data[1] == 0x18 && f->len <= SPK_LEN) {
+                spk_push(w, f->data, f->len);
+                break;
+            }
+            if (f->data[1] == 0x14 || f->data[1] == 0x19)  // speaker on / off, mute
+                spk_flush(w);
         }
-        uint8_t i = (w->out_head + w->out_count) % OUT_QUEUE;
-        memcpy(w->out[i], f->data, f->len);
-        w->out_len[i] = f->len;
-        if (++w->out_count == 1)
-            l2cap_request_can_send_now_event(w->intr_cid);
+        out_push(w, f->data, f->len);
         break;
     case EB_DROP:
         if (w && w->handle != HCI_CON_HANDLE_INVALID)
@@ -479,12 +655,33 @@ static void handle_frame(const inbound_t *f)
 void wiimotes_stats(char *out, size_t size, uint32_t ms)
 {
     // EB_MAX_PAYLOAD: 64 bytes
-    char call[12] = "-";
-    if (s_call_status >= 0)
-        snprintf(call, sizeof(call), "%02x", (unsigned)s_call_status & 0xff);
-    snprintf(out, size, "bt %lu/s, trou %lldms, wii %s, venue %s, app %s, appel %lu/%s",
-             (unsigned long)(s_bt_reports * 1000 / (ms ? ms : 1)), s_bt_gap / 1000,
-             s_scan ? "oui" : "non", s_last_link, s_pairing, (unsigned long)s_calls, call);
+    int ready = 0, master = 0, sniff = 0;
+    for (int i = 0; i < EB_SLOTS; i++)
+        if (s_wm[i].ready) {
+            ready++;
+            master += s_wm[i].master;
+            sniff += s_wm[i].sniff;
+        }
+    unsigned long rate = s_bt_reports * 1000 / (ms ? ms : 1);
+    if (s_spk_in) {  // sound: its figures in place of the pairing ones, "max" and "att" per Wii Remote
+        char gaps[24] = "", peaks[24] = "";
+        for (int i = 0; i < EB_SLOTS; i++)
+            if (s_wm[i].ready) {
+                snprintf(gaps + strlen(gaps), sizeof(gaps) - strlen(gaps), "%s%d", *gaps ? "/" : "",
+                         (int)(s_wm[i].spk_gap / 1000));
+                snprintf(peaks + strlen(peaks), sizeof(peaks) - strlen(peaks), "%s%d", *peaks ? "/" : "",
+                         (int)(s_wm[i].out_wait / 1000));
+            }
+        snprintf(out, size, "bt %lu/s, maître %d/%d, sniff %d, perte %lu, max %sms att %sms", rate, master,
+                 ready, sniff, (unsigned long)s_spk_lost, gaps, peaks);
+    } else
+        snprintf(out, size, "bt %lu/s, trou %lldms, wii %s, venue %s, app %s, maître %d/%d", rate,
+                 s_bt_gap / 1000, s_scan ? "oui" : "non", s_last_link, s_pairing, master, ready);
+    s_spk_in = s_spk_lost = 0;
+    for (int i = 0; i < EB_SLOTS; i++) {
+        s_wm[i].spk_gap = 0;
+        s_wm[i].out_wait = 0;
+    }
     s_bt_reports = 0;
     s_bt_gap = 0;
 }
@@ -539,7 +736,8 @@ void wiimotes_init(void)
     gap_ssp_set_enable(0);            // they only know legacy PIN pairing
     gap_set_local_name("WolfyBar");
     gap_set_class_of_device(0x000104);  // shown as a computer
-    gap_set_default_link_policy_settings(LM_LINK_POLICY_ENABLE_ROLE_SWITCH);
+    gap_set_default_link_policy_settings(LM_LINK_POLICY_ENABLE_ROLE_SWITCH | LM_LINK_POLICY_ENABLE_SNIFF_MODE);
+    hci_set_master_slave_policy(0);     // a Wii Remote calling us: we become master (channel_opened)
     gap_connectable_control(1);         // Wii Remotes paired with SYNC connect to us
     // a Wii Remote whose batteries are pulled is gone after 2 s, not 20 (when we are master:
     // found by the search), and can come back at once

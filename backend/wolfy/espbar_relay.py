@@ -53,6 +53,27 @@ class Esp:
         self.update_sent = 0                       # bytes of it acknowledged
         self.update_size = 0
         self.acks: asyncio.Queue[bytes] = asyncio.Queue()
+        # speaker data from Dolphin (0x18), measured to find its crackle: slot -> [window start,
+        # reports, last, s of sound (gaps < 100 ms), longest gap within a sound, gaps > 20 ms]
+        # (monotonic s), logged every 5 s
+        self.spk: dict[int, list] = {}
+
+    def speaker(self, slot: int, payload: bytes) -> None:
+        now = time.monotonic()
+        m = self.spk.setdefault(slot, [now, 0, 0.0, 0.0, 0.0, 0])
+        gap = now - m[2]
+        if m[2] and gap < 0.1:  # longer: silence between two sounds
+            m[3] += gap
+            m[4] = max(m[4], gap)
+            m[5] += gap > 0.02
+        m[1] += 1
+        m[2] = now
+        if now - m[0] >= 5:
+            if m[3]:
+                print(f"{self.name}: speaker slot {slot + 1}: {m[1]} reports, {m[1] / m[3]:.1f}/s while "
+                      f"sounding ({m[3]:.1f} s), longest gap {m[4] * 1000:.0f} ms, {m[5]} gaps > 20 ms; "
+                      f"ESP32: {self.flow}", flush=True)
+            self.spk[slot] = [now, 0, now, 0.0, 0.0, 0]
 
     @property
     def name(self) -> str:
@@ -315,6 +336,8 @@ async def _serve_dolphin(peer: Peer) -> None:
                 esp.peer.send(type_, slot, payload)
                 if type_ == REPORT and slot in esp.traffic:
                     esp.traffic[slot][1] += 1
+                if type_ == REPORT and len(payload) > 1 and payload[1] == 0x18:
+                    esp.speaker(slot, payload)
             if type_ == DROP:
                 print(f"WolfyBar: Dolphin of session {session} turns off the Wii Remote of slot {slot + 1}"
                       f"{f' of {esp.name}' if esp else ' (ignored: no WolfyBar for it)'}", flush=True)

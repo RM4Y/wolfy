@@ -26,7 +26,7 @@
 
 #include "protocol.h"
 
-#define VERSION "16"
+#define VERSION "23"
 #define LED GPIO_NUM_2  // blue LED of the DevKit: blinks = looking for Wolfy, on = linked
 // The radio goes quiet now and then (~1 s every 30 s seen at home): each report is its own TCP
 // segment(s), lwIP's send queue fills within that time and a send waits for room. Waiting 1 s
