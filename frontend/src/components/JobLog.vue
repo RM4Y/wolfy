@@ -9,6 +9,9 @@ const job = ref(null)
 const box = ref(null)
 let timer
 
+// "≈ 7 min" / "45 s"
+const dur = s => s == null ? '' : s >= 90 ? `${Math.round(s / 60)} min` : `${Math.max(1, Math.round(s))} s`
+
 async function poll() {
   try {
     job.value = await api.get(`/jobs/${props.jobId}`)
@@ -32,6 +35,18 @@ onUnmounted(() => clearTimeout(timer))
           {{ { running: 'en cours…', success: 'terminé', error: 'échec' }[job.status] }}
         </span>
       </div>
+      <div v-if="job?.progress" class="progress-box">
+        <div class="row between small">
+          <span><b>{{ job.progress.phase }}</b><span v-if="job.progress.step" class="muted"> · étape {{ job.progress.step }}</span></span>
+          <span>{{ Math.floor(job.progress.percent) }} %</span>
+        </div>
+        <progress :value="job.progress.percent" max="100"></progress>
+        <div class="row between small muted">
+          <span>écoulé {{ dur(job.progress.elapsed) }}</span>
+          <span v-if="job.progress.eta != null">reste ≈ {{ dur(job.progress.eta) }}
+            (fin vers {{ new Date(Date.now() + job.progress.eta * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) }})</span>
+        </div>
+      </div>
       <div ref="box" class="logbox">{{ job?.log?.join('\n') || '…' }}</div>
       <div class="row end" style="margin-top:12px">
         <button @click="emit('close')">{{ job?.status === 'running' ? 'Continuer en arrière-plan' : 'Fermer' }}</button>
@@ -39,3 +54,8 @@ onUnmounted(() => clearTimeout(timer))
     </div>
   </div>
 </template>
+
+<style scoped>
+.progress-box { margin-bottom: 12px; display: grid; gap: 6px; }
+.progress-box progress { width: 100%; accent-color: var(--brand); }
+</style>

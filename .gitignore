@@ -9,6 +9,10 @@ __pycache__/
 images/eden/AppDir/
 # patched Eden binary + libraries, built by images/eden/build/build.sh
 images/eden/patched/
+# patched Eglantine binary, built by images/switch2/build/build.sh
+images/switch2/patched/
+# patched Switch emulator (Eglantine) binary, built by images/switch/build.sh
+images/switch/patched/
 *.bak-*
 # emulator data (keys, firmware, saves): never versioned
 config/

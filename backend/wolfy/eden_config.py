@@ -1,15 +1,19 @@
-"""Eden's qt-config.ini: read every setting, describe it with the schema generated from
-Eden's sources (emulator_settings/eden.json), write changes back in place.
+"""qt-config.ini of Eglantine (app Switch, an Eden fork with Eden's file format): read every setting,
+describe it with the schema generated from Eglantine's sources (emulator_settings/eglantine.json),
+write changes back in place. The functions work on the file of the current profile (PROFILES,
+`with profile(...)`, default "switch").
 
 Format (QSettings ini): each setting is a pair of lines
     resolution_setup\\default=false
     resolution_setup=6
 and Eden ignores the value while `\\default` is true, so a change also sets it to false.
 """
+import contextvars
 import json
 import os
 import re
 import shutil
+from contextlib import contextmanager
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
@@ -18,7 +22,7 @@ from fastapi import HTTPException
 
 from . import combos, settings
 
-SCHEMA_FILE = Path(__file__).parent / "emulator_settings" / "eden.json"
+SCHEMA_DIR = Path(__file__).parent / "emulator_settings"
 BACKUP_KEEP = 20
 
 # Tabs of the settings page: Eden categories grouped as in Eden's own dialog
@@ -66,17 +70,48 @@ PLAYER_FIELDS = {
     "vibration_strength": ("int", "Intensité des vibrations (%)", 100),
 }
 
-# Overwritten by the Wolf image (startup-app.sh) at every session start
-FORCED = {
-    ("UI", "Multiplayer\\nickname"): "Pseudo unique par session (Joueur-XXXX)",
-    ("UI", "Multiplayer\\ip"): "IP du salon local, via la passerelle du conteneur",
-    ("UI", "Multiplayer\\port"): "Port du salon local",
+# Overwritten by the Wolf image of the app Switch (images/switch/startup-app.sh) at every session
+FORCED_SWITCH = {
+    ("UI", "fullscreen"): "Toujours activé (le menu et les jeux démarrent en plein écran)",
+    ("UI", "confirmStop"): "Jamais (« Fermer le logiciel » dans le menu ferme le jeu sans question)",
+    ("Core", "memory_layout_mode"): "12 Gio (le menu HOME ne demande « Qui joue ? » que dans ce mode)",
     ("Services", "network_interface"): "Interface réseau du conteneur",
-    ("Services", "airplane_mode"): "Toujours désactivé",
     ("Audio", "output_engine"): "SDL2 (sinon le son part dans une autre session)",
     ("Audio", "output_device"): "auto",
 }
 SECRET_KEYS = {"eden_token"}
+
+PROFILES = {
+    "switch": {"name": "Eglantine", "schema": "eglantine.json", "forced": FORCED_SWITCH,
+               "path": lambda: Path(settings.WOLFY_HOST_DIR) / "config/switch/cfg/qt-config.ini"},
+}
+_profile = contextvars.ContextVar("eden_profile", default="switch")
+
+
+@contextmanager
+def profile(name: str):
+    """Work on another emulator's qt-config.ini (PROFILES) inside the block."""
+    token = _profile.set(name)
+    try:
+        yield PROFILES[name]
+    finally:
+        _profile.reset(token)
+
+
+def _current() -> dict:
+    return PROFILES[_profile.get()]
+
+
+# Players 1-4 of the app Switch while the automatic pad detection is on (pad-config.py)
+PAD_KEY = re.compile(r"player_([0-3])_(connected|type|button_\w+|lstick|rstick|motionleft|motionright)$")
+
+
+def _forced(section: str, key: str):
+    forced = _current()["forced"].get((section, key))
+    if forced is None and _profile.get() == "switch" and section == "Controls" and PAD_KEY.match(key) \
+            and pads_auto():
+        forced = "manettes de la session, détectées au lancement de chaque jeu (désactivable dans l'onglet Wolfy-Eglantine)"
+    return forced
 
 # French labels for settings Eden hides from its own dialog (no translation upstream)
 EXTRA_LABELS = {
@@ -170,12 +205,16 @@ def _shortcut(key: str):
 
 
 @lru_cache
+def _schema(name: str) -> dict:
+    return json.loads((SCHEMA_DIR / name).read_text())
+
+
 def schema() -> dict:
-    return json.loads(SCHEMA_FILE.read_text())
+    return _schema(_current()["schema"])
 
 
 def _path() -> Path:
-    return settings.EDEN_CONFIG
+    return _current()["path"]()
 
 
 # ------------------------------------------------------------------ parsing
@@ -263,7 +302,8 @@ def _describe(section: str, key: str) -> dict | None:
 def read() -> dict:
     path = _path()
     if not path.is_file():
-        raise HTTPException(404, f"Configuration Eden introuvable : {path}")
+        raise HTTPException(404, f"Configuration {_current()['name']} introuvable : {path}"
+                                 + " (lance une fois l'appli Switch pour la créer)")
     lines = path.read_text().split("\n")
     values, defaults = _parse(lines)
     items = []
@@ -291,7 +331,7 @@ def read() -> dict:
             "raw": v["raw"],
             "value": _typed(v["raw"], kind) if kind != "raw" else v["raw"],
             "is_default": is_default,
-            "forced": FORCED.get((section, key)),
+            "forced": _forced(section, key),
             "secret": key in SECRET_KEYS,
         }
         name = key.split("\\")[-1]
@@ -319,6 +359,7 @@ def read() -> dict:
         "path": str(path),
         "mtime": path.stat().st_mtime,
         "eden_tag": schema().get("eden_tag"),
+        "version": f"{_current()['name']} {schema().get('eden_tag')}",
         "tabs": tabs,
         "items": items,
         "backups": list_backups(),
@@ -329,7 +370,7 @@ def write(changes: list[dict], mtime: float | None) -> int:
     """changes: [{section, key, value | raw | reset}] -> number of lines changed."""
     path = _path()
     if mtime is not None and abs(path.stat().st_mtime - mtime) > 1e-6:
-        raise HTTPException(409, "Le fichier a été modifié entre-temps (Eden ?) : recharge la page.")
+        raise HTTPException(409, f"Le fichier a été modifié entre-temps ({_current()['name']} ?) : recharge la page.")
     lines = path.read_text().split("\n")
     values, defaults = _parse(lines)
     inserts = []  # (line index, text) for missing \default lines
@@ -469,10 +510,35 @@ def write_override(title_id: str, section: str, key: str, value: str | None) -> 
     _atomic_write(path, "\n".join(out))
 
 
+def _pads_path() -> Path:
+    return _path().parent / "wolfy" / "pads.json"
+
+
+def pads_auto() -> bool:
+    """Players 1-4 set to the session's pads before each Eglantine process (images/switch/pad-config.py)."""
+    try:
+        return bool(json.loads(_pads_path().read_text()).get("auto", True))
+    except (OSError, ValueError, AttributeError):
+        return True
+
+
+def write_pads_auto(auto: bool) -> None:
+    path = _pads_path()
+    owner = path.parent.parent.stat()
+    path.parent.mkdir(exist_ok=True)
+    os.chown(path.parent, owner.st_uid, owner.st_gid)
+    tmp = path.with_suffix(".wolfy-tmp")
+    tmp.write_text(json.dumps({"auto": auto}) + "\n")
+    os.chown(tmp, owner.st_uid, owner.st_gid)
+    tmp.chmod(0o644)
+    tmp.replace(path)
+
+
 def read_wolfy() -> dict:
     res = read_override(QLAUNCH, "Renderer", "resolution_setup")
     return {
-        "home_combo": combos.read("eden"),
+        "home_combo": combos.read("switch"),
+        "pads_auto": pads_auto(),
         "menu_resolution": int(res) if res is not None else None,
         "resolution_options": schema()["enums"]["ResolutionSetup"],
         "global_resolution": next((i["value"] for i in read()["items"]

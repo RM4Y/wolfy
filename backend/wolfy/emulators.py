@@ -31,24 +31,27 @@ GAMES = settings.GAMES_DIR
 
 EMULATORS = [
     {
-        "id": "eden",
+        "id": "switch",
         "cover": "switch.png",
-        "name": "Eden",
-        "systems": ["Nintendo Switch"],
-        "description": "Démarre sur le menu HOME Switch (qlaunch). Rejoint automatiquement le salon "
-                       "local « Maison » pour le sans-fil local entre sessions.",
-        "image": "wolfy-eden:latest",
-        "build_dir": "eden",
-        "settings_page": "eden",
-        "paths_page": "eden",
+        "name": "Eglantine",
+        "systems": ["Nintendo Switch", "Nintendo Switch 2"],
+        "description": "Menu HOME Switch (firmware 23) : « Qui joue ? », jeux Switch 1 et 2 suspendus et "
+                       "repris comme sur la console. Chaque jeu tourne dans son propre processus Eglantine, "
+                       "avec la bonne horloge. Réglages, clés, firmware et sauvegardes "
+                       "dans config/switch.",
+        "image": "wolfy-switch:latest",
+        "build_dir": "switch",
+        "settings_page": "switch",
+        "paths_page": "switch",
         "rom_dir": f"{GAMES}/ROMS/switch",
         "mounts": [
-            f"{settings.EDEN_DATA_DIR}:{settings.EDEN_DATA_DIR}:rw",
-            f"{settings.EDEN_DATA_DIR}:/home/retro/.local/share/eden:rw",
-            f"{settings.EDEN_CONFIG_DIR}:/eden-config-host:ro",
+            f"{settings.WOLFY_HOST_DIR}/config/switch/cfg:/home/retro/.config/eden:rw",
+            f"{settings.WOLFY_HOST_DIR}/config/switch/data:/home/retro/.local/share/eden:rw",
+            f"{GAMES}/ROMS/switch2:{GAMES}/ROMS/switch2:ro",
         ],
         "env": ["RUN_SWAY=1", *GOW_ENV],
-        "multi_session": True,
+        # settings and saves mounted read-write: one session at a time
+        "multi_session": False,
     },
     {
         "id": "retroarch",

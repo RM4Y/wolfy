@@ -1,0 +1,218 @@
+diff --git a/src/core/file_sys/nup_menu.h b/src/core/file_sys/nup_menu.h
+new file mode 100644
+index 000000000..5da4a43bd
+--- /dev/null
++++ b/src/core/file_sys/nup_menu.h
+@@ -0,0 +1,67 @@
++// SPDX-License-Identifier: GPL-3.0-or-later
++
++#pragma once
++
++#include <map>
++#include <memory>
++#include <mutex>
++#include <optional>
++#include <string>
++#include <utility>
++#include <vector>
++
++#include "common/common_types.h"
++#include "core/file_sys/control_metadata.h"
++#include "core/file_sys/vfs/vfs_vector.h"
++
++// NUP games of the game folders, for the HOME menu. They hold no NCA, so they are kept out of the
++// content providers (whose users would open them as NCAs): the game list fills this registry, and
++// the ns services read it to list the games with their title and icon.
++namespace FileSys::NupMenu {
++
++struct Entry {
++    std::string path;
++    NACP control;
++    std::vector<u8> icon; // JPEG the HOME menu can show
++};
++
++namespace Detail {
++inline std::mutex mutex;
++inline std::map<u64, Entry> entries;
++} // namespace Detail
++
++inline void Clear() {
++    std::scoped_lock lock{Detail::mutex};
++    Detail::entries.clear();
++}
++
++inline void Add(u64 title_id, Entry entry) {
++    std::scoped_lock lock{Detail::mutex};
++    Detail::entries.insert_or_assign(title_id, std::move(entry));
++}
++
++inline std::vector<u64> TitleIds() {
++    std::scoped_lock lock{Detail::mutex};
++    std::vector<u64> ids;
++    ids.reserve(Detail::entries.size());
++    for (const auto& [title_id, entry] : Detail::entries) {
++        ids.push_back(title_id);
++    }
++    return ids;
++}
++
++/// NACP and icon of a NUP game, nullopt for any other title.
++inline std::optional<std::pair<std::unique_ptr<NACP>, VirtualFile>> Control(u64 title_id) {
++    std::scoped_lock lock{Detail::mutex};
++    const auto it = Detail::entries.find(title_id);
++    if (it == Detail::entries.end()) {
++        return std::nullopt;
++    }
++    VirtualFile icon;
++    if (!it->second.icon.empty()) {
++        icon = std::make_shared<VectorVfsFile>(it->second.icon, "icon.jpg");
++    }
++    return std::make_pair(std::make_unique<NACP>(it->second.control), std::move(icon));
++}
++
++} // namespace FileSys::NupMenu
+diff --git a/src/core/file_sys/patch_manager.cpp b/src/core/file_sys/patch_manager.cpp
+index 860288787..b9901aec2 100644
+--- a/src/core/file_sys/patch_manager.cpp
++++ b/src/core/file_sys/patch_manager.cpp
+@@ -23,6 +23,7 @@
+ #include "core/file_sys/content_archive.h"
+ #include "core/file_sys/control_metadata.h"
+ #include "core/file_sys/ips_layer.h"
++#include "core/file_sys/nup_menu.h"
+ #include "core/file_sys/patch_manager.h"
+ #include "core/file_sys/registered_cache.h"
+ #include "core/file_sys/romfs.h"
+@@ -1284,6 +1285,9 @@ std::optional<u32> PatchManager::GetGameVersion() const {
+ PatchManager::Metadata PatchManager::GetControlMetadata() const {
+     const auto base_control_nca = content_provider.GetEntry(title_id, ContentRecordType::Control);
+     if (base_control_nca == nullptr) {
++        if (auto nup = NupMenu::Control(title_id)) {
++            return std::move(*nup);
++        }
+         if (parent_title_id) {
+             const auto control_id = content_provider.HasEntry(*parent_title_id, ContentRecordType::Control) ? *parent_title_id : GetUpdateTitleID(*parent_title_id);
+             const PatchManager parent{control_id, fs_controller, content_provider};
+diff --git a/src/core/hle/service/ns/application_manager_interface.cpp b/src/core/hle/service/ns/application_manager_interface.cpp
+index 348649917..069f9d225 100644
+--- a/src/core/hle/service/ns/application_manager_interface.cpp
++++ b/src/core/hle/service/ns/application_manager_interface.cpp
+@@ -6,6 +6,7 @@
+ 
+ #include "core/file_sys/control_metadata.h"
+ #include "core/file_sys/nca_metadata.h"
++#include "core/file_sys/nup_menu.h"
+ #include "core/file_sys/registered_cache.h"
+ #include "core/hle/service/cmif_serialization.h"
+ #include "core/hle/service/filesystem/filesystem.h"
+@@ -592,6 +593,16 @@ Result IApplicationManagerInterface::ListApplicationRecord(
+          records.push_back(record);
+      }
+ 
++    // NUP games of the game folders: not in the content providers (they hold no NCA)
++    for (const auto title_id : FileSys::NupMenu::TitleIds()) {
++        ApplicationRecord record{};
++        record.application_id = title_id;
++        record.last_event = ApplicationEvent::Installed;
++        record.attributes = 0;
++        record.last_updated = Core::LaunchTimestampCache::GetLaunchTimestamp(title_id);
++        records.push_back(record);
++    }
++
+      std::sort(records.begin(), records.end(), [](const ApplicationRecord& lhs, const ApplicationRecord& rhs) {
+          if (lhs.last_updated == rhs.last_updated) {
+              return lhs.application_id < rhs.application_id;
+diff --git a/src/qt_common/game_list/worker.cpp b/src/qt_common/game_list/worker.cpp
+index b89792034..213175dfc 100644
+--- a/src/qt_common/game_list/worker.cpp
++++ b/src/qt_common/game_list/worker.cpp
+@@ -12,9 +12,11 @@
+ #include <utility>
+ #include <vector>
+ 
++#include <QBuffer>
+ #include <QDir>
+ #include <QFile>
+ #include <QFileInfo>
++#include <QImage>
+ #include <QSettings>
+ 
+ #include "common/fs/fs.h"
+@@ -27,6 +29,7 @@
+ #include "core/file_sys/control_metadata.h"
+ #include "core/file_sys/fs_filesystem.h"
+ #include "core/file_sys/nca_metadata.h"
++#include "core/file_sys/nup_menu.h"
+ #include "core/file_sys/patch_manager.h"
+ #include "core/file_sys/registered_cache.h"
+ #include "core/file_sys/submission_package.h"
+@@ -411,6 +414,23 @@ void GameListWorker::AddTitlesToGameList(GameListDir* parent_dir, GameListItemTy
+     }
+ }
+ 
++namespace {
++// The HOME menu takes 256x256 JPEG icons in a buffer sized for them; Switch 2 icons can be larger.
++std::vector<u8> NupMenuIcon(const std::vector<u8>& data) {
++    const auto image = QImage::fromData(data.data(), static_cast<int>(data.size()));
++    if (image.isNull()) {
++        return {};
++    }
++    QByteArray jpeg;
++    QBuffer buffer(&jpeg);
++    buffer.open(QIODevice::WriteOnly);
++    image.convertToFormat(QImage::Format_RGB888)
++        .scaled(256, 256, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
++        .save(&buffer, "JPEG", 90);
++    return {jpeg.begin(), jpeg.end()};
++}
++} // namespace
++
+ void GameListWorker::ScanFileSystem(ScanTarget target, const std::vector<std::filesystem::path>& files,
+                                     GameListDir* parent_dir) {
+     const auto process_candidate = [this, target,
+@@ -453,6 +473,18 @@ void GameListWorker::ScanFileSystem(ScanTarget target, const std::vector<std::fi
+                         file_type == Loader::FileType::NSP ||
+                         file_type == Loader::FileType::NSZ)) {
+                 void(provider->AddEntriesFromContainer(file));
++            } else if (res2 == Loader::ResultStatus::Success &&
++                       file_type == Loader::FileType::NUP) {
++                FileSys::NupMenu::Entry entry;
++                entry.path = physical_name;
++                loader->ReadControlData(entry.control);
++                std::vector<u8> icon;
++                if (loader->ReadIcon(icon) == Loader::ResultStatus::Success) {
++                    entry.icon = NupMenuIcon(icon);
++                }
++                LOG_INFO(Frontend, "HOME menu: NUP game {:016X} ({}), icon {} bytes", program_id,
++                         entry.control.GetApplicationName(), entry.icon.size());
++                FileSys::NupMenu::Add(program_id, std::move(entry));
+             }
+         } else {
+             std::vector<u64> program_ids;
+@@ -532,6 +564,7 @@ void GameListWorker::run() {
+     const auto started = std::chrono::steady_clock::now();
+     watch_list.clear();
+     provider->ClearAllEntries();
++    FileSys::NupMenu::Clear();
+ 
+     const auto DirEntryReady = [&](GameListDir* game_list_dir) {
+         auto pending = std::make_shared<std::unique_ptr<GameListDir>>(game_list_dir);
+diff --git a/src/yuzu/main_window.cpp b/src/yuzu/main_window.cpp
+index fac2e5cc6..a13e499f8 100644
+--- a/src/yuzu/main_window.cpp
++++ b/src/yuzu/main_window.cpp
+@@ -549,7 +549,13 @@ MainWindow::MainWindow(bool has_broken_vulkan)
+         } else if (lp.launch_setup) {
+             LaunchFirmwareApplet(u64(Service::AM::AppletProgramId::Starter), std::nullopt);
+         } else if (lp.launch_qlaunch) {
+-            LaunchFirmwareApplet(u64(Service::AM::AppletProgramId::QLaunch), std::nullopt);
++            // Booting stops the scan of the game folders, started just above: the HOME menu
++            // would list no game. Boot once it is done.
++            auto scanned = std::make_shared<QMetaObject::Connection>();
++            *scanned = connect(game_list, &GameList::PopulatingCompleted, this, [this, scanned] {
++                disconnect(*scanned);
++                LaunchFirmwareApplet(u64(Service::AM::AppletProgramId::QLaunch), std::nullopt);
++            });
+         } else if (lp.launch_hlaunch) {
+             std::filesystem::path const sd_dir =
+                 Common::FS::GetEdenPathString(Common::FS::EdenPath::SDMCDir);

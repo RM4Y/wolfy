@@ -74,7 +74,8 @@ COPY dolphin/dolphin-run.sh /opt/gow/dolphin-run.sh
 COPY dolphin/console-data.sh /opt/gow/console-data.sh
 COPY dolphin/host-pads.py /opt/gow/host-pads.py
 COPY dolphin/40-host-pads.sh /etc/cont-init.d/40-host-pads.sh
+COPY common/20-fix-home-perms.sh /etc/cont-init.d/20-fix-home-perms.sh
 COPY dolphin/startup-app.sh /opt/gow/startup-app.sh
 COPY dolphin/espbar-env.py /opt/gow/espbar-env.py
 RUN chmod +x /opt/gow/home-combo.py /opt/gow/dolphin-setup.py /opt/gow/dolphin-run.sh /opt/gow/console-data.sh /opt/gow/startup-app.sh \
-      /opt/gow/host-pads.py /opt/gow/espbar-env.py /etc/cont-init.d/40-host-pads.sh
+      /opt/gow/host-pads.py /opt/gow/espbar-env.py /etc/cont-init.d/40-host-pads.sh /etc/cont-init.d/20-fix-home-perms.sh

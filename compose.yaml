@@ -2,7 +2,7 @@
 # + the emulator images of the Wolf apps.
 #
 #   docker compose up -d --build              Wolf + Wolfy, UI on http://<serveur>:8420
-#   docker compose --profile images build     (re)build wolfy-eden / wolfy-retroarch
+#   docker compose --profile images build     (re)build wolfy-switch / wolfy-retroarch…
 name: wolfy
 
 services:
@@ -108,11 +108,12 @@ services:
   # emulator images used by the Wolf apps (build only: Wolf starts them per session)
   # build context images/ (shared scripts in images/common); each Dockerfile has its own
   # .dockerignore (Dockerfile.dockerignore) to leave the other images out
-  wolfy-eden:
+  # app Switch (Eglantine): run images/switch/build.sh first (patched emulator binary)
+  wolfy-switch:
     build:
       context: images
-      dockerfile: eden/Dockerfile
-    image: wolfy-eden:latest
+      dockerfile: switch/Dockerfile
+    image: wolfy-switch:latest
     profiles: [images]
 
   wolfy-retroarch:

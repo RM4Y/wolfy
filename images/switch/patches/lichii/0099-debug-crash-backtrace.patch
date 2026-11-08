@@ -1,0 +1,38 @@
+diff --git a/src/dynarmic/src/dynarmic/backend/exception_handler_posix.cpp b/src/dynarmic/src/dynarmic/backend/exception_handler_posix.cpp
+index 24a059aee..fc6f975e5 100644
+--- a/src/dynarmic/src/dynarmic/backend/exception_handler_posix.cpp
++++ b/src/dynarmic/src/dynarmic/backend/exception_handler_posix.cpp
+@@ -6,6 +6,11 @@
+  * SPDX-License-Identifier: 0BSD
+  */
+ 
++#include <execinfo.h>
++#include <fcntl.h>
++#include <unistd.h>
++#include <cstdio>
++#include <cstdlib>
+ #include <signal.h>
+ 
+ #include <algorithm>
+@@ -145,6 +150,21 @@ void SigHandler::SigAction(int sig, siginfo_t* info, void* raw_context) {
+     }
+     LOG_ERROR(Core, "Unhandled {} at {:#018x}\n", sig == SIGSEGV ? "SIGSEGV" : "SIGBUS", CTX_PC);
+ 
++    {   // Wolfy debug: where the host crashed
++        void* frames[48];
++        const int count = backtrace(frames, 48);
++        const char* const home = getenv("HOME");
++        char path[512];
++        snprintf(path, sizeof(path), "%s/.local/share/eden/log/crash-backtrace.txt", home ? home : "/tmp");
++        const int fd = open(path, O_WRONLY | O_CREAT | O_APPEND, 0644);
++        if (fd >= 0) {
++            backtrace_symbols_fd(frames, count, fd);
++            const char line[] = "--\n";
++            (void)!write(fd, line, sizeof(line) - 1);
++            close(fd);
++        }
++    }
++
+     struct sigaction* retry_sa = sig == SIGSEGV ? &sig_handler->old_sa_segv : &sig_handler->old_sa_bus;
+     if (retry_sa->sa_flags & SA_SIGINFO) {
+         retry_sa->sa_sigaction(sig, info, raw_context);

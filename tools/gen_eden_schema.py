@@ -8,6 +8,7 @@ qt_common/config/shared_translation.cpp and their official French translation
 (dist/languages/fr.ts).
 
     python3 tools/gen_eden_schema.py v0.2.1
+    python3 tools/gen_eden_schema.py eglantine build-64   # Eglantine (Switch2), a GitHub tag/branch
 """
 import html
 import json
@@ -16,9 +17,16 @@ import sys
 import urllib.request
 from pathlib import Path
 
-TAG = sys.argv[1] if len(sys.argv) > 1 else "v0.2.1"
-BASE = f"https://git.eden-emu.dev/eden-emu/eden/raw/tag/{TAG}"
-OUT = Path(__file__).resolve().parent.parent / "backend/wolfy/emulator_settings/eden.json"
+SCHEMAS = Path(__file__).resolve().parent.parent / "backend/wolfy/emulator_settings"
+if len(sys.argv) > 1 and sys.argv[1] == "eglantine":
+    # Eden fork (Switch 2): same files, on GitHub
+    TAG = sys.argv[2] if len(sys.argv) > 2 else "nx2"
+    BASE = f"https://raw.githubusercontent.com/Djihads80/Eglantine/{TAG}"
+    OUT = SCHEMAS / "eglantine.json"
+else:
+    TAG = sys.argv[1] if len(sys.argv) > 1 else "v0.2.1"
+    BASE = f"https://git.eden-emu.dev/eden-emu/eden/raw/tag/{TAG}"
+    OUT = SCHEMAS / "eden.json"
 
 
 def fetch(path: str) -> str:

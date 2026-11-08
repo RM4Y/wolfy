@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import auth, combos, idle, dolphin_config, docker_ops, eden_config, espbar, espbar_relay, eden_paths, ps_paths, igdb, ra_config, ra_paths, romarr, steam, emulators, settings, store, wolf_api, wolf_config
+from . import auth, combos, idle, dolphin_config, docker_ops, eden_config, espbar, espbar_relay, eden_paths, switch_paths, ps_paths, igdb, ra_config, ra_paths, romarr, steam, emulators, switch_update, settings, store, wolf_api, wolf_config
 
 app = FastAPI(title="Wolfy", docs_url="/api/docs", openapi_url="/api/openapi.json")
 public = APIRouter(prefix="/api")
@@ -299,56 +299,55 @@ def profiles():
     return {"profiles": wolf_config.list_profiles(wolf_config.load())}
 
 
-@api.get("/emulators/eden/paths")
-def get_eden_paths():
-    paths = eden_paths.current()
-    return {"paths": paths, "status": eden_paths.status(paths), "defaults": eden_paths.DEFAULTS}
+# ------------------------------------------------------------------- app Switch (Eglantine)
+# config/switch/cfg and data are mounted read-write in the session: Eglantine rewrites its
+# qt-config.ini when it quits, and a firmware swap would break a running session
+
+def _switch_running() -> bool:
+    try:
+        return any(c.image.tags and c.image.tags[0].startswith("wolfy-switch:")
+                   for c in docker_ops.client().containers.list())
+    except Exception:
+        return False
 
 
-class EdenPaths(BaseModel):
-    keys: str = ""
-    firmware: str = ""
-    roms: list[str] = []
-    users: str = ""
+class SwitchUpdate(BaseModel):
+    tag: str | None = None
 
 
-@api.post("/emulators/eden/paths/check")
-def check_eden_paths(body: EdenPaths):
-    paths = {**eden_paths.DEFAULTS, **{k: v for k, v in body.model_dump().items() if v or k == "users"}}
-    return {"status": eden_paths.status(paths)}
+@api.get("/emulators/switch/version")
+def switch_version(refresh: bool = False):
+    """Installed Switch emulator (fork, version), its newest release on GitHub, the running update."""
+    return switch_update.status(refresh)
 
 
-@api.put("/emulators/eden/paths")
-def set_eden_paths(body: EdenPaths):
-    result = eden_paths.apply(body.model_dump(), _apply)
-    paths = eden_paths.current()
-    return {**result, "status": eden_paths.status(paths)}
+@api.post("/emulators/switch/update")
+def switch_do_update(body: SwitchUpdate):
+    return switch_update.update(body.tag)
 
 
-@api.post("/emulators/eden/keys")
-async def upload_eden_keys(files: list[UploadFile] = File(...)):
+@api.get("/emulators/switch/paths")
+def get_switch_paths():
+    return {"status": switch_paths.status(), "session_running": _switch_running()}
+
+
+@api.post("/emulators/switch/keys")
+async def upload_switch_keys(files: list[UploadFile] = File(...)):
     data = [(f.filename or "", await f.read()) for f in files]
-    result = await run_in_threadpool(eden_paths.upload_keys, data)
-    return {**result, "status": eden_paths.status(eden_paths.current())}
+    result = await run_in_threadpool(switch_paths.upload_keys, data)
+    return {**result, "status": switch_paths.status()}
 
 
-@api.post("/emulators/eden/firmware")
-async def upload_eden_firmware(file: UploadFile = File(...)):
-    # replacing the firmware under a running Switch session would break it
-    if wolf_api.available():
-        doc = wolf_config.load()
-        eden_titles = {a["title"] for p in wolf_config.list_profiles(doc) for a in p["apps"] if a["emulator"] == "eden"}
-        apps = {a["id"]: a["title"] for a in (await wolf_api.get("apps")).get("apps", [])}
-        running = [s for s in (await wolf_api.get("sessions")).get("sessions", [])
-                   if apps.get(str(s.get("app_id"))) in eden_titles]
-        if running:
-            raise HTTPException(409, "Une session Switch est en cours : quitte-la avant d'installer un firmware")
+@api.post("/emulators/switch/firmware")
+async def upload_switch_firmware(file: UploadFile = File(...)):
+    if _switch_running():
+        raise HTTPException(409, "Une session Switch est en cours : quitte-la avant d'installer un firmware")
     with tempfile.NamedTemporaryFile(suffix=".zip") as tmp:
         while chunk := await file.read(1 << 20):
             tmp.write(chunk)
         tmp.flush()
-        result = await run_in_threadpool(eden_paths.upload_firmware, tmp.name)
-    return {**result, "status": eden_paths.status(eden_paths.current())}
+        result = await run_in_threadpool(switch_paths.upload_firmware, tmp.name)
+    return {**result, "status": switch_paths.status()}
 
 
 @api.get("/emulators/retroarch/paths")
@@ -489,11 +488,11 @@ def move_app(profile_id: str, index: int, body: Move):
     return {"ok": True}
 
 
-# ------------------------------------------------------------------- emulator settings (Eden)
+# ------------------------------------------------------------------- emulator settings (Eglantine, app Switch)
 
-@api.get("/emulator-settings/eden")
-def eden_settings():
-    return eden_config.read()
+@api.get("/emulator-settings/switch")
+def switch_settings():
+    return {**eden_config.read(), "session_running": _switch_running()}
 
 
 class SettingChange(BaseModel):
@@ -509,8 +508,11 @@ class SettingsUpdate(BaseModel):
     mtime: float | None = None
 
 
-@api.put("/emulator-settings/eden")
-def update_eden_settings(body: SettingsUpdate):
+@api.put("/emulator-settings/switch")
+def update_switch_settings(body: SettingsUpdate):
+    if _switch_running():
+        raise HTTPException(409, "Une session Switch est en cours : Eglantine réécrira sa config en quittant. "
+                                 "Quitte-la avant d'enregistrer.")
     changes = [c.model_dump(exclude_none=True) for c in body.changes]
     return {"changed": eden_config.write(changes, body.mtime)}
 
@@ -534,8 +536,8 @@ def set_home_combo(emulator: str, body: HomeCombo):
     return combos.write(emulator, body.model_dump())
 
 
-@api.get("/emulator-settings/eden/wolfy")
-def get_wolfy_eden():
+@api.get("/emulator-settings/switch/wolfy")
+def get_wolfy_switch():
     return eden_config.read_wolfy()
 
 
@@ -543,14 +545,24 @@ class MenuResolution(BaseModel):
     value: int | None = None
 
 
-@api.put("/emulator-settings/eden/wolfy/menu-resolution")
+@api.put("/emulator-settings/switch/wolfy/menu-resolution")
 def set_menu_resolution(body: MenuResolution):
     eden_config.write_menu_resolution(body.value)
     return eden_config.read_wolfy()
 
 
-@api.post("/emulator-settings/eden/backups/{name}/restore")
-def restore_eden_settings(name: str):
+class PadsAuto(BaseModel):
+    auto: bool = True
+
+
+@api.put("/emulator-settings/switch/wolfy/pads")
+def set_switch_pads(body: PadsAuto):
+    eden_config.write_pads_auto(body.auto)
+    return eden_config.read_wolfy()
+
+
+@api.post("/emulator-settings/switch/backups/{name}/restore")
+def restore_switch_settings(name: str):
     eden_config.restore(name)
     return {"ok": True}
 

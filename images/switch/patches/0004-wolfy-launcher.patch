@@ -1,0 +1,552 @@
+diff --git a/src/core/file_sys/control_metadata.h b/src/core/file_sys/control_metadata.h
+index 670e8f7..8af3605 100644
+--- a/src/core/file_sys/control_metadata.h
++++ b/src/core/file_sys/control_metadata.h
+@@ -285,6 +285,15 @@ public:
+     [[nodiscard]] u32 GetSupportedLanguages() const;
+     [[nodiscard]] std::vector<std::string> GetApplicationNames() const;
+     [[nodiscard]] std::vector<u8> GetRawBytes() const;
++
++    /// Whether the game needs a user when it starts (0 none, 1 required, 2 required with an online
++    /// account): the HOME menu asks who plays for it.
++    [[nodiscard]] u8 GetStartupUserAccount() const {
++        return raw.startup_user_account;
++    }
++    void SetStartupUserAccount(u8 value) {
++        raw.startup_user_account = value;
++    }
+     [[nodiscard]] bool GetUserAccountSwitchLock() const;
+     [[nodiscard]] u64 GetDeviceSaveDataSize() const;
+     [[nodiscard]] u32 GetParentalControlFlag() const;
+diff --git a/src/core/file_sys/wolfy_launcher.h b/src/core/file_sys/wolfy_launcher.h
+new file mode 100644
+index 0000000..1e2f7c2
+--- /dev/null
++++ b/src/core/file_sys/wolfy_launcher.h
+@@ -0,0 +1,140 @@
++// SPDX-License-Identifier: GPL-3.0-or-later
++
++#pragma once
++
++#include <cstdlib>
++#include <filesystem>
++#include <fstream>
++#include <map>
++#include <mutex>
++#include <optional>
++#include <string>
++#include <string_view>
++#include <system_error>
++#include <utility>
++
++#include <fmt/format.h>
++
++#include "common/common_types.h"
++#include "common/logging.h"
++
++// Wolfy's launcher (images/switch2/lichii/wolfy-launcher.py) runs the HOME menu and each game in
++// processes of their own: a game then boots like on its own (Switch 1 or Switch 2 mode, its
++// counter), and nothing of it outlives it. In the menu, the game is a placeholder application
++// (no guest code), so the menu shows it suspended, resumes and closes it as usual. They talk
++// through files in WOLFY_LAUNCHER_DIR:
++//   menu -> launcher: "launch" (program id, user index, path), "resume" (program id): the menu
++//                     brought the game to the foreground, "close": the menu closed it
++//   game -> launcher: "home": HOME was pressed
++//   launcher -> menu: "menu-home": HOME was pressed in the game, "game-ended": the game is gone
++// WOLFY_LAUNCHER_ROLE is "menu" or "game". Without these variables Lichii behaves as usual.
++namespace FileSys::WolfyLauncher {
++
++namespace Detail {
++inline std::mutex mutex;
++inline std::map<u64, std::string> paths; // program id -> file of the game folders
++
++inline const char* Dir() {
++    static const char* const dir = std::getenv("WOLFY_LAUNCHER_DIR");
++    return dir != nullptr && dir[0] != '\0' ? dir : nullptr;
++}
++
++inline std::string_view Role() {
++    static const char* const role = std::getenv("WOLFY_LAUNCHER_ROLE");
++    return role != nullptr ? role : "";
++}
++
++/// Writes `name` in the launcher's folder at once (a temporary file renamed), so the launcher
++/// never reads half of it.
++inline bool Write(const char* name, const std::string& content) {
++    const std::filesystem::path dir{Dir()};
++    const auto tmp = dir / (std::string{name} + ".tmp");
++    {
++        std::ofstream out{tmp, std::ios::trunc};
++        if (!out) {
++            return false;
++        }
++        out << content;
++    }
++    std::error_code ec;
++    std::filesystem::rename(tmp, dir / name, ec);
++    return !ec;
++}
++} // namespace Detail
++
++inline bool IsMenu() {
++    return Detail::Dir() != nullptr && Detail::Role() == "menu";
++}
++
++inline bool IsGame() {
++    return Detail::Dir() != nullptr && Detail::Role() == "game";
++}
++
++inline void ClearPaths() {
++    std::scoped_lock lock{Detail::mutex};
++    Detail::paths.clear();
++}
++
++inline void SetPath(u64 program_id, std::string path) {
++    std::scoped_lock lock{Detail::mutex};
++    Detail::paths.insert_or_assign(program_id, std::move(path));
++}
++
++/// The HOME menu starts a game: hand it to the launcher. False when the menu is not under the
++/// launcher or the game has no file (installed in the NAND): it then runs inside the menu.
++inline bool RequestLaunch(u64 program_id, s32 user_index) {
++    if (!IsMenu()) {
++        return false;
++    }
++    std::scoped_lock lock{Detail::mutex};
++    const auto it = Detail::paths.find(program_id);
++    if (it == Detail::paths.end()) {
++        LOG_WARNING(Service_AM, "Wolfy launcher: no file for {:016X}, started in the menu",
++                    program_id);
++        return false;
++    }
++    if (!Detail::Write("launch", fmt::format("{:016X}\n{}\n{}\n", program_id, user_index,
++                                             it->second))) {
++        LOG_ERROR(Service_AM, "Wolfy launcher: can't write the launch request");
++        return false;
++    }
++    LOG_INFO(Service_AM, "Wolfy launcher: {:016X} (user {}) -> {}", program_id, user_index,
++             it->second);
++    return true;
++}
++
++/// The menu brought the game to the foreground (started or resumed from its suspended tile).
++inline void NotifyForeground(u64 program_id) {
++    if (IsMenu()) {
++        Detail::Write("resume", fmt::format("{:016X}\n", program_id));
++    }
++}
++
++/// The menu closed the game ("Close software", or another game picked).
++inline void NotifyClose(u64 program_id) {
++    if (IsMenu()) {
++        Detail::Write("close", fmt::format("{:016X}\n", program_id));
++        LOG_INFO(Service_AM, "Wolfy launcher: {:016X} closed by the menu", program_id);
++    }
++}
++
++/// A request of the launcher to the menu ("menu-home", "game-ended"), removed once taken.
++inline bool TakeMenuRequest(const char* name) {
++    if (!IsMenu()) {
++        return false;
++    }
++    std::error_code ec;
++    return std::filesystem::remove(std::filesystem::path{Detail::Dir()} / name, ec);
++}
++
++/// HOME in a game process: the launcher pauses the game and shows the menu.
++inline bool RequestHome() {
++    if (!IsGame()) {
++        return false;
++    }
++    Detail::Write("home", "home\n");
++    LOG_INFO(Service_AM, "Wolfy launcher: HOME, back to the menu");
++    return true;
++}
++
++} // namespace FileSys::WolfyLauncher
+diff --git a/src/core/hle/service/am/service/application_accessor.cpp b/src/core/hle/service/am/service/application_accessor.cpp
+index 00c9b06..ad47368 100644
+--- a/src/core/hle/service/am/service/application_accessor.cpp
++++ b/src/core/hle/service/am/service/application_accessor.cpp
+@@ -4,6 +4,7 @@
+ // SPDX-FileCopyrightText: Copyright 2024 yuzu Emulator Project
+ // SPDX-License-Identifier: GPL-2.0-or-later
+ 
++#include "core/file_sys/wolfy_launcher.h"
+ #include "core/hle/result.h"
+ #include "core/hle/service/acc/acc.h"
+ #include "core/hle/service/am/am_types.h"
+@@ -67,6 +68,12 @@ Result IApplicationAccessor::Start() {
+ 
+ Result IApplicationAccessor::RequestExit() {
+     LOG_INFO(Service_AM, "called");
++    if (m_applet->process->IsPlaceholder()) {
++        FileSys::WolfyLauncher::NotifyClose(m_applet->program_id);
++        m_applet->process->Terminate();
++        m_window_system.RequestUpdate();
++        R_SUCCEED();
++    }
+ 
+     std::scoped_lock lk{m_applet->lock};
+     if (m_applet->exit_locked) {
+@@ -81,6 +88,12 @@ Result IApplicationAccessor::RequestExit() {
+ 
+ Result IApplicationAccessor::Terminate() {
+     LOG_INFO(Service_AM, "called");
++    if (m_applet->process->IsPlaceholder()) {
++        FileSys::WolfyLauncher::NotifyClose(m_applet->program_id);
++        m_applet->process->Terminate();
++        m_window_system.RequestUpdate();
++        R_SUCCEED();
++    }
+     m_applet->process->Terminate();
+     R_SUCCEED();
+ }
+@@ -154,6 +167,9 @@ Result IApplicationAccessor::GetCurrentLibraryApplet(
+ 
+ Result IApplicationAccessor::RequestForApplicationToGetForeground() {
+     LOG_INFO(Service_AM, "called");
++    if (m_applet->process->IsPlaceholder()) {
++        FileSys::WolfyLauncher::NotifyForeground(m_applet->program_id);
++    }
+     m_window_system.RequestApplicationToGetForeground();
+     R_SUCCEED();
+ }
+diff --git a/src/core/hle/service/am/service/application_creator.cpp b/src/core/hle/service/am/service/application_creator.cpp
+index 4eb2f29..8c725f0 100644
+--- a/src/core/hle/service/am/service/application_creator.cpp
++++ b/src/core/hle/service/am/service/application_creator.cpp
+@@ -4,7 +4,12 @@
+ // SPDX-FileCopyrightText: Copyright 2024 yuzu Emulator Project
+ // SPDX-License-Identifier: GPL-2.0-or-later
+ 
++#include "common/settings.h"
++#include "core/file_sys/wolfy_launcher.h"
+ #include "core/file_sys/nca_metadata.h"
++#include "core/hle/service/glue/glue_manager.h"
++#include "core/file_sys/control_metadata.h"
++#include "core/file_sys/patch_manager.h"
+ #include "core/file_sys/registered_cache.h"
+ #include "core/hle/service/am/am_types.h"
+ #include "core/hle/service/am/applet.h"
+@@ -23,6 +28,41 @@ namespace Service::AM {
+ namespace {
+ 
+ Result CreateGuestApplication(SharedPointer<IApplicationAccessor>* out_application_accessor, Core::System& system, WindowSystem& window_system, u64 program_id) {
++    // Under Wolfy's launcher the game runs in a process of its own: the menu tracks a
++    // placeholder of it (a failed start is fatal to the menu).
++    if (FileSys::WolfyLauncher::RequestLaunch(program_id, Settings::values.current_user.GetValue())) {
++        // Its control data and launch properties, as a real start registers them: the menu reads
++        // them through the accessor to resume the game.
++        {
++            FileSys::PatchManager pm{program_id, system.GetFileSystemController(),
++                                     system.GetContentProviderUnion()};
++            const auto metadata = pm.GetControlMetadata();
++            std::vector<u8> control = metadata.first != nullptr
++                                          ? metadata.first->GetRawBytes()
++                                          : std::vector<u8>(sizeof(FileSys::RawNACP), 0);
++            Service::Glue::ApplicationLaunchProperty launch{};
++            launch.title_id = program_id;
++            launch.version = pm.GetGameVersion().value_or(0);
++            auto& arp = system.GetARPManager();
++            static_cast<void>(arp.Unregister(program_id));
++            static_cast<void>(arp.Register(program_id, launch, std::move(control)));
++        }
++        auto placeholder = std::make_unique<Process>(system);
++        placeholder->MakePlaceholder();
++        const auto applet = std::make_shared<Applet>(system, std::move(placeholder), true);
++        applet->program_id = program_id;
++        applet->applet_id = AppletId::Application;
++        applet->type = AppletType::Application;
++        applet->library_applet_mode = LibraryAppletMode::AllForeground;
++        // Running for the window system (no process holder watches it): it goes foreground,
++        // background and suspended like a game, which the menu needs to resume it.
++        applet->is_process_running = true;
++        window_system.TrackApplet(applet, true);
++        *out_application_accessor =
++            std::make_shared<IApplicationAccessor>(system, applet, window_system);
++        R_SUCCEED();
++    }
++
+     FileSys::VirtualFile nca_raw{};
+ 
+     // Get the program NCA from storage.
+diff --git a/src/core/hle/service/am/service/library_applet_accessor.cpp b/src/core/hle/service/am/service/library_applet_accessor.cpp
+index 7119c60..2f590b7 100644
+--- a/src/core/hle/service/am/service/library_applet_accessor.cpp
++++ b/src/core/hle/service/am/service/library_applet_accessor.cpp
+@@ -5,6 +5,7 @@
+ // SPDX-License-Identifier: GPL-2.0-or-later
+ 
+ #include "common/settings.h"
++#include "core/hle/service/acc/acc.h"
+ #include "core/hle/service/acc/profile_manager.h"
+ #include "core/hle/service/am/applet_data_broker.h"
+ #include "core/hle/service/am/applet_manager.h"
+@@ -179,6 +180,14 @@ Result ILibraryAppletAccessor::PopOutData(Out<SharedPointer<IStorage>> out_stora
+ 
+         if (impl->GetSize() == sizeof(Frontend::UiReturnArg)) {
+             ReplaceEmptyUuidWithCurrentUser(impl);
++
++            // The game started from the menu gets the user picked here (Wolfy's launcher passes
++            // the open one on): open it before the menu starts the game.
++            Frontend::UiReturnArg arg{};
++            impl->Read(0, &arg, sizeof(arg));
++            if (arg.result == 0) {
++                Service::Account::OpenPreselectedUser(arg.uuid_selected);
++            }
+         }
+     }
+ 
+diff --git a/src/core/hle/service/am/window_system.cpp b/src/core/hle/service/am/window_system.cpp
+index fbb1a57..2e304e5 100644
+--- a/src/core/hle/service/am/window_system.cpp
++++ b/src/core/hle/service/am/window_system.cpp
+@@ -4,10 +4,12 @@
+ // SPDX-FileCopyrightText: Copyright 2024 yuzu Emulator Project
+ // SPDX-License-Identifier: GPL-2.0-or-later
+ 
++#include <chrono>
+ #include <utility>
+ 
+ #include "common/settings.h"
+ #include "core/core.h"
++#include "core/file_sys/wolfy_launcher.h"
+ #include "core/hle/kernel/kernel.h"
+ #include "core/hle/service/am/am_results.h"
+ #include "core/hle/service/am/applet.h"
+@@ -18,9 +20,33 @@
+ 
+ namespace Service::AM {
+ 
+-WindowSystem::WindowSystem(Core::System& system) : m_system(system) {}
++WindowSystem::WindowSystem(Core::System& system) : m_system(system) {
++    if (!FileSys::WolfyLauncher::IsMenu()) {
++        return;
++    }
++    m_launcher_thread = std::jthread([this](std::stop_token stop) {
++        while (!stop.stop_requested()) {
++            std::this_thread::sleep_for(std::chrono::milliseconds{100});
++            if (FileSys::WolfyLauncher::TakeMenuRequest("menu-home")) {
++                LOG_INFO(Service_AM, "Wolfy launcher: HOME pressed in the game");
++                OnSystemButtonPress(SystemButtonType::HomeButtonShortPressing);
++            }
++            if (FileSys::WolfyLauncher::TakeMenuRequest("game-ended")) {
++                std::scoped_lock lk{m_lock};
++                if (m_application != nullptr && m_application->process->IsPlaceholder()) {
++                    LOG_INFO(Service_AM, "Wolfy launcher: the game ended");
++                    m_application->process->Terminate();
++                }
++                if (m_event_observer != nullptr) {
++                    m_event_observer->RequestUpdate();
++                }
++            }
++        }
++    });
++}
+ 
+ WindowSystem::~WindowSystem() {
++    m_launcher_thread = {};
+     m_system.GetAppletManager().SetWindowSystem(nullptr);
+ }
+ 
+@@ -249,6 +275,13 @@ void WindowSystem::SendButtonAppletMessageLocked(AppletMessage message) {
+ }
+ 
+ void WindowSystem::OnSystemButtonPress(SystemButtonType type) {
++    // A game started by Wolfy's launcher has no menu of its own: the launcher shows the menu.
++    if ((type == SystemButtonType::HomeButtonShortPressing ||
++         type == SystemButtonType::HomeButtonLongPressing) &&
++        FileSys::WolfyLauncher::RequestHome()) {
++        return;
++    }
++
+     std::scoped_lock lk{m_lock};
+     switch (type) {
+     case SystemButtonType::HomeButtonShortPressing:
+diff --git a/src/core/hle/service/am/window_system.h b/src/core/hle/service/am/window_system.h
+index 824ae14..2efcc7e 100644
+--- a/src/core/hle/service/am/window_system.h
++++ b/src/core/hle/service/am/window_system.h
+@@ -6,6 +6,8 @@
+ 
+ #pragma once
+ 
++#include <thread>
++
+ #include <map>
+ #include <memory>
+ #include <mutex>
+@@ -48,6 +50,7 @@ public:
+ public:
+     void RequestHomeMenuToGetForeground();
+     void RequestApplicationToGetForeground();
++
+     void RequestLockHomeMenuIntoForeground();
+     void RequestUnlockHomeMenuIntoForeground();
+     void RequestAppletVisibilityState(Applet& applet, bool visible);
+@@ -95,6 +98,9 @@ private:
+     // Applet map by aruid.
+     std::map<u64, std::shared_ptr<Applet>> m_applets{};
+     std::optional<u64> m_pending_application_notification{};
++
++    /// Wolfy's launcher: HOME pressed in the game, or the game gone (polled in the menu).
++    std::jthread m_launcher_thread;
+ };
+ 
+ } // namespace Service::AM
+diff --git a/src/core/hle/service/os/process.cpp b/src/core/hle/service/os/process.cpp
+index 5e46de2..30f023b 100644
+--- a/src/core/hle/service/os/process.cpp
++++ b/src/core/hle/service/os/process.cpp
+@@ -90,6 +90,9 @@ bool Process::Run() {
+ }
+ 
+ void Process::Terminate() {
++    if (m_placeholder) {
++        m_placeholder_terminated = true;
++    }
+     if (m_process) {
+         m_process->Terminate(m_system.Kernel());
+     }
+@@ -102,6 +105,9 @@ void Process::ResetSignal() {
+ }
+ 
+ bool Process::IsRunning() const {
++    if (m_placeholder) {
++        return !m_placeholder_terminated;
++    }
+     if (m_process) {
+         const auto state = m_process->GetState();
+         return state == Kernel::KProcess::State::Running ||
+@@ -113,6 +119,9 @@ bool Process::IsRunning() const {
+ }
+ 
+ bool Process::IsTerminated() const {
++    if (m_placeholder) {
++        return m_placeholder_terminated;
++    }
+     if (m_process) {
+         return m_process->IsTerminated();
+     }
+diff --git a/src/core/hle/service/os/process.h b/src/core/hle/service/os/process.h
+index 103ba7a..ab2d4b3 100644
+--- a/src/core/hle/service/os/process.h
++++ b/src/core/hle/service/os/process.h
+@@ -54,6 +54,15 @@ public:
+     bool IsRunning() const;
+     bool IsTerminated() const;
+ 
++    /// A game run by Wolfy's launcher in a process of its own: here no guest process, running
++    /// until terminated.
++    void MakePlaceholder() {
++        m_placeholder = true;
++    }
++    bool IsPlaceholder() const {
++        return m_placeholder;
++    }
++
+     u64 GetProcessId() const;
+     u64 GetProgramId() const;
+ 
+@@ -67,6 +76,8 @@ private:
+     u64 m_main_thread_stack_size{};
+     s32 m_main_thread_priority{};
+     bool m_process_started{};
++    bool m_placeholder{};
++    bool m_placeholder_terminated{};
+ };
+ 
+ } // namespace Service
+diff --git a/src/qt_common/game_list/worker.cpp b/src/qt_common/game_list/worker.cpp
+index 213175d..5a48a5c 100644
+--- a/src/qt_common/game_list/worker.cpp
++++ b/src/qt_common/game_list/worker.cpp
+@@ -30,6 +30,7 @@
+ #include "core/file_sys/fs_filesystem.h"
+ #include "core/file_sys/nca_metadata.h"
+ #include "core/file_sys/nup_menu.h"
++#include "core/file_sys/wolfy_launcher.h"
+ #include "core/file_sys/patch_manager.h"
+ #include "core/file_sys/registered_cache.h"
+ #include "core/file_sys/submission_package.h"
+@@ -478,6 +479,13 @@ void GameListWorker::ScanFileSystem(ScanTarget target, const std::vector<std::fi
+                 FileSys::NupMenu::Entry entry;
+                 entry.path = physical_name;
+                 loader->ReadControlData(entry.control);
++                // The HOME menu asks who plays only for a game that needs a user: Switch 2
++                // games do, but read as needing none here.
++                LOG_INFO(Frontend, "HOME menu: NUP game {:016X} startup user account {}",
++                         program_id, entry.control.GetStartupUserAccount());
++                if (entry.control.GetStartupUserAccount() == 0) {
++                    entry.control.SetStartupUserAccount(1); // required
++                }
+                 std::vector<u8> icon;
+                 if (loader->ReadIcon(icon) == Loader::ResultStatus::Success) {
+                     entry.icon = NupMenuIcon(icon);
+@@ -523,6 +531,7 @@ void GameListWorker::ScanFileSystem(ScanTarget target, const std::vector<std::fi
+                 RecordEvent([=](GameListModel* model) {
+                     model->AddEntry(pending->Release(), parent_dir);
+                 });
++                FileSys::WolfyLauncher::SetPath(id, physical_name);
+             };
+ 
+             if (res2 == Loader::ResultStatus::Success && program_ids.size() > 1 &&
+@@ -565,6 +574,7 @@ void GameListWorker::run() {
+     watch_list.clear();
+     provider->ClearAllEntries();
+     FileSys::NupMenu::Clear();
++    FileSys::WolfyLauncher::ClearPaths();
+ 
+     const auto DirEntryReady = [&](GameListDir* game_list_dir) {
+         auto pending = std::make_shared<std::unique_ptr<GameListDir>>(game_list_dir);
+diff --git a/src/yuzu/main_window.cpp b/src/yuzu/main_window.cpp
+index 02e9a88..718b96c 100644
+--- a/src/yuzu/main_window.cpp
++++ b/src/yuzu/main_window.cpp
+@@ -155,6 +155,7 @@ static FileSys::VirtualFile VfsDirectoryCreateFileWrapper(const FileSys::Virtual
+ #include "core/file_sys/card_image.h"
+ #include "core/file_sys/common_funcs.h"
+ #include "core/file_sys/nup_writer.h"
++#include "core/file_sys/wolfy_launcher.h"
+ #include "core/file_sys/romfs.h"
+ #include "core/file_sys/savedata_factory.h"
+ 
+@@ -1973,6 +1974,12 @@ void MainWindow::BootGame(const QString& filename, Service::AM::FrontendAppletPa
+         QtCommon::system->ApplySettings();
+     }
+ 
++    // Started by Wolfy's launcher from a controller: no dialog can be answered.
++    if (title_id == Settings::MarioKartWorldProgramId && !asked_recommended_mkw_settings &&
++        FileSys::WolfyLauncher::IsGame()) {
++        asked_recommended_mkw_settings = true;
++        use_recommended_mkw_settings = true;
++    }
+     if (title_id == Settings::MarioKartWorldProgramId && !asked_recommended_mkw_settings) {
+         asked_recommended_mkw_settings = true;
+         use_recommended_mkw_settings =
+@@ -2028,6 +2035,11 @@ void MainWindow::BootGame(const QString& filename, Service::AM::FrontendAppletPa
+             return;
+         }
+     }
++    if (FileSys::WolfyLauncher::IsGame()) {
++        // The user picked in the HOME menu's "Who is playing?" (-u from Wolfy's launcher)
++        LOG_INFO(Frontend, "Wolfy launcher: game started as user {}",
++                 Settings::values.current_user.GetValue());
++    }
+ 
+     // If the user specifies -u (successfully) on the cmd line, don't prompt for a user on first
+     // game startup only. If the user stops emulation and starts a new one, go back to the expected
+@@ -2300,6 +2312,12 @@ void MainWindow::OnEmulationStopped() {
+ 
+     emulation_running = false;
+ 
++    // A game process of Wolfy's launcher ends with its game: the launcher shows the menu.
++    if (FileSys::WolfyLauncher::IsGame()) {
++        LOG_INFO(Frontend, "Wolfy launcher: the game ended, quitting");
++        QTimer::singleShot(0, qApp, [] { QCoreApplication::exit(0); });
++    }
++
+     discord_rpc->Update();
+     Common::FeralGamemode::Stop();
+ 

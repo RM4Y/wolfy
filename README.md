@@ -9,9 +9,9 @@ chacun dans son propre conteneur.
 | **Tableau de bord** | État de Wolf, sessions actives, appareils, alerte quand un appareil demande l'appairage |
 | **Appairage** | Saisie du code PIN Moonlight, nom des appareils, type de manette forcé, désappairage |
 | **Sessions** | Sessions en cours (appli, appareil, résolution), arrêt d'une session |
-| **Applications** | Les applis affichées dans Moonlight, ordre, ajout/suppression. « Configurer » ouvre la page de l'appli : tous les réglages de son émulateur (Eden : 800+ réglages de `qt-config.ini`, en onglets, en français) + le conteneur Wolf (image, ROMs, jaquette, montages, variables, options Docker) |
+| **Applications** | Les applis affichées dans Moonlight, ordre, ajout/suppression. « Configurer » ouvre la page de l'appli : tous les réglages de son émulateur (Switch/Eglantine : 800+ réglages de `qt-config.ini`, en onglets, en français) + le conteneur Wolf (image, ROMs, jaquette, montages, variables, options Docker) |
 | **Mes jeux** | Catalogue complet d'une console avec jaquettes ([IGDB](https://www.igdb.com)) et demande d'un jeu à [Romarr](https://github.com/BlizzHacker/romarr), jeux demandés et téléchargements en cours, bibliothèque, vitrine « Découvrir ». Adresse et clé API de Romarr, identifiants IGDB (application Twitch) dans Paramètres |
-| **Émulateurs** | Catalogue (Eden, RetroArch, Dolphin…), état des images, construction/mise à jour |
+| **Émulateurs** | Catalogue (Eglantine, RetroArch, Dolphin…), état des images, construction/mise à jour |
 | **Maintenance** | Redémarrer/arrêter Wolf, journaux, conteneurs d'applis, rapports de plantage, sauvegardes/restauration de `config.toml` |
 
 ## Architecture
@@ -21,7 +21,7 @@ navigateur ──► Wolfy (FastAPI + Vue 3, port 8420)
                  ├─ API Wolf ........ socket UNIX /var/run/wolf/wolf.sock (volume docker « wolf-api »)
                  │                    appairage, sessions, clients
                  ├─ config.toml ..... /opt/stacks/config/wolf/cfg (applications / profils)
-                 ├─ qt-config.ini ... ~/.config/eden (réglages Eden)
+                 ├─ qt-config.ini ... config/switch/cfg (réglages Eglantine, appli Switch)
                  └─ Docker .......... /var/run/docker.sock (redémarrage Wolf, conteneurs, images)
 ```
 
@@ -31,12 +31,12 @@ navigateur ──► Wolfy (FastAPI + Vue 3, port 8420)
   des sessions en cours.
 - Les infos propres à Wolfy (noms des appareils, émulateur associé à chaque appli, notes) sont dans
   `data/wolfy.json`.
-- Réglages Eden : `backend/wolfy/emulator_settings/eden.json` est généré depuis les sources d'Eden
-  (types, valeurs par défaut, bornes, libellés et traduction française officielle) :
-  `python3 tools/gen_eden_schema.py v0.2.1` (à relancer quand Eden est mis à jour). Wolfy modifie
-  `~/.config/eden/qt-config.ini` ligne par ligne (sauvegardes dans `~/.config/eden/wolfy-backups/`) ;
-  les sessions Wolf copient ce fichier à leur démarrage. Les réglages imposés par l'image Wolf
-  (pseudo, IP du salon, moteur audio, interface réseau) sont affichés verrouillés.
+- Réglages Switch (Eglantine, fork d'Eden au même format) : `backend/wolfy/emulator_settings/eglantine.json`
+  est généré depuis les sources (types, valeurs par défaut, bornes, libellés et traduction française
+  officielle) avec `tools/gen_eden_schema.py`. Wolfy modifie `config/switch/cfg/qt-config.ini` ligne par
+  ligne (sauvegardes dans `config/switch/cfg/wolfy-backups/`), refusé pendant une session Switch (Eglantine
+  réécrit sa config en quittant). Les réglages imposés par l'image Wolf (plein écran, mémoire 12 Gio,
+  moteur audio, interface réseau…) sont affichés verrouillés.
 - Réglages PlayStation : options des cœurs uniquement (Beetle PSX HW, LRPS2, PPSSPP), décrites par
   `backend/wolfy/emulator_settings/retroarch.json`, généré depuis les sources des cœurs (et de RetroArch) :
   `python3 tools/gen_retroarch_schema.py v1.22.2`. Wolfy modifie `config/<cœur>/<cœur>.opt`
@@ -47,7 +47,13 @@ navigateur ──► Wolfy (FastAPI + Vue 3, port 8420)
 - Le catalogue d'émulateurs est dans `backend/wolfy/emulators.py`. Jaquettes par défaut des applis (Switch,
   PlayStation, Wii, Steam) : `backend/wolfy/covers/`, copiées au démarrage dans le dossier `covers` de Wolf si
   absentes, et proposées à la création d'une appli (bouton « Image par défaut » dans l'éditeur). Les images locales sont construites
-  depuis `images/<émulateur>/` : `images/eden` = `wolfy-eden` (Switch, voir son README),
+  depuis `images/<émulateur>/` : `images/switch` = `wolfy-switch` (Switch : [Eglantine](https://github.com/Eglantine-Community/Eglantine)
+  — ou un autre fork d'Eden comme [Lichii](https://github.com/zortos293/Lichii) —, patché par `images/switch/build.sh`, à lancer
+  avant de construire l'image. Fork et version dans `images/switch/emulator.version` (`patches/lichii/` : les
+  patchs pour Lichii) ; mise à jour (patchs réappliqués, version gardée si l'un ne passe plus) par
+  `images/switch/update-emulator.py` (`--check` pour seulement vérifier) ou Émulateurs › Eglantine › « Mettre à jour ».
+  Menu HOME du firmware 23 ; `wolfy-launcher.py` lance chaque jeu Switch 1 ou 2 dans son propre processus Eglantine, avec la
+  bonne horloge, et le menu le met en pause, le reprend ou le ferme comme sur la console),
   `images/steam` = `wolfy-steam` (Steam, sur l'image officielle GoW : un dossier Steam par session en cours, bibliothèques
   enregistrées dans `libraryfolders.vdf`, options de démarrage — `steam-setup.py`) ;
   `images/retroarch` = `wolfy-retroarch` (PlayStation) : cœurs Beetle PSX HW / LRPS2 / PPSSPP intégrés à l'image
@@ -70,7 +76,7 @@ Une seule pile Docker (`compose.yaml`, projet `wolfy`) :
 |---|---|
 | `wolf` | Wolf (image officielle `ghcr.io/games-on-whales/wolf:stable`), réseau hôte, GPU NVIDIA |
 | `wolfy` | cette interface, construite depuis le dépôt, port 8420 |
-| `wolfy-eden`, `wolfy-retroarch`, `wolfy-steam` | images des applis Switch / PlayStation (dont PS3 / PS Vita) / Steam (profil `images`, construction seulement : Wolf les lance à chaque session) |
+| `wolfy-switch`, `wolfy-retroarch`, `wolfy-steam` | images des applis Switch / PlayStation (dont PS3 / PS Vita) / Steam (profil `images`, construction seulement : Wolf les lance à chaque session) |
 
 ```bash
 git clone https://github.com/RM4Y/wolfy.git && cd wolfy
@@ -118,7 +124,7 @@ Les images construites ici ont une copie publique sur GitHub, avec `latest` et l
 | Image locale | Copie |
 |---|---|
 | `wolfy:latest` (interface, `wolfy-net`) | `ghcr.io/rm4y/wolfy` |
-| `wolfy-eden:latest` | `ghcr.io/rm4y/wolfy-eden` |
+| `wolfy-switch:latest` | `ghcr.io/rm4y/wolfy-switch` |
 | `wolfy-retroarch:latest` | `ghcr.io/rm4y/wolfy-retroarch` |
 | `wolfy-dolphin:latest` | `ghcr.io/rm4y/wolfy-dolphin` |
 | `wolfy-steam:latest` | `ghcr.io/rm4y/wolfy-steam` |
@@ -127,7 +133,7 @@ Les images des émulateurs se restaurent (sans compte) et se sauvegardent (jeton
 (Émulateurs). À la main (l'envoi demande `docker login ghcr.io`) :
 
 ```sh
-docker pull ghcr.io/rm4y/wolfy-eden:latest && docker tag ghcr.io/rm4y/wolfy-eden:latest wolfy-eden:latest
+docker pull ghcr.io/rm4y/wolfy-switch:latest && docker tag ghcr.io/rm4y/wolfy-switch:latest wolfy-switch:latest
 docker tag wolfy:latest ghcr.io/rm4y/wolfy:latest && docker push ghcr.io/rm4y/wolfy:latest
 ```
 
@@ -138,17 +144,15 @@ montages correspondants du service `wolfy` dans `compose.yaml`.
 
 - État de Wolf (config.toml, jaquettes, appareils appairés) : `/opt/stacks/config/wolf`, inchangé.
 - Données des émulateurs dans `config/` (jamais versionné) :
-  `config/switch/keys` (prod.keys, title.keys — envoi depuis Émulateurs > Eden),
-  `config/switch/nand` (firmware — installation d'un .zip depuis la même page, contenu installé),
-  `config/switch/users` (profils `system/save` + sauvegardes `user/save`),
+  `config/switch/cfg` (réglages Eglantine, `~/.config/eden` des sessions, et `wolfy/combo.json`),
+  `config/switch/data` (`~/.local/share/eden` des sessions : `keys` — envoi depuis Émulateurs > Switch —,
+  `nand` — firmware, comptes et sauvegardes —, journaux dans `log`),
   `config/playstation/bios` (dossier « system » de RetroArch : BIOS PS2 dans `pcsx2/bios`, PS1, fichiers PPSSPP),
   `config/playstation/saves`, `config/playstation/states` ;
   `config/steam/data` (le `~/.steam` des sessions : installation, compte, réglages ; les sessions lancées
   pendant qu'une autre utilise Steam prennent `config/steam/data-2`, `data-3`…, chacun avec son compte),
   `config/steam/wolfy/steam.json` (options de session) ;
   `config/<système>/wolfy/combo.json` : combinaisons de manette (menu / quitter).
-  Eden sur le PC utilise les mêmes dossiers (`~/.local/share/eden/keys` est un lien vers
-  `config/switch/keys`, la NAND et les sauvegardes sont réglées dans `~/.config/eden/qt-config.ini`).
 - Le volume `nvidia-driver-vol` (pilote NVIDIA pour les conteneurs d'applis) est externe : à recréer
   après une mise à jour du pilote NVIDIA.
 - Wolf et Wolfy partagent le socket d'API de Wolf via le volume `wolf-api`.

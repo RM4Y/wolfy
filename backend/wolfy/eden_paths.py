@@ -118,8 +118,8 @@ def status(paths: dict) -> dict:
     return out
 
 
-def _firmware_version() -> str | None:
-    log = host(f"{DATA_DIR}/log/eden_log.txt")
+def _firmware_version(data_dir: str = DATA_DIR) -> str | None:
+    log = host(f"{data_dir}/log/eden_log.txt")
     try:
         with open(log, errors="replace") as f:
             head = f.read(20000)
@@ -299,8 +299,8 @@ def _check_keys(name: str, data: bytes) -> str:
     return text
 
 
-def upload_keys(files: list[tuple[str, bytes]]) -> dict:
-    """prod.keys / title.keys, or a .zip containing them."""
+def upload_keys(files: list[tuple[str, bytes]], keys_dir: str | None = None) -> dict:
+    """prod.keys / title.keys, or a .zip containing them (default: Eden's keys folder)."""
     found: dict[str, bytes] = {}
     for name, data in files:
         base = Path(name).name.lower()
@@ -317,7 +317,7 @@ def upload_keys(files: list[tuple[str, bytes]]) -> dict:
         raise HTTPException(400, "Aucun prod.keys ni title.keys trouvé")
     texts = {name: _check_keys(name, data) for name, data in found.items()}
 
-    keys_dir = Path(current()["keys"])
+    keys_dir = Path(keys_dir or current()["keys"])
     keys_dir.mkdir(parents=True, exist_ok=True)
     backup = keys_dir / ".backups" / datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     for name, text in texts.items():
@@ -335,8 +335,9 @@ def _bytes_file(data: bytes):
     return io.BytesIO(data)
 
 
-def upload_firmware(zip_path: str) -> dict:
-    """Firmware .zip (the .nca files of a Switch firmware) -> NAND system/Contents/registered."""
+def upload_firmware(zip_path: str, nand_dir: str | None = None) -> dict:
+    """Firmware .zip (the .nca files of a Switch firmware) -> NAND system/Contents/registered
+    (default: Eden's NAND)."""
     try:
         z = zipfile.ZipFile(zip_path)
     except zipfile.BadZipFile:
@@ -349,7 +350,7 @@ def upload_firmware(zip_path: str) -> dict:
         if len(set(names)) != len(names):
             raise HTTPException(400, "Archive invalide : fichiers .nca en double")
 
-        nand = Path(current()["firmware"])
+        nand = Path(nand_dir or current()["firmware"])
         contents = nand / "system" / "Contents"
         contents.mkdir(parents=True, exist_ok=True)
         staging = Path(tempfile.mkdtemp(prefix="registered.new-", dir=contents))

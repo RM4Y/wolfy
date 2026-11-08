@@ -1,5 +1,5 @@
 <script setup>
-// Every setting of an emulator (Eden: qt-config.ini, RetroArch: core options,
+// Every setting of an emulator (Eglantine: qt-config.ini, RetroArch: core options,
 // Dolphin: Dolphin.ini, GFX.ini…),
 // grouped in tabs, with a draft of pending changes. First tab: Wolfy's own settings.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
@@ -8,10 +8,10 @@ import EspBar from './EspBar.vue'
 import HomeCombo from './HomeCombo.vue'
 import SettingField from './SettingField.vue'
 import WolfyDolphin from './WolfyDolphin.vue'
-import WolfyEden from './WolfyEden.vue'
+import WolfySwitch from './WolfySwitch.vue'
 
 const props = defineProps({ emulator: { type: String, required: true } })
-const NAMES = { eden: 'Eden', retroarch: 'RetroArch', steam: 'Steam', dolphin: 'Dolphin' }
+const NAMES = { switch: 'Eglantine', retroarch: 'RetroArch', steam: 'Steam', dolphin: 'Dolphin' }
 const name = NAMES[props.emulator] || props.emulator
 const base = `/emulator-settings/${props.emulator}`
 const open = ref({}) // collapsed/expanded groups
@@ -119,13 +119,16 @@ defineExpose({ pending })
     <div class="alert info small" style="margin-bottom:16px">
       <template v-if="data.description">{{ data.description }}</template>
       <template v-else>
-        Configuration Eden <b>partagée</b> : utilisée par Eden sur le PC et copiée au démarrage de
-        <b>chaque session Wolf</b>. Les changements s'appliquent aux prochaines sessions.
+        Configuration montée dans chaque session : les changements s'appliquent aux prochaines sessions.
       </template>
-      <code>{{ data.path }}</code> · réglages et libellés issus de {{ data.version || `Eden ${data.eden_tag}` }}.
+      <code>{{ data.path }}</code><template v-if="data.version"> · réglages et libellés issus de {{ data.version }}</template>.
     </div>
     <div v-if="data.host_running" class="alert warn small" style="margin-bottom:16px">
       <Icon name="alert" />{{ name }} est ouvert sur le PC : ferme-le avant d'enregistrer (il réécrit sa config en quittant).
+    </div>
+    <div v-if="data.session_running" class="alert warn small" style="margin-bottom:16px">
+      <Icon name="alert" />Une session Switch est en cours : {{ name }} réécrit sa config en quittant, l'enregistrement
+      est bloqué jusqu'à la fin de la session.
     </div>
 
     <div class="row" style="margin-bottom:14px">
@@ -155,7 +158,7 @@ defineExpose({ pending })
     </div>
 
     <template v-if="tab === 'wolfy' && !search">
-      <WolfyEden v-if="emulator === 'eden'" />
+      <WolfySwitch v-if="emulator === 'switch'" />
       <WolfyDolphin v-else-if="emulator === 'dolphin'" />
       <HomeCombo v-else :emulator="emulator" />
     </template>

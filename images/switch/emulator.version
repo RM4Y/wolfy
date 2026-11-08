@@ -1,0 +1,11 @@
+# Switch emulator of the app Switch (written by update-emulator.py / Wolfy after a successful
+# build): which fork (GitHub repository, binary name), the release (AppImage used by Dockerfile)
+# and its sources patched by build.sh. LLVM and Qt: the toolchain of that release's Linux PGO build.
+EMU_NAME=Eglantine
+EMU_REPO=Eglantine-Community/Eglantine
+EMU_BINARY=eglantine
+EMU_TAG=v0.1.0-rc3
+EMU_DATE=2026-11-08T16:21:38Z
+EMU_COMMIT=78743f30c251f66bd77e6eea6c28d8632d642d6f
+EMU_LLVM=23
+EMU_QT=6.8.3

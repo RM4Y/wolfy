@@ -1,7 +1,7 @@
 """Gamepad combos of the Wolf sessions (menu / quit), one settings file per emulator.
 
 Read live by images/common/home-combo.py in each session:
-- Switch (Eden): ~/.config/eden/wolfy-home-combo.json (sessions see it as /eden-config-host)
+- Switch (Eglantine): config/switch/cfg/wolfy/combo.json (~/.config/eden/wolfy in the session)
 - PlayStation (RetroArch), Steam, Wii (Dolphin): config/<system>/wolfy/combo.json (mounted at /wolfy-config)
 """
 import json
@@ -20,8 +20,8 @@ QUIT_COMBOS = ("start+guide", "back+start", "back+guide")
 
 
 def path(emulator: str) -> Path:
-    if emulator == "eden":
-        return settings.EDEN_CONFIG.parent / "wolfy-home-combo.json"
+    if emulator == "switch":
+        return Path(settings.WOLFY_HOST_DIR) / "config" / "switch" / "cfg" / "wolfy" / "combo.json"
     systems = {"retroarch": "playstation", "steam": "steam", "dolphin": "wii"}
     if emulator in systems:
         return Path(settings.WOLFY_HOST_DIR) / "config" / systems[emulator] / "wolfy" / "combo.json"
@@ -60,7 +60,7 @@ def write(emulator: str, data: dict) -> dict:
 
 def ensure_hooks() -> None:
     """Create/refresh every combo file with the current hook (token, port) at startup."""
-    for emulator in ("eden", "retroarch", "steam", "dolphin"):
+    for emulator in ("switch", "retroarch", "steam", "dolphin"):
         p = path(emulator)
         if not p.parent.parent.exists():
             continue

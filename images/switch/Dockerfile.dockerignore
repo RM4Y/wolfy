@@ -1,0 +1,7 @@
+dolphin
+eden
+retroarch
+steam
+**/*.bak-*
+**/__pycache__
+switch/patches

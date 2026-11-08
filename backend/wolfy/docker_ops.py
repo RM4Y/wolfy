@@ -180,15 +180,29 @@ class Job:
         self.lines: deque[str] = deque(maxlen=2000)
         self.started = datetime.now().isoformat(timespec="seconds")
         self.finished: str | None = None
+        # optional: on_line(line) sees every log line (progress parsers); progress() -> {percent,
+        # phase, eta (seconds left or None), elapsed} computed when the job is read (fresh ETA)
+        self.on_line: Callable[[str], None] | None = None
+        self.progress: Callable[[], dict] | None = None
 
     def log(self, line: str) -> None:
         for part in str(line).splitlines():
             if part.strip():
                 self.lines.append(part.rstrip())
+                if self.on_line:
+                    try:
+                        self.on_line(part.strip())
+                    except Exception:  # a parser never breaks the job
+                        pass
 
     def as_dict(self, with_log: bool = False) -> dict:
         d = {"id": self.id, "title": self.title, "status": self.status,
              "started": self.started, "finished": self.finished}
+        if self.progress and self.status == "running":
+            try:
+                d["progress"] = self.progress()
+            except Exception:
+                pass
         if with_log:
             d["log"] = list(self.lines)
         return d
@@ -230,23 +244,45 @@ def _context_tar(root, build_dir: str):
     return buf
 
 
-def build_image(ref: str, build_dir: str) -> Job:
+def build_steps(job: Job, ref: str, build_dir: str) -> None:
+    """Builds REF from images/<build_dir> within JOB (its output in the job log)."""
     ctx = build_context(build_dir)
     if ctx is None:
+        raise RuntimeError(f"Pas de Dockerfile pour « {build_dir} »")
+    job.log(f"Construction de {ref} depuis {ctx}")
+    context = _context_tar(ctx.parent, build_dir)
+    for chunk in client().api.build(fileobj=context, custom_context=True, dockerfile=f"{build_dir}/Dockerfile",
+                                    tag=ref, rm=True, pull=True, decode=True):
+        if "stream" in chunk:
+            job.log(chunk["stream"])
+        elif "status" in chunk:
+            job.log(f"{chunk['status']} {chunk.get('progress', '')}")
+        elif "error" in chunk:
+            raise RuntimeError(chunk["error"])
+    job.log("Image construite.")
+
+
+def step_progress(job: Job, phase: str) -> None:
+    """Progress of a Docker build from its "Step N/M" lines (no ETA: steps differ too much)."""
+    import re
+    state = {"frac": 0.0, "start": time.time()}
+
+    def on_line(line: str) -> None:
+        if m := re.match(r"Step (\d+)/(\d+)", line):
+            state["frac"] = (int(m[1]) - 1) / int(m[2])
+
+    job.on_line = on_line
+    job.progress = lambda: {"percent": round(state["frac"] * 100, 1), "phase": phase, "eta": None,
+                            "elapsed": int(time.time() - state["start"])}
+
+
+def build_image(ref: str, build_dir: str) -> Job:
+    if build_context(build_dir) is None:
         raise HTTPException(404, f"Pas de Dockerfile pour « {build_dir} »")
 
     def work(job: Job):
-        job.log(f"Construction de {ref} depuis {ctx}")
-        context = _context_tar(ctx.parent, build_dir)
-        for chunk in client().api.build(fileobj=context, custom_context=True, dockerfile=f"{build_dir}/Dockerfile",
-                                        tag=ref, rm=True, pull=True, decode=True):
-            if "stream" in chunk:
-                job.log(chunk["stream"])
-            elif "status" in chunk:
-                job.log(f"{chunk['status']} {chunk.get('progress', '')}")
-            elif "error" in chunk:
-                raise RuntimeError(chunk["error"])
-        job.log("Image construite.")
+        step_progress(job, f"Construction de {ref}")
+        build_steps(job, ref, build_dir)
 
     return run_job(f"Construction {ref}", work)
 

@@ -7,7 +7,7 @@ import { coverUrl } from '../api'
 const props = defineProps({ app: Object, label: { type: Boolean, default: true } })
 
 const DEFAULTS = ['switch', 'playstation', 'wii', 'steam']
-const BY_EMULATOR = { eden: 'switch', retroarch: 'playstation', 'gow-retroarch': 'playstation', dolphin: 'wii', steam: 'steam' }
+const BY_EMULATOR = { switch: 'switch', retroarch: 'playstation', 'gow-retroarch': 'playstation', dolphin: 'wii', steam: 'steam' }
 
 const file = computed(() => (props.app?.icon || '').split('/').pop().replace(/\.png$/, ''))
 const custom = computed(() => props.app?.icon && !DEFAULTS.includes(file.value))

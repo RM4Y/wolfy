@@ -9,7 +9,7 @@ COPY eden/eden-app /opt/eden
 COPY eden/patched/ /opt/eden/shared/
 RUN chmod -R a+rX /opt/eden
 
-COPY eden/20-fix-home-perms.sh /etc/cont-init.d/20-fix-home-perms.sh
+COPY common/20-fix-home-perms.sh /etc/cont-init.d/20-fix-home-perms.sh
 RUN chmod +x /etc/cont-init.d/20-fix-home-perms.sh
 
 RUN apt-get update && apt-get install -y --no-install-recommends xdotool \
