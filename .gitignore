@@ -5,12 +5,6 @@ backend/static/
 __pycache__/
 *.pyc
 .venv/
-# extracted Eden AppImage (≈300 Mo), see images/eden/README.md
-images/eden/AppDir/
-# patched Eden binary + libraries, built by images/eden/build/build.sh
-images/eden/patched/
-# patched Eglantine binary, built by images/switch2/build/build.sh
-images/switch2/patched/
 # patched Switch emulator (Eglantine) binary, built by images/switch/build.sh
 images/switch/patched/
 *.bak-*

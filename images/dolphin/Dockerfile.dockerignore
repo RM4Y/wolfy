@@ -1,6 +1,4 @@
-eden
 retroarch
 steam
-switch2
 **/*.bak-*
 **/__pycache__

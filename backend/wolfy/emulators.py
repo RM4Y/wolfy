@@ -172,7 +172,7 @@ def install_default_covers() -> None:
 
 
 def backup_ref(emu: dict) -> str | None:
-    """Copy of an image built here in the private registry (ghcr.io/rm4y/wolfy-eden:latest...)."""
+    """Copy of an image built here in the private registry (ghcr.io/rm4y/wolfy-switch:latest...)."""
     if not emu.get("build_dir") or not emu.get("image") or "/" in emu["image"]:
         return None
     return f"{settings.REGISTRY}/{emu['image']}"
