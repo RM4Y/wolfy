@@ -1,5 +1,5 @@
 {
- "eden_tag": "build-129",
+ "eden_tag": "v0.1.0-rc3",
  "settings": {
   "cabinet_applet_mode": {
    "id": "cabinet_applet_mode",
@@ -336,7 +336,7 @@
    "default": 50,
    "percent": true,
    "label_en": "Slow Speed",
-   "label": "Slow Speed",
+   "label": "Vitesse lente",
    "help": "When the Slow Speed hotkey is pressed, the speed will be limited to this percentage."
   },
   "turbo_speed_limit": {
@@ -350,7 +350,7 @@
    "default": 200,
    "percent": true,
    "label_en": "Turbo Speed",
-   "label": "Turbo Speed",
+   "label": "Vitesse turbo",
    "help": "When the Turbo Speed hotkey is pressed, the speed will be limited to this percentage."
   },
   "current_speed_mode": {
@@ -385,7 +385,7 @@
    "max": null,
    "type": "enum",
    "enum": "CpuBackend",
-   "default": 1,
+   "default": 0,
    "label_en": "Backend",
    "label": "Arrière-plan",
    "help": ""
@@ -411,7 +411,7 @@
    "enum": "CpuClock",
    "default": 0,
    "label_en": "CPU Clocks",
-   "label": "CPU Clocks",
+   "label": "Fréquence du CPU",
    "help": "Raises the clock the emulated CPU reports, which removes some FPS limiters.\nWeaker CPUs may see reduced performance, and certain games may behave improperly."
   },
   "use_custom_cpu_ticks": {
@@ -576,7 +576,7 @@
    "key": "cpuopt_unsafe_host_mmu",
    "category": "CpuUnsafe",
    "type": "bool",
-   "default": false,
+   "default": true,
    "label_en": "Enable Host MMU Emulation (fastmem)",
    "label": "Activer l'émulation MMU de l'hôte (fastmem)",
    "help": "Cette optimisation accélère les accès mémoire par le programme invité.\nL'activer permet à l'invité de lire/écrire directement dans la mémoire et utilise le MMU de l'Hôte.\nDésactiver cela force tous les accès mémoire à utiliser l'émulation logicielle de la MMU."
@@ -654,7 +654,7 @@
    "category": "Renderer",
    "type": "enum",
    "enum": "RendererBackend",
-   "default": 0,
+   "default": 1,
    "label_en": "API",
    "label": "API",
    "help": "Modifie l’API graphique utilisée en sortie.\nVulkan est recommandé."
@@ -703,7 +703,7 @@
    "category": "Renderer",
    "type": "enum",
    "enum": "ScalingFilter",
-   "default": 0,
+   "default": 5,
    "label_en": "Window Adapting Filter",
    "label": "Filtre de fenêtre adaptatif",
    "help": ""
@@ -718,9 +718,20 @@
    "type": "int",
    "default": 25,
    "percent": true,
-   "label_en": "FSR Sharpness",
-   "label": "Netteté FSR",
-   "help": "Determines how sharpened the image will look using FSR's or SGSR's dynamic contrast."
+   "label_en": "RCAS Sharpness",
+   "label": "Netteté RCAS",
+   "help": "Strength of RCAS (AMD's contrast-adaptive sharpening) on the upscaler used in place "
+  },
+  "nvidia_dlss": {
+   "id": "nvidia_dlss",
+   "owner": "Settings",
+   "key": "nvidia_dlss",
+   "category": "Renderer",
+   "type": "bool",
+   "default": false,
+   "label_en": "Use NVIDIA DLSS in place of a game's DLSS",
+   "label": "NVIDIA DLSS à la place du DLSS du jeu",
+   "help": "Uses NVIDIA DLSS on GeForce RTX cards in place of a Switch 2 game's own DLSS, instead of AMD FSR 3.1.\nNeeds NVIDIA's Streamline loader, and NVIDIA DLSS unless the NVIDIA app has downloaded it; Eglantine does not ship NVIDIA's files. Use the download button below.\nTakes effect when a game starts."
   },
   "aspect_ratio": {
    "id": "aspect_ratio",
@@ -741,7 +752,7 @@
    "category": "Renderer",
    "type": "enum",
    "enum": "AntiAliasing",
-   "default": 0,
+   "default": 1,
    "label_en": "Anti-Aliasing Method",
    "label": "Méthode d'anticrénelage",
    "help": "La méthode d’anticrénelage à utiliser.\nSMAA offre la meilleure qualité.\nFXAA peut produire une image plus stable à des résolutions plus faibles."
@@ -776,7 +787,7 @@
    "type": "bool",
    "default": true,
    "label_en": "Enable post-processing effects",
-   "label": "Enable post-processing effects",
+   "label": "Effets de post-traitement",
    "help": "Applies post-processing effects to the final image."
   },
   "frame_gen": {
@@ -787,7 +798,7 @@
    "type": "bool",
    "default": false,
    "label_en": "Enable Frame Generation",
-   "label": "Enable Frame Generation",
+   "label": "Génération d'images",
    "help": ""
   },
   "frame_gen_type": {
@@ -799,7 +810,7 @@
    "enum": "FrameGenType",
    "default": 1,
    "label_en": "Frame Generation Type",
-   "label": "Frame Generation Type",
+   "label": "Type de génération d'images",
    "help": ""
   },
   "frame_gen_multiplier": {
@@ -812,7 +823,7 @@
    "type": "int",
    "default": 2,
    "label_en": "Frame Generation Multiplier",
-   "label": "Frame Generation Multiplier",
+   "label": "Multiplicateur de génération d'images",
    "help": ""
   },
   "frame_gen_target_rate": {
@@ -825,7 +836,7 @@
    "type": "int",
    "default": 0,
    "label_en": "Target Frame Rate",
-   "label": "Target Frame Rate",
+   "label": "Fréquence d'images visée",
    "help": ""
   },
   "frame_gen_flow_scale_auto": {
@@ -836,7 +847,7 @@
    "type": "bool",
    "default": true,
    "label_en": "Auto Flow Scale",
-   "label": "Auto Flow Scale",
+   "label": "Échelle du flux optique automatique",
    "help": ""
   },
   "frame_gen_flow_scale": {
@@ -850,7 +861,7 @@
    "default": 75,
    "percent": true,
    "label_en": "Flow Scale",
-   "label": "Flow Scale",
+   "label": "Échelle du flux optique",
    "help": ""
   },
   "frame_gen_queue_target": {
@@ -863,7 +874,7 @@
    "type": "int",
    "default": 0,
    "label_en": "Queue Target",
-   "label": "Queue Target",
+   "label": "File d'attente visée",
    "help": ""
   },
   "frame_gen_dump_flow": {
@@ -874,7 +885,7 @@
    "type": "bool",
    "default": false,
    "label_en": "Dump Optical Flow",
-   "label": "Dump Optical Flow",
+   "label": "Exporter le flux optique",
    "help": ""
   },
   "use_asynchronous_gpu_emulation": {
@@ -968,7 +979,7 @@
    "enum": "GpuFenceBehavior",
    "default": 0,
    "label_en": "GPU Fence Behavior",
-   "label": "GPU Fence Behavior",
+   "label": "Comportement des barrières GPU",
    "help": "Controls the GPU fence synchronization behavior.\nImmediate is the fastest option, but can introduce some issues.\nBalanced offers better compatibility and may fix issues in some games.\nAccurate further improves compatibility at the cost of some performance.\nDefault follows the GPU Mode setting."
   },
   "vram_usage_mode": {
@@ -1030,7 +1041,7 @@
    "enum": "FramePacingMode",
    "default": 0,
    "label_en": "Frame Pacing Mode (Vulkan only)",
-   "label": "Frame Pacing Mode (Vulkan only)",
+   "label": "Régulation des images (Vulkan uniquement)",
    "help": "Controls how the emulator manages frame pacing to reduce stuttering and make the frame rate smoother and more consistent."
   },
   "astc_recompression": {
@@ -1040,7 +1051,7 @@
    "category": "RendererAdvanced",
    "type": "enum",
    "enum": "AstcRecompression",
-   "default": 0,
+   "default": 2,
    "label_en": "ASTC Recompression Method",
    "label": "Méthode de recompression ASTC",
    "help": "La plupart des GPU ne prennent pas en charge les textures ASTC et doivent les décompresser dans un format intermédiaire : RGBA8.\nBC1/BC3 : Le format intermédiaire sera recompressé en BC1 ou BC3, ce qui économise de la VRAM mais dégrade la qualité de l’image."
@@ -1111,6 +1122,28 @@
    "label": "Synchro la fréquence d'image de la relecture du vidéo",
    "help": "Éxécuter le jeu à une vitesse normale pendant la relecture du vidéo, même-ci la fréquence d'image est dévérouillée. "
   },
+  "mkw_30fps": {
+   "id": "mkw_30fps",
+   "owner": "Settings",
+   "key": "mkw_30fps",
+   "category": "RendererAdvanced",
+   "type": "bool",
+   "default": false,
+   "label_en": "Mario Kart World: 30 FPS mode",
+   "label": "Mario Kart World : mode 30 FPS",
+   "help": "Force le mode 30 FPS natif du jeu, à vitesse normale. Pris en compte au prochain lancement du jeu."
+  },
+  "mkw_dynamic_fps": {
+   "id": "mkw_dynamic_fps",
+   "owner": "Settings",
+   "key": "mkw_dynamic_fps",
+   "category": "RendererAdvanced",
+   "type": "bool",
+   "default": false,
+   "label_en": "Mario Kart World: dynamic FPS (experimental)",
+   "label": "Mario Kart World : FPS dynamiques (expérimental)",
+   "help": "Le jeu varie entre 30 et 60 FPS selon le temps de chaque image pour garder sa vitesse normale. Pris en compte au prochain lancement du jeu ; prioritaire sur le mode 30 FPS."
+  },
   "use_reactive_flushing": {
    "id": "use_reactive_flushing",
    "owner": "Settings",
@@ -1141,7 +1174,7 @@
    "type": "bool",
    "default": false,
    "label_en": "Enable buffer history",
-   "label": "Enable buffer history",
+   "label": "Historique des tampons",
    "help": "Enables access to previous buffer states.\nThis option may improve rendering quality and performance consistency in some games."
   },
   "fast_gpu_time": {
@@ -1153,7 +1186,7 @@
    "enum": "GpuClock",
    "default": 1,
    "label_en": "GPU Clocks",
-   "label": "GPU Clocks",
+   "label": "Fréquence du GPU",
    "help": "Makes the game believe GPU work finishes faster than it does, so it stops lowering resolution and render distance to fit the Switch's clocks."
   },
   "skip_cpu_inner_invalidation": {
@@ -1186,7 +1219,7 @@
    "type": "bool",
    "default": false,
    "label_en": "Fix bloom effects",
-   "label": "Fix bloom effects",
+   "label": "Corriger les effets de bloom",
    "help": "Removes bloom in Burnout."
   },
   "emulate_bgr565": {
@@ -1220,7 +1253,7 @@
    "enum": "GpuUnswizzleSize",
    "default": 3,
    "label_en": "GPU Unswizzle Max Texture Size",
-   "label": "GPU Unswizzle Max Texture Size",
+   "label": "Dé-swizzle GPU : taille max. des textures",
    "help": "Sets the maximum size (MiB) for GPU-based texture unswizzling.\nWhile the GPU is faster for medium and large textures, the CPU may be more efficient for very small ones.\nAdjust this to find the balance between GPU acceleration and CPU overhead."
   },
   "gpu_unswizzle_stream_size": {
@@ -1232,7 +1265,7 @@
    "enum": "GpuUnswizzle",
    "default": 3,
    "label_en": "GPU Unswizzle Stream Size",
-   "label": "GPU Unswizzle Stream Size",
+   "label": "Dé-swizzle GPU : taille du flux",
    "help": "Sets the maximum amount of texture data (in MiB) processed per frame.\nHigher values can reduce stutter during texture loading but may impact frame consistency."
   },
   "gpu_unswizzle_chunk_size": {
@@ -1244,7 +1277,7 @@
    "enum": "GpuUnswizzleChunk",
    "default": 3,
    "label_en": "GPU Unswizzle Chunk Size",
-   "label": "GPU Unswizzle Chunk Size",
+   "label": "Dé-swizzle GPU : taille des blocs",
    "help": "Determines the number of depth slices processed in a single dispatch.\nIncreasing this can improve throughput on high-end GPUs but may cause TDR or driver timeouts on weaker hardware."
   },
   "gpu_unswizzle_enabled": {
@@ -1255,7 +1288,7 @@
    "type": "bool",
    "default": false,
    "label_en": "GPU Unswizzle",
-   "label": "GPU Unswizzle",
+   "label": "Dé-swizzle GPU",
    "help": "Accelerates BCn 3D texture decoding using GPU compute.\nDisable if experiencing crashes or graphical glitches."
   },
   "dyna_state": {
@@ -1291,7 +1324,7 @@
    "type": "bool",
    "default": true,
    "label_en": "Vertex Input Dynamic State",
-   "label": "Vertex Input Dynamic State",
+   "label": "État dynamique des entrées de sommets",
    "help": "Enables vertex input dynamic state feature for better quality and performance."
   },
   "debug": {
@@ -1505,7 +1538,7 @@
    "category": "System",
    "type": "enum",
    "enum": "ConsoleMode",
-   "default": 1,
+   "default": 0,
    "label_en": "Console Mode",
    "label": "Mode console",
    "help": "Choisit si la console est en mode Portable ou en mode Dock\nLes jeux adaptent leur résolution, leurs paramètres graphiques et les manettes prises en charge selon ce réglage.\nPasser en mode Portable peut améliorer les performances sur les systèmes peu puissants."
@@ -1948,7 +1981,7 @@
    "type": "string",
    "default": "",
    "label_en": "Homebrew Args",
-   "label": "Homebrew Args",
+   "label": "Arguments homebrew",
    "help": "Command-line arguments passed to homebrew at launch (e.g. -noglsl)."
   },
   "dump_exefs": {
@@ -2510,6 +2543,17 @@
    "owner": "UISettings",
    "key": "language",
    "category": "Paths",
+   "type": "string",
+   "default": "",
+   "label_en": "",
+   "label": "",
+   "help": ""
+  },
+  "steamgriddb_api_key": {
+   "id": "steamgriddb_api_key",
+   "owner": "UISettings",
+   "key": "steamgriddb_api_key",
+   "category": "Ui",
    "type": "string",
    "default": "",
    "label_en": "",
@@ -3369,7 +3413,7 @@
    {
     "value": 0,
     "name": "OpenGL_GLSL",
-    "label": "OpenGL GLSL"
+    "label": "OpenGL_GLSL"
    },
    {
     "value": 1,
@@ -3384,12 +3428,12 @@
    {
     "value": 3,
     "name": "OpenGL_GLASM",
-    "label": "OpenGL GLASM (Assembly Shaders, NVIDIA Only)"
+    "label": "OpenGL_GLASM"
    },
    {
     "value": 4,
     "name": "OpenGL_SPIRV",
-    "label": "OpenGL SPIR-V (Experimental, AMD/Mesa Only)"
+    "label": "OpenGL_SPIRV"
    }
   ],
   "GpuAccuracy": [
@@ -3673,7 +3717,7 @@
    {
     "value": 6,
     "name": "Fsr",
-    "label": "AMD FidelityFX Super Resolution"
+    "label": "AMD FidelityFX Super Resolution 1 (FSR 1)"
    },
    {
     "value": 7,
@@ -3718,7 +3762,7 @@
    {
     "value": 15,
     "name": "Fsr3",
-    "label": "AMD FidelityFX Super Resolution 3"
+    "label": "AMD FidelityFX Super Resolution 1, softer sharpening"
    }
   ],
   "AntiAliasing": [
@@ -4013,7 +4057,7 @@
    {
     "value": 1,
     "name": "Fsr3",
-    "label": "AMD FidelityFX Super Resolution 3 (FSR 3)"
+    "label": "Optical Flow Interpolation (built-in)"
    }
   ],
   "NAME": [

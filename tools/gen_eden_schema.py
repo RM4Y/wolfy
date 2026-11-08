@@ -8,10 +8,12 @@ qt_common/config/shared_translation.cpp and their official French translation
 (dist/languages/fr.ts).
 
     python3 tools/gen_eden_schema.py v0.2.1
-    python3 tools/gen_eden_schema.py eglantine build-64   # Eglantine (Switch2), a GitHub tag/branch
+    python3 tools/gen_eden_schema.py eglantine v0.1.0-rc3  # Eglantine (app Switch), a GitHub tag/branch
+    (WOLFY_SCHEMA_OUT=<file> writes elsewhere, to compare with the current schema)
 """
 import html
 import json
+import os
 import re
 import sys
 import urllib.request
@@ -21,12 +23,14 @@ SCHEMAS = Path(__file__).resolve().parent.parent / "backend/wolfy/emulator_setti
 if len(sys.argv) > 1 and sys.argv[1] == "eglantine":
     # Eden fork (Switch 2): same files, on GitHub
     TAG = sys.argv[2] if len(sys.argv) > 2 else "nx2"
-    BASE = f"https://raw.githubusercontent.com/Djihads80/Eglantine/{TAG}"
+    BASE = f"https://raw.githubusercontent.com/Eglantine-Community/Eglantine/{TAG}"
     OUT = SCHEMAS / "eglantine.json"
 else:
     TAG = sys.argv[1] if len(sys.argv) > 1 else "v0.2.1"
     BASE = f"https://git.eden-emu.dev/eden-emu/eden/raw/tag/{TAG}"
     OUT = SCHEMAS / "eden.json"
+if os.environ.get("WOLFY_SCHEMA_OUT"):
+    OUT = Path(os.environ["WOLFY_SCHEMA_OUT"])
 
 
 def fetch(path: str) -> str:
@@ -39,11 +43,30 @@ def strip_comments(src: str) -> str:
     return preprocess(re.sub(r"//[^\n]*", "", src))
 
 
+# macros defined for the build Wolfy runs (Linux x86-64 desktop, clang); any other is undefined
+# (HAS_NCE: arm64 only, __sun__, __ANDROID__, _WIN32...)
+DEFINED = {"__linux__", "__linux", "linux", "__unix__", "__unix", "__x86_64__", "__x86_64", "__amd64__",
+           "ARCHITECTURE_x86_64", "__GNUC__", "__clang__", "__ELF__"}
+
+
 def _is_true(cond: str) -> bool:
-    """#if conditions as seen by a Linux desktop build."""
-    neg = cond.startswith("#ifndef") or "!" in cond
-    foreign = any(t in cond for t in ("ANDROID", "_WIN32", "__APPLE__", "_MSC_VER", "__FreeBSD__"))
-    return foreign if neg else not foreign
+    """An #ifdef / #ifndef / #if condition as the preprocessor of that build evaluates it."""
+    cond = cond.strip()
+    if cond.startswith("#ifdef"):
+        return cond.split()[1] in DEFINED
+    if cond.startswith("#ifndef"):
+        return cond.split()[1] not in DEFINED
+    expr = cond.split(None, 1)[1] if " " in cond else "0"
+    expr = re.sub(r"defined\s*\(\s*(\w+)\s*\)|defined\s+(\w+)",
+                  lambda m: "1" if (m[1] or m[2]) in DEFINED else "0", expr)
+    expr = re.sub(r"__has_\w+\s*\([^)]*\)", "0", expr)
+    expr = re.sub(r"\b[A-Za-z_]\w*\b", "0", expr)  # an undefined macro is 0
+    expr = expr.replace("&&", " and ").replace("||", " or ")
+    expr = re.sub(r"!(?!=)", " not ", expr)
+    try:
+        return bool(eval(expr, {"__builtins__": {}}))  # only digits, operators, and/or/not left
+    except Exception:
+        raise SystemExit(f"condition non comprise : {cond}")
 
 
 def preprocess(src: str) -> str:
@@ -189,8 +212,39 @@ for msg in re.findall(r"<message>(.*?)</message>", fr_src, re.S):
         french[html.unescape(src.group(1))] = html.unescape(tr.group(2))
 
 
+# Wolfy's own French for texts the fork has no official translation of yet (fr.ts wins when it has one)
+WOLFY_FR = {
+    "Volume:": "Volume :", "Slow Speed": "Vitesse lente", "Turbo Speed": "Vitesse turbo",
+    "CPU Clocks": "Fréquence du CPU", "GPU Clocks": "Fréquence du GPU", "API:": "API :",
+    "RCAS Sharpness:": "Netteté RCAS :",
+    "Use NVIDIA DLSS in place of a game's DLSS": "NVIDIA DLSS à la place du DLSS du jeu",
+    "Enable post-processing effects": "Effets de post-traitement",
+    "Enable Frame Generation": "Génération d'images", "Frame Generation Type": "Type de génération d'images",
+    "Frame Generation Multiplier": "Multiplicateur de génération d'images",
+    "Target Frame Rate": "Fréquence d'images visée", "Auto Flow Scale": "Échelle du flux optique automatique",
+    "Flow Scale": "Échelle du flux optique", "Queue Target": "File d'attente visée",
+    "Dump Optical Flow": "Exporter le flux optique", "GPU Fence Behavior": "Comportement des barrières GPU",
+    "GPU Fence Behavior:": "Comportement des barrières GPU :",
+    "Frame Pacing Mode (Vulkan only)": "Régulation des images (Vulkan uniquement)",
+    "Mario Kart World: 30 FPS mode": "Mario Kart World : mode 30 FPS",
+    "Mario Kart World: dynamic FPS (experimental)": "Mario Kart World : FPS dynamiques (expérimental)",
+    "Enable buffer history": "Historique des tampons", "Fix bloom effects": "Corriger les effets de bloom",
+    "GPU Unswizzle Max Texture Size": "Dé-swizzle GPU : taille max. des textures",
+    "GPU Unswizzle Stream Size": "Dé-swizzle GPU : taille du flux",
+    "GPU Unswizzle Chunk Size": "Dé-swizzle GPU : taille des blocs", "GPU Unswizzle": "Dé-swizzle GPU",
+    "Vertex Input Dynamic State": "État dynamique des entrées de sommets",
+    "Homebrew Args": "Arguments homebrew",
+    "Forces the game to use its native 30 FPS mode at normal game speed. Takes effect after restarting the game.":
+        "Force le mode 30 FPS natif du jeu, à vitesse normale. Pris en compte au prochain lancement du jeu.",
+    "Lets the game adjust between 30 and 60 FPS using whole-frame timing to maintain normal game speed. "
+    "Takes effect after restarting the game and takes precedence over the 30 FPS mode.":
+        "Le jeu varie entre 30 et 60 FPS selon le temps de chaque image pour garder sa vitesse normale. "
+        "Pris en compte au prochain lancement du jeu ; prioritaire sur le mode 30 FPS.",
+}
+
+
 def fr(text: str) -> str:
-    return french.get(text, text) if text else ""
+    return french.get(text) or WOLFY_FR.get(text, text) if text else ""
 
 
 # ------------------------------------------------------------------ output
