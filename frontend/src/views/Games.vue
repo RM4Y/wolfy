@@ -18,6 +18,8 @@ async function load() {
   clearTimeout(timer)
   try {
     data.value = await api.get('/games')
+    // a console remembered from before that Mes jeux no longer lists
+    if (!data.value.platforms.some(p => p.slug === platform.value)) platform.value = data.value.platforms[0]?.slug || ''
     error.value = ''
     unconfigured.value = false
   } catch (e) {

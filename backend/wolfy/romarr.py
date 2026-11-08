@@ -9,7 +9,7 @@ from pathlib import PurePosixPath
 import httpx
 from fastapi import HTTPException
 
-from . import store
+from . import settings, store
 
 
 def config() -> tuple[str, str]:
@@ -58,12 +58,20 @@ async def test(url: str, key: str) -> dict:
 
 
 # consoles Romarr doesn't download for: IGDB's catalogue of them all the same (nothing to request),
-# and in the library what their emulator has installed (main.games_library)
-EXTRA_PLATFORMS = [{"slug": "psvita", "name": "Sony PlayStation Vita", "after": "psp"}]
+# and in the library the games of their ROMS folder ("dir", which Romarr doesn't read)
+EXTRA_PLATFORMS = [{"slug": "psvita", "name": "Sony PlayStation Vita", "after": "psp"},
+                   {"slug": "switch-2", "name": "Nintendo Switch 2", "after": "switch", "dir": "switch2",
+                    "ext": (".nup", ".xci", ".nsp")}]
+
+
+# consoles Wolfy runs (emulators.py: Switch 1/2, PlayStation 1/2/3, PSP, PS Vita, Wii, GameCube): the
+# others Romarr knows (NES, Xbox, Amiga…) are left out of Mes jeux
+WOLFY_PLATFORMS = {"switch", "psx", "ps2", "ps3", "psp", "psvita", "wii", "ngc"}  # + EXTRA_PLATFORMS
 
 
 def _platforms(romarr_platforms: list[dict]) -> list[dict]:
-    out = [{"slug": p["slug"], "name": p["name"], "requestable": True} for p in romarr_platforms]
+    out = [{"slug": p["slug"], "name": p["name"], "requestable": True} for p in romarr_platforms
+           if p["slug"] in WOLFY_PLATFORMS]
     for extra in EXTRA_PLATFORMS:
         if any(p["slug"] == extra["slug"] for p in out):
             continue  # Romarr knows it now
@@ -104,6 +112,18 @@ def clean_name(name: str) -> str:
     return re.sub(r"\s+", " ", name).strip(" -")
 
 
+def _extra_games(extra: dict) -> list[str]:
+    """Games of an EXTRA_PLATFORMS console's ROMS folder (on the host), without their title id."""
+    if not extra.get("dir"):
+        return []
+    folder = settings.HOST_ROOT / f"{settings.GAMES_DIR}/ROMS/{extra['dir']}".lstrip("/")
+    try:
+        files = [p for p in folder.iterdir() if p.suffix.lower() in extra["ext"]]
+    except OSError:
+        return []
+    return [re.sub(r"\s*\[[0-9A-Fa-f]{16}\]", "", p.stem) for p in files]
+
+
 async def library() -> dict:
     """Every game of Romarr's library, one per game: Romarr's "Folder" library lists files, so a game
     kept in a folder of its own (bin + cue, a PS3 game's tree) comes as several entries whose
@@ -120,6 +140,10 @@ async def library() -> dict:
             "id": f"{platform}/{folder or item['name']}", "platform": platform, "files": 0,
             "name": item["name"], "folder": folder})
         game["files"] += 1
+    for extra in EXTRA_PLATFORMS:
+        for name in _extra_games(extra):
+            games.setdefault((extra["slug"], name), {"id": f"{extra['slug']}/{name}", "platform": extra["slug"],
+                                                     "files": 1, "name": name, "folder": None})
     for game in games.values():
         # one file in its folder: the file is better named ("LocoRoco (Europe)", not "loco-roco-europe-en-fr…")
         raw = game.pop("folder") if game["files"] > 1 else game["name"]
