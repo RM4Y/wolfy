@@ -22,7 +22,7 @@ STEAM = Path.home() / ".steam"
 STEAMDIR = STEAM / "steam"
 
 DEFAULT = {"libraries": [], "startup_mode": "bigpicture", "compositor": "sway",
-           "mangohud": False, "proton_log": False, "extra_flags": ""}
+           "mangohud": False, "proton_log": False, "dlss_upgrade": False, "extra_flags": ""}
 MODES = {"bigpicture": "-bigpicture", "gamepadui": "-gamepadui", "desktop": ""}
 
 
@@ -117,6 +117,10 @@ def prepare() -> int:
     exports = {"STEAM_STARTUP_FLAGS": flags, "MANGOHUD": "1" if s["mangohud"] else "0"}
     if s["proton_log"]:
         exports["PROTON_LOG"] = "1"
+    if s["dlss_upgrade"]:
+        # Proton: NVAPI on (DLSS visible to the games) and the games' DLSS DLLs replaced by the
+        # latest official ones NVIDIA publishes (downloaded by Proton, cached in the prefix)
+        exports.update(PROTON_ENABLE_NVAPI="1", PROTON_DLSS_UPGRADE="1")
     lines = [f"export {k}={shlex.quote(v)}" for k, v in exports.items()]
     if not s["proton_log"]:
         lines.append("unset PROTON_LOG")

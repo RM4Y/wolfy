@@ -23,7 +23,7 @@ STEAM_DIR = f"{settings.WOLFY_HOST_DIR}/config/steam"
 DATA = f"{STEAM_DIR}/data"
 OPTIONS = Path(STEAM_DIR) / "wolfy" / "steam.json"
 DEFAULT = {"libraries": [f"{settings.GAMES_DIR}/SteamLibrary"], "startup_mode": "bigpicture", "compositor": "sway",
-           "mangohud": False, "proton_log": False, "extra_flags": ""}
+           "mangohud": False, "proton_log": False, "dlss_upgrade": False, "extra_flags": ""}
 
 # settings page (EmulatorSettings): one tab, typed items
 FIELDS = [
@@ -32,6 +32,9 @@ FIELDS = [
      [("bigpicture", "Big Picture"), ("gamepadui", "Interface Steam Deck"), ("desktop", "Bureau (fenêtre Steam)")]),
     ("mangohud", "bool", "Overlay de performances (MangoHud)",
      "Affiche FPS, charge CPU/GPU dans les jeux Vulkan et Proton.", None),
+    ("dlss_upgrade", "bool", "DLSS à jour (cartes NVIDIA RTX)",
+     "Proton remplace le DLSS des jeux par la dernière version officielle d'NVIDIA (téléchargée au "
+     "lancement du jeu). Nouvelles versions de DLSS dès qu'NVIDIA les publie pour ta carte.", None),
     ("proton_log", "bool", "Journaux Proton",
      "Écrit un journal steam-<appid>.log par jeu Proton lancé (dépannage).", None),
     ("extra_flags", "string", "Options de lancement de Steam supplémentaires",
