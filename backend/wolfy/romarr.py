@@ -57,13 +57,28 @@ async def test(url: str, key: str) -> dict:
     return {"ok": True, "health": health}
 
 
+# consoles Romarr doesn't download for: IGDB's catalogue of them all the same (nothing to request),
+# and in the library what their emulator has installed (main.games_library)
+EXTRA_PLATFORMS = [{"slug": "psvita", "name": "Sony PlayStation Vita", "after": "psp"}]
+
+
+def _platforms(romarr_platforms: list[dict]) -> list[dict]:
+    out = [{"slug": p["slug"], "name": p["name"], "requestable": True} for p in romarr_platforms]
+    for extra in EXTRA_PLATFORMS:
+        if any(p["slug"] == extra["slug"] for p in out):
+            continue  # Romarr knows it now
+        at = next((i + 1 for i, p in enumerate(out) if p["slug"] == extra["after"]), len(out))
+        out.insert(at, {"slug": extra["slug"], "name": extra["name"], "requestable": False})
+    return out
+
+
 async def overview() -> dict:
-    """Platforms Romarr knows, wanted list and downloads in flight."""
+    """Platforms (Romarr's, then EXTRA_PLATFORMS), wanted list and downloads in flight."""
     platforms = await call("GET", "/api/platforms")
     wanted = await call("GET", "/api/v1/wanted/missing")
     queue = await call("GET", "/api/v1/queue")
     return {
-        "platforms": [{"slug": p["slug"], "name": p["name"]} for p in platforms],
+        "platforms": _platforms(platforms),
         "wanted": wanted.get("items", []),
         "queue": queue.get("items", []),
     }

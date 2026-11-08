@@ -61,7 +61,7 @@ navigateur ──► Wolfy (FastAPI + Vue 3, port 8420)
   `/opt/wolfy/cores/VERSIONS`) ; les playlists partagées sont copiées dans la session avec ces cœurs et
   les changements (scans, historique, favoris) réécrits vers celles du PC (`playlist-sync.py`).
   PS3 et PS Vita : RPCS3 et Vita3K (dernières versions à la construction, dans `/opt/rpcs3` et `/opt/vita3k` ;
-  Vita3K avec sa propre glibc, plus récente que celle de l'image) sont lancés depuis le XMB par un cœur
+  Vita3K en AppImage « sharun », avec sa propre glibc) sont lancés depuis le XMB par un cœur
   « lanceur » (`launcher-core.c` → `ps-launch`) : à chaque session, `ps-playlists.py` crée les playlists
   « Sony - PlayStation 3 » (dossiers de jeux décryptés des dossiers de ROMs + jeux installés dans `dev_hdd0`)
   et « Sony - PlayStation Vita » (jeux installés dans Vita3K). La combinaison HOME quitte le jeu PS3 / Vita

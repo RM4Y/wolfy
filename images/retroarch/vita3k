@@ -1,0 +1,4 @@
+#!/bin/sh
+# Vita3K (sharun AppImage, /opt/vita3k): its bundled Qt's PipeWire audio backend crashes it at
+# startup, PulseAudio (Wolf's audio server) works
+QT_AUDIO_BACKEND=pulseaudio exec /opt/vita3k/bin/Vita3K "$@"

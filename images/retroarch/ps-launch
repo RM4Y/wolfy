@@ -21,7 +21,7 @@ case "$EMU" in
         ;;
     vita3k)
         TITLE_ID=$(basename "$(dirname "$GAME")")
-        CMD=(/opt/vita3k/usr/bin/Vita3K --fullscreen --installed-path "$TITLE_ID")
+        CMD=(/opt/wolfy/bin/vita3k --fullscreen --installed-path "$TITLE_ID")
         ;;
     *)
         echo "unknown emulator $EMU"

@@ -280,7 +280,7 @@ def install_ps3_firmware(job, file: str) -> None:
 
 def install_vita_firmware(job, file: str) -> None:
     job.log(f"Installation du firmware PS Vita : {file}")
-    _run(job, f"xvfb-run -a /opt/vita3k/usr/bin/Vita3K --firmware {_q(file)}", file)
+    _run(job, f"xvfb-run -a /opt/wolfy/bin/vita3k --firmware {_q(file)}", file)
     version = vita_firmware()
     if not version:
         raise RuntimeError("Vita3K n'a pas installé le firmware (fichier PSVUPDAT.PUP valide ?)")
@@ -312,7 +312,7 @@ def install_vita_pkg(job, file: str, zrif: str) -> None:
         raise RuntimeError("zRIF manquant ou invalide (licence du jeu, en base64)")
     job.log(f"Installation du pkg PS Vita : {file}")
     before = {g["id"] for g in vita_games()}
-    _run(job, f"xvfb-run -a /opt/vita3k/usr/bin/Vita3K --pkg {_q(file)} --zrif {_q(zrif)}", file)
+    _run(job, f"xvfb-run -a /opt/wolfy/bin/vita3k --pkg {_q(file)} --zrif {_q(zrif)}", file)
     new = [g["title"] for g in vita_games() if g["id"] not in before]
     job.log(f"Installé : {', '.join(new)}" if new else "Paquet installé (mise à jour / DLC, ou jeu déjà présent).")
 

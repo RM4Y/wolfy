@@ -19,24 +19,11 @@ RUN curl -fsSL -o /src/libretro.h \
     && cc -O2 -shared -fPIC -o /out/wolfy_vita3k_libretro.so /src/launcher-core.c \
          -DEMU='"vita3k"' -DLIB_NAME='"Vita3K"' -DEXTS='"bin"'
 
-# ---------------------------------------------------------------- glibc for Vita3K
-# Vita3K's Linux builds need a newer glibc than this image's Ubuntu: it gets its own
-# (loader + libraries), used by the Vita3K binary only (patchelf below)
-# (+ libwayland, newer than this image's too)
-FROM ubuntu:26.04 AS glibc
-RUN apt-get update && apt-get install -y --no-install-recommends libwayland-client0 libwayland-cursor0 \
-      libwayland-egl1 && rm -rf /var/lib/apt/lists/*
-RUN mkdir -p /out && cp -L /lib64/ld-linux-x86-64.so.2 /out/ \
-    && for l in libc.so.6 libm.so.6 libmvec.so.1 libpthread.so.0 libdl.so.2 librt.so.1 libresolv.so.2 \
-                libanl.so.1 libutil.so.1 libwayland-client.so.0 libwayland-cursor.so.0 libwayland-egl.so.1; do \
-      cp -L /lib/x86_64-linux-gnu/$l /out/; done \
-    && /out/ld-linux-x86-64.so.2 --version | head -1
-
 # ---------------------------------------------------------------- app
 FROM ghcr.io/games-on-whales/retroarch:edge
 ARG DEBIAN_FRONTEND=noninteractive
 # xvfb: firmware / pkg installs run by Wolfy (Vita3K needs a display even for those)
-RUN apt-get update && apt-get install -y --no-install-recommends xvfb xauth patchelf \
+RUN apt-get update && apt-get install -y --no-install-recommends xvfb xauth \
     && rm -rf /var/lib/apt/lists/*
 
 # no bar (RetroArch is fullscreen), hide the idle mouse cursor
@@ -70,20 +57,21 @@ RUN set -e; cd /tmp; \
     chmod +x vita3k.AppImage; ./vita3k.AppImage --appimage-extract >/dev/null; \
     mv "$(readlink -f squashfs-root)" /opt/vita3k; rm -f squashfs-root vita3k.AppImage; \
     echo "vita3k  $(curl -fsSL https://api.github.com/repos/Vita3K/Vita3K/releases/tags/continuous | python3 -c "import json, sys; print(json.load(sys.stdin)['published_at'])")" >> /opt/wolfy/cores/VERSIONS
-COPY --from=glibc /out /opt/vita3k/glibc
-# Vita3K: its own glibc; "portable" mode = every file (config.yml, ux0, firmware, cache) in the
-# folder Wolf mounts at ~/.local/share/Vita3K
-RUN patchelf --set-interpreter /opt/vita3k/glibc/ld-linux-x86-64.so.2 \
-      --set-rpath /opt/vita3k/glibc:/opt/vita3k/usr/lib --force-rpath /opt/vita3k/usr/bin/Vita3K \
-    && ln -s /home/retro/.local/share/Vita3K /opt/vita3k/usr/bin/portable \
-    && test -x /opt/rpcs3/usr/bin/rpcs3 && test -x /opt/vita3k/usr/bin/Vita3K \
+# Vita3K is a "sharun" AppImage: its own glibc and libraries (Mesa too; the NVIDIA Vulkan driver
+# the session adds to /usr/share/vulkan/icd.d is still picked up), started by bin/Vita3K.
+# The path-mapping hook (skipped as we don't go through AppRun) makes /tmp links to its lib/share
+# dirs; "portable" mode = every file (config.yml, ux0, firmware, cache) in the folder Wolf mounts
+# at ~/.local/share/Vita3K
+RUN APPDIR=/opt/vita3k sh /opt/vita3k/bin/01-path-mapping-hardcoded.hook \
+    && ln -s /home/retro/.local/share/Vita3K /opt/vita3k/bin/portable \
+    && test -x /opt/rpcs3/usr/bin/rpcs3 && test -x /opt/vita3k/bin/Vita3K \
     && ! ldd /opt/rpcs3/usr/bin/rpcs3 | grep 'not found' \
-    && ! /opt/vita3k/glibc/ld-linux-x86-64.so.2 --list /opt/vita3k/usr/bin/Vita3K | grep 'not found'
+    && /opt/vita3k/bin/Vita3K --help >/dev/null
 
 # launcher cores (PS3, PS Vita) + their .info files
 COPY --from=build /out/ /opt/wolfy/cores/
 COPY retroarch/launcher-info/ /opt/wolfy/info/
-COPY retroarch/ps-launch retroarch/rpcs3-pads.py retroarch/ps-playlists.py retroarch/ps-session-setup.py /opt/wolfy/bin/
+COPY retroarch/ps-launch retroarch/vita3k retroarch/rpcs3-pads.py retroarch/ps-playlists.py retroarch/ps-session-setup.py /opt/wolfy/bin/
 RUN chmod +x /opt/wolfy/bin/* && chmod -R a+rX /opt/wolfy /opt/rpcs3 /opt/vita3k \
     && ls -l /opt/wolfy/cores /opt/wolfy/info && cat /opt/wolfy/cores/VERSIONS
 
@@ -94,6 +82,10 @@ RUN chmod +x /opt/gow/playlist-sync.py
 # gamepad combos (RetroArch menu / quit the session), set from Wolfy
 COPY common/home-combo.py /opt/gow/home-combo.py
 RUN chmod +x /opt/gow/home-combo.py
+
+# home parent dirs created as root by Docker for the rpcs3 / Vita3K mounts
+COPY common/20-fix-home-perms.sh /etc/cont-init.d/20-fix-home-perms.sh
+RUN chmod +x /etc/cont-init.d/20-fix-home-perms.sh
 
 COPY retroarch/startup-app.sh /opt/gow/startup-app.sh
 RUN chmod +x /opt/gow/startup-app.sh

@@ -11,6 +11,8 @@ const result = ref(null)  // last request: { ok, release, seeders, error, game }
 let timer
 
 const platformName = slug => data.value?.platforms.find(p => p.slug === slug)?.name || slug
+// Romarr downloads for it (not the PS Vita: catalogue only)
+const canRequest = slug => data.value?.platforms.find(p => p.slug === slug)?.requestable !== false
 
 async function load() {
   clearTimeout(timer)
@@ -132,7 +134,8 @@ watch(shelf, loadDiscover)
 // the catalogue's platforms that Romarr can download for
 function requestable(g) {
   const known = data.value?.platforms || []
-  return (g.platforms || []).map(p => known.find(k => k.name.toLowerCase() === String(p).toLowerCase() || k.slug === String(p).toLowerCase()))
+  return (g.platforms || []).map(p => known.find(k => k.requestable !== false
+    && (k.name.toLowerCase() === String(p).toLowerCase() || k.slug === String(p).toLowerCase())))
     .filter((p, i, all) => p && all.indexOf(p) === i)
 }
 
@@ -183,6 +186,10 @@ onUnmounted(() => { clearTimeout(timer); clearTimeout(libTimer); clearTimeout(ca
           <option value="name">De A à Z</option>
         </select>
       </div>
+      <div v-if="!canRequest(platform)" class="alert info small" style="margin-bottom:16px"><Icon name="info" />
+        <div>Romarr ne télécharge pas pour la {{ platformName(platform) }} : catalogue seulement. Les jeux installés
+          dans l'émulateur sont dans la Bibliothèque.</div>
+      </div>
       <div v-if="result" class="alert small" :class="result.ok ? 'info' : 'warn'" style="margin-bottom:16px">
         <template v-if="result.ok">
           <b>{{ result.game }}</b> : {{ result.release }}<span v-if="result.seeders"> · {{ result.seeders }} sources</span>
@@ -197,7 +204,7 @@ onUnmounted(() => { clearTimeout(timer); clearTimeout(libTimer); clearTimeout(ca
           <div>Le catalogue et les jaquettes viennent d'IGDB : renseigne ses identifiants dans
             <router-link to="/parametres">Paramètres › IGDB</router-link>. En attendant, demande un jeu par son nom :</div>
         </div>
-        <div class="card">
+        <div v-if="canRequest(platform)" class="card">
           <form class="row" style="gap:8px" @submit.prevent="submit">
             <div class="search" style="flex:2;min-width:200px">
               <Icon name="search" class="ico" />
@@ -224,7 +231,7 @@ onUnmounted(() => { clearTimeout(timer); clearTimeout(libTimer); clearTimeout(ca
               <div v-if="g.alias" class="small muted">{{ g.alias }}</div>
               <div class="small muted">{{ g.year || '' }}<span v-if="g.rating"> · ★ {{ g.rating }}</span></div>
               <span v-if="status(g)" class="badge" :class="status(g)[1]" style="align-self:flex-start">{{ status(g)[0] }}</span>
-              <button v-else class="sm" @click="request(g.title, platform)"><Icon name="download" />Demander</button>
+              <button v-else-if="canRequest(platform)" class="sm" @click="request(g.title, platform)"><Icon name="download" />Demander</button>
             </div>
           </article>
         </div>
