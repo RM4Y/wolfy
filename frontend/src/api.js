@@ -1,6 +1,7 @@
 import { reactive } from 'vue'
 
-export const ui = reactive({ toasts: [], busy: '' })
+// busy: blocking overlay; tasks: background work shown bottom right (the app stays usable)
+export const ui = reactive({ toasts: [], busy: '', tasks: [] })
 
 // the logged-in account: { name, role: admin | user, tabs } (an admin has every tab and every page)
 export const session = reactive({ user: null })
@@ -50,8 +51,11 @@ export const api = {
 }
 
 // Runs an action with a global busy overlay + toast; returns undefined on error.
-export async function act(label, fn, success) {
-  ui.busy = label
+// background: a small spinner bottom right instead of the overlay, the app stays usable
+export async function act(label, fn, success, { background = false } = {}) {
+  const task = { id: Math.random(), label }
+  if (background) ui.tasks.push(task)
+  else ui.busy = label
   try {
     const r = await fn()
     if (success) toast(success)
@@ -59,7 +63,8 @@ export async function act(label, fn, success) {
   } catch (e) {
     toast(e.message, 'error')
   } finally {
-    ui.busy = ''
+    if (background) ui.tasks.splice(ui.tasks.indexOf(task), 1)
+    else ui.busy = ''
   }
 }
 

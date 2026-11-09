@@ -139,6 +139,7 @@ onUnmounted(() => { clearTimeout(timer); window.removeEventListener('wolfy:logou
 
   <div v-if="ui.busy" class="busy"><div class="box"><div class="spinner"></div>{{ ui.busy }}…</div></div>
   <div class="toasts">
+    <div v-for="t in ui.tasks" :key="t.id" class="toast task"><div class="spinner"></div>{{ t.label }}…</div>
     <div v-for="t in ui.toasts" :key="t.id" class="toast" :class="t.kind">{{ t.message }}</div>
   </div>
 </template>

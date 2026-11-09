@@ -31,7 +31,8 @@ async function load() {
 }
 
 async function request(name, slug) {
-  const r = await act(`Recherche de ${name}`, () => api.post('/games/request', { game: name, platform: slug }))
+  const r = await act(`Recherche de ${name}`, () => api.post('/games/request', { game: name, platform: slug }),
+    undefined, { background: true })
   if (!r) return
   result.value = { ...r, game: name }
   if (r.ok) toast(`${name} : téléchargement lancé`)
