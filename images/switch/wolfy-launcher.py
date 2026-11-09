@@ -26,11 +26,6 @@ from pathlib import Path
 
 DIR = Path(os.environ.get("WOLFY_LAUNCHER_DIR", "/tmp/wolfy-launcher"))
 CFG_DIR = Path.home() / ".config/eden"
-# Switch 2 games run at their native docked resolution (often 1080p and more): the global 2X of
-# the Switch 1 games would cost them a lot. Set once per game (listed here), then Wolfy's per-game
-# setting wins.
-SWITCH2_RES = 3  # ResolutionSetup Res1X
-SWITCH2_DONE = CFG_DIR / "wolfy/switch2-resolution.json"
 
 
 def log(msg: str) -> None:
@@ -103,40 +98,9 @@ def configure_pads() -> None:
         log(f"pad-config failed: {e}")
 
 
-def switch2_resolution(program_id: str) -> None:
-    """Native resolution for a Switch 2 game (program id 04...), once (SWITCH2_RES)."""
-    if not program_id.upper().startswith("04"):
-        return
-    try:
-        done = set(json.loads(SWITCH2_DONE.read_text()))
-    except (OSError, ValueError):
-        done = set()
-    if program_id.upper() in done:
-        return
-    path = CFG_DIR / "custom" / f"{program_id.upper()}.ini"
-    lines = path.read_text().split("\n") if path.is_file() else []
-    if "resolution_setup\\use_global=false" not in lines:
-        new = ["resolution_setup\\use_global=false", "resolution_setup\\default=false",
-               f"resolution_setup={SWITCH2_RES}"]
-        lines = [x for x in lines if not x.startswith(("resolution_setup\\", "resolution_setup="))]
-        if "[Renderer]" in lines:
-            i = lines.index("[Renderer]") + 1
-            lines[i:i] = new
-        else:
-            lines += ["", "[Renderer]", *new, ""]
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("\n".join(lines))
-        log(f"{program_id}: Switch 2 game, native resolution (1X)")
-    done.add(program_id.upper())
-    SWITCH2_DONE.parent.mkdir(parents=True, exist_ok=True)
-    SWITCH2_DONE.write_text(json.dumps(sorted(done)))
-
-
 class Eglantine:
     def __init__(self, apprun: str, role: str, args: list[str], program_id: str = ""):
         configure_pads()
-        if program_id:
-            switch2_resolution(program_id)
         env = dict(os.environ, WOLFY_LAUNCHER_ROLE=role, WOLFY_LAUNCHER_DIR=str(DIR))
         self.role, self.program_id = role, program_id
         self.proc = subprocess.Popen([apprun, *args], env=env, start_new_session=True)

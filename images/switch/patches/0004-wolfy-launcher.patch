@@ -512,20 +512,26 @@ index 02e9a88..718b96c 100644
  #include "core/file_sys/romfs.h"
  #include "core/file_sys/savedata_factory.h"
  
-@@ -1973,6 +1974,12 @@ void MainWindow::BootGame(const QString& filename, Service::AM::FrontendAppletPa
+@@ -1973,6 +1974,18 @@ void MainWindow::BootGame(const QString& filename, Service::AM::FrontendAppletPa
          QtCommon::system->ApplySettings();
      }
  
-+    // Started by Wolfy's launcher from a controller: no dialog can be answered.
-+    if (title_id == Settings::MarioKartWorldProgramId && !asked_recommended_mkw_settings &&
-+        FileSys::WolfyLauncher::IsGame()) {
-+        asked_recommended_mkw_settings = true;
-+        use_recommended_mkw_settings = true;
++    // Started by Wolfy's launcher from a controller: no dialog can be answered. Every game keeps
++    // the settings set in Wolfy (no built-in preset over them).
++    if (FileSys::WolfyLauncher::IsGame()) {
++        if (title_id == Settings::MarioKartWorldProgramId && !asked_recommended_mkw_settings) {
++            asked_recommended_mkw_settings = true;
++            use_recommended_mkw_settings = false;
++        }
++        if (title_id == Settings::OcarinaOfTimeProgramId && !asked_recommended_oot_settings) {
++            asked_recommended_oot_settings = true;
++            use_recommended_oot_settings = false;
++        }
 +    }
      if (title_id == Settings::MarioKartWorldProgramId && !asked_recommended_mkw_settings) {
          asked_recommended_mkw_settings = true;
          use_recommended_mkw_settings =
-@@ -2028,6 +2035,11 @@ void MainWindow::BootGame(const QString& filename, Service::AM::FrontendAppletPa
+@@ -2028,6 +2041,11 @@ void MainWindow::BootGame(const QString& filename, Service::AM::FrontendAppletPa
              return;
          }
      }
@@ -537,7 +543,7 @@ index 02e9a88..718b96c 100644
  
      // If the user specifies -u (successfully) on the cmd line, don't prompt for a user on first
      // game startup only. If the user stops emulation and starts a new one, go back to the expected
-@@ -2300,6 +2312,12 @@ void MainWindow::OnEmulationStopped() {
+@@ -2300,6 +2318,12 @@ void MainWindow::OnEmulationStopped() {
  
      emulation_running = false;
  
