@@ -23,7 +23,7 @@ CFG = Path(settings.DOLPHIN_DIR) / "config" / "dolphin-emu"
 BACKUPS = CFG / "wolfy-backups"
 FILES = ("Dolphin.ini", "GFX.ini", "RetroAchievements.ini", "FreeLook.ini", "Logger.ini", "DSUClient.ini")
 WOLFY_OPTIONS = Path(settings.WOLFY_HOST_DIR) / "config" / "wii" / "wolfy" / "dolphin.json"
-WOLFY_DEFAULT = {"wiimotes": ["pad", "real", "real", "real"], "nunchuk": True, "host_pads": [None] * 4}
+WOLFY_DEFAULT = {"wiimotes": ["pad", "real", "real", "real"], "nunchuk": True, "speaker": True, "host_pads": [None] * 4}
 SLOT_SOURCES = ("pad", "host", "real", "none")
 HOST_PAD_KEYS = ("name", "vendor", "product", "uniq", "sdl_name")
 IMAGE = "wolfy-dolphin:latest"
@@ -278,10 +278,11 @@ def read_wolfy() -> dict:
     slots = [s if s in SLOT_SOURCES else "pad" for s in list(data["wiimotes"])[:4]]
     hosts = [h if isinstance(h, dict) else None for h in list(data.get("host_pads") or [])[:4]]
     return {"wiimotes": slots + ["none"] * (4 - len(slots)), "nunchuk": bool(data["nunchuk"]),
+            "speaker": bool(data["speaker"]),
             "host_pads": hosts + [None] * (4 - len(hosts))}
 
 
-def write_wolfy(wiimotes: list[str], nunchuk: bool, host_pads: list[dict | None]) -> dict:
+def write_wolfy(wiimotes: list[str], nunchuk: bool, speaker: bool, host_pads: list[dict | None]) -> dict:
     if len(wiimotes) != 4 or any(s not in SLOT_SOURCES for s in wiimotes):
         raise HTTPException(400, "Emplacements de Wiimote invalides")
     host_pads = (list(host_pads) + [None] * 4)[:4]
@@ -295,7 +296,7 @@ def write_wolfy(wiimotes: list[str], nunchuk: bool, host_pads: list[dict | None]
             host_pads[i] = {k: pad.get(k) for k in HOST_PAD_KEYS}
     WOLFY_OPTIONS.parent.mkdir(parents=True, exist_ok=True)
     tmp = WOLFY_OPTIONS.with_suffix(".wolfy-tmp")
-    tmp.write_text(json.dumps({"wiimotes": wiimotes, "nunchuk": nunchuk, "host_pads": host_pads}, indent=2) + "\n")
+    tmp.write_text(json.dumps({"wiimotes": wiimotes, "nunchuk": nunchuk, "speaker": speaker, "host_pads": host_pads}, indent=2) + "\n")
     owner = WOLFY_OPTIONS.parent.parent.stat()
     os.chown(tmp, owner.st_uid, owner.st_gid)
     tmp.replace(WOLFY_OPTIONS)

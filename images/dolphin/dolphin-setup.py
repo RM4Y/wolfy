@@ -12,7 +12,7 @@ On Wii console 2+ (another session runs on console 1, see startup-app.sh) every 
 on a Wolf pad: the real Wii Remotes and PC gamepads stay with console 1.
 
 Settings: /wolfy-config/dolphin.json (written by Wolfy), e.g.
-    {"wiimotes": ["real", "pad", "host", "none"], "nunchuk": true,
+    {"wiimotes": ["real", "pad", "host", "none"], "nunchuk": true, "speaker": true,
      "host_pads": [null, null, {"sdl_name": "Xbox Series X Controller", ...}, null]}
 The Wolf pads are seen by Dolphin through SDL: "SDL/<n>/Xbox One S Controller" for the
 Xbox pad Wolf creates (n = order of the pads in the session).
@@ -28,7 +28,7 @@ HOST_CFG = Path("/dolphin-config-host")
 CFG = Path.home() / ".config" / "dolphin-emu"
 SETTINGS = Path("/wolfy-config/dolphin.json")
 # player 1 on the Wolf pad, players 2-4 on real Wii Remotes (not connected = not there)
-DEFAULT = {"wiimotes": ["pad", "real", "real", "real"], "nunchuk": True}
+DEFAULT = {"wiimotes": ["pad", "real", "real", "real"], "nunchuk": True, "speaker": True}
 # SDL name of the Wolf Xbox pad (Wolf X-Box One (virtual) pad, 045e:02ea)
 PAD = os.environ.get("DOLPHIN_PAD_NAME", "Xbox One S Controller")
 SOURCES = {"none": "0", "pad": "1", "host": "1", "real": "2"}
@@ -190,6 +190,8 @@ def main() -> int:
             main_ini.add_section(section)
         main_ini[section][key] = value
     put("Core", "WiimoteContinuousScanning", "True" if "real" in s["wiimotes"] else "False")
+    # sound of the real Wii Remotes: its data takes Bluetooth time from their input reports
+    put("Core", "WiimoteEnableSpeaker", "True" if s["speaker"] else "False")
     for i in range(4):
         put("Core", f"SIDevice{i}", "6")  # GameCube standard controller in ports 1-4
     put("BluetoothPassthrough", "Enabled", "False")  # real Wii Remotes: Dolphin's own Bluetooth
@@ -208,7 +210,7 @@ def main() -> int:
         gfx.add_section("Hardware")
     gfx["Hardware"]["VSync"] = "False"
     save(gfx, CFG / "GFX.ini")
-    log(f"players: {s['wiimotes']}, devices: {devices}, Nunchuk: {s['nunchuk']}")
+    log(f"players: {s['wiimotes']}, devices: {devices}, Nunchuk: {s['nunchuk']}, speaker: {s['speaker']}")
     return 0
 
 

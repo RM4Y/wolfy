@@ -615,6 +615,7 @@ def restore_dolphin_settings(name: str):
 class DolphinWolfy(BaseModel):
     wiimotes: list[str]
     nunchuk: bool = True
+    speaker: bool = True
     host_pads: list[dict | None] = []
 
 
@@ -625,7 +626,7 @@ def get_wolfy_dolphin():
 
 @api.put("/emulator-settings/dolphin/wolfy")
 def set_wolfy_dolphin(body: DolphinWolfy):
-    return dolphin_config.write_wolfy(body.wiimotes, body.nunchuk, body.host_pads)
+    return dolphin_config.write_wolfy(body.wiimotes, body.nunchuk, body.speaker, body.host_pads)
 
 
 @api.get("/emulator-settings/dolphin/host-pads")

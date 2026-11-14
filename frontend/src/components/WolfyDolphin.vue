@@ -97,6 +97,13 @@ onMounted(load)
       <span class="switch"><input v-model="form.nunchuk" type="checkbox" /><span></span></span>
       Nunchuk branché sur les Wiimotes simulées (stick gauche, C = LB, Z = LT)
     </label>
+    <label class="row" style="margin-top:12px;gap:10px;align-items:center">
+      <span class="switch"><input v-model="form.speaker" type="checkbox" /><span></span></span>
+      Son du haut-parleur des vraies Wiimotes
+    </label>
+    <div class="muted small" style="margin:4px 0 0 52px">
+      Coupé, la radio Bluetooth ne transporte plus le son : les Wiimotes répondent plus vite.
+    </div>
     <div v-if="dirty" class="row end" style="margin-top:12px">
       <button type="button" class="ghost" @click="form = clone(saved)">Annuler</button>
       <button type="button" class="primary" @click="save"><Icon name="save" />Enregistrer</button>
