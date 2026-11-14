@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import auth, combos, idle, dolphin_config, docker_ops, eden_config, espbar, espbar_relay, eden_paths, switch_paths, ps_paths, igdb, ra_config, ra_paths, romarr, steam, emulators, switch_update, settings, store, wolf_api, wolf_config
+from . import auth, combos, idle, dolphin_config, docker_ops, image_update, eden_config, espbar, espbar_relay, eden_paths, switch_paths, ps_paths, igdb, ra_config, ra_paths, romarr, steam, emulators, switch_update, settings, store, wolf_api, wolf_config
 
 app = FastAPI(title="Wolfy", docs_url="/api/docs", openapi_url="/api/openapi.json")
 public = APIRouter(prefix="/api")
@@ -326,6 +326,20 @@ def switch_do_update(body: SwitchUpdate):
     return switch_update.update(body.tag)
 
 
+# ------------------------------------------------------------------- other apps' images
+# (Wii / GameCube, PlayStation, Steam): their emulators and base images, updated by a rebuild
+
+@api.get("/emulators/{emu_id}/image-versions")
+def image_versions(emu_id: str, refresh: bool = False):
+    """What the app's image holds, the newest versions, the running update."""
+    return image_update.status(emu_id, refresh)
+
+
+@api.post("/emulators/{emu_id}/image-update")
+def image_do_update(emu_id: str):
+    return image_update.update(emu_id)
+
+
 @api.get("/emulators/switch/paths")
 def get_switch_paths():
     return {"status": switch_paths.status(), "session_running": _switch_running()}
@@ -445,7 +459,8 @@ def emulator_catalog():
         ctx = docker_ops.build_context(emu["build_dir"])
         out.append({**emu, "image_info": info, "buildable": ctx is not None,
                     "pullable": ctx is None and "/" in emu["image"], "icon": emulators.cover_path(emu),
-                    "backup": emulators.backup_ref(emu)})
+                    "backup": emulators.backup_ref(emu),
+                    "updatable": image_update.supported(emu["id"])})
     return {"emulators": out, "base_create_json": emulators.BASE_CREATE_JSON}
 
 
@@ -983,7 +998,7 @@ def build(body: ImageJob):
     emu = emulators.BY_ID.get(body.emulator or "")
     if not emu or not emu["build_dir"]:
         raise HTTPException(400, "Cet émulateur n'a pas d'image locale à construire")
-    return docker_ops.build_image(emu["image"], emu["build_dir"]).as_dict()
+    return docker_ops.build_image(emu["image"], emu["build_dir"], image_update.rebuild_args(emu["id"])).as_dict()
 
 
 @api.get("/registry")

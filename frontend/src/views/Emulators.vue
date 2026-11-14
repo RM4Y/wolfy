@@ -67,12 +67,32 @@ async function updateEmu() {
   if (j) { jobId.value = j.id; loadEmuVer() }
 }
 
+// other apps' images (Wii / GameCube, PlayStation, Steam): the emulators and base image they hold,
+// the newest versions, update = the image built again with them
+const imgVer = ref({})  // emulator id -> { components, update_available, error, job }
+async function loadImgVer(emu, refresh = false) {
+  const url = `/emulators/${emu.id}/image-versions${refresh ? '?refresh=true' : ''}`
+  const r = refresh ? await act('Vérification', () => api.get(url)) : await api.get(url).catch(() => null)
+  if (r) imgVer.value = { ...imgVer.value, [emu.id]: r }
+}
+const loadAllImgVer = () => emulators.value.filter(e => e.updatable).forEach(e => loadImgVer(e))
+const toUpdate = emu => (imgVer.value[emu.id]?.components || []).filter(c => c.update)
+
+async function updateImage(emu) {
+  const list = toUpdate(emu).map(c => `• ${c.name} : ${c.installed || '?'} → ${c.latest}`).join('\n')
+  if (!confirm(`Mettre ${emu.name} à jour ?\n\n${list}\n\nWolfy reconstruit l'image ${emu.image} avec ces versions`
+    + (emu.id === 'dolphin' ? ' (Dolphin est recompilé : 10 à 20 minutes)' : '')
+    + `. Si la construction échoue, l'image installée ne change pas.\nActif à la prochaine session.`)) return
+  const j = await act('Lancement', () => api.post(`/emulators/${emu.id}/image-update`))
+  if (j) { jobId.value = j.id; loadImgVer(emu) }
+}
+
 async function pull(emu) {
   const j = await act('Lancement', () => api.post('/images/pull', { image: emu.image, emulator: emu.id }))
   if (j) jobId.value = j.id
 }
 
-onMounted(() => { load(); loadEmuVer() })
+onMounted(async () => { await load(); loadEmuVer(); loadAllImgVer() })
 </script>
 
 <template>
@@ -118,6 +138,25 @@ onMounted(() => { load(); loadEmuVer() })
               <span v-if="emuVer.error" class="muted"> · {{ emuVer.error }}</span>
             </td>
           </tr>
+          <template v-if="imgVer[emu.id]">
+            <tr v-for="c in imgVer[emu.id].components" :key="c.key">
+              <td class="muted">{{ c.name }}</td>
+              <td>
+                <b>{{ c.installed || 'inconnue' }}</b>
+                <span v-if="c.update" class="badge warn" style="margin-left:6px">
+                  <a v-if="c.url" :href="c.url" target="_blank" rel="noopener">{{ c.latest }}</a><template v-else>{{ c.latest }}</template>
+                  disponible</span>
+                <span v-else-if="c.latest" class="badge ok" style="margin-left:6px">à jour</span>
+              </td>
+            </tr>
+            <tr v-if="imgVer[emu.id].job || imgVer[emu.id].error">
+              <td></td>
+              <td>
+                <span v-if="imgVer[emu.id].job" class="badge warn">mise à jour en cours…</span>
+                <span v-if="imgVer[emu.id].error" class="muted small"> {{ imgVer[emu.id].error }}</span>
+              </td>
+            </tr>
+          </template>
           <tr><td class="muted">ROMs</td><td class="mono">{{ emu.rom_dir || '—' }}</td></tr>
           <tr>
             <td class="muted">Utilisé par</td>
@@ -135,6 +174,12 @@ onMounted(() => { load(); loadEmuVer() })
           <button v-else-if="emuVer.update_available" class="primary" @click="updateEmu">
             <Icon name="download" />Mettre à jour vers {{ emuVer.latest.tag }}</button>
           <button v-else @click="loadEmuVer(true)"><Icon name="refresh" />Vérifier les mises à jour</button>
+        </template>
+        <template v-if="emu.updatable && imgVer[emu.id] && emu.image_info.present">
+          <button v-if="imgVer[emu.id].job" @click="jobId = imgVer[emu.id].job.id"><Icon name="hammer" />Voir la mise à jour</button>
+          <button v-else-if="imgVer[emu.id].update_available" class="primary" @click="updateImage(emu)">
+            <Icon name="download" />Mettre à jour ({{ toUpdate(emu).length }})</button>
+          <button v-else @click="loadImgVer(emu, true)"><Icon name="refresh" />Vérifier les mises à jour</button>
         </template>
         <button v-if="emu.buildable" @click="build(emu)"><Icon name="hammer" />{{ emu.image_info.present ? 'Reconstruire' : 'Construire' }}</button>
         <button v-else-if="emu.pullable" @click="pull(emu)"><Icon name="download" />{{ emu.image_info.present ? 'Mettre à jour' : 'Télécharger' }}</button>
@@ -162,5 +207,5 @@ onMounted(() => { load(); loadEmuVer() })
   <SwitchPaths v-if="pathsFor === 'switch'" @close="pathsFor = ''; load()" />
   <RetroArchPaths v-if="pathsFor === 'retroarch'" @close="pathsFor = ''; load()" />
   <SteamPaths v-if="pathsFor === 'steam'" @close="pathsFor = ''; load()" />
-  <JobLog v-if="jobId" :job-id="jobId" @close="jobId = ''; loadEmuVer()" @done="load(); loadEmuVer()" />
+  <JobLog v-if="jobId" :job-id="jobId" @close="jobId = ''; loadEmuVer(); loadAllImgVer()" @done="load(); loadEmuVer(); loadAllImgVer()" />
 </template>

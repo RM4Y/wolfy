@@ -31,10 +31,13 @@ RUN sed -i '/^bar swaybar_command waybar/d' /cfg/sway/config \
     && sed -i '/^# Need to autostart/i seat * hide_cursor 3000' /cfg/sway/config
 
 # libretro cores (latest libretro buildbot builds) + their .info files, in /opt/wolfy.
-# Rebuilding the image (Wolfy > Émulateurs > Reconstruire) updates them.
+# Wolfy > Émulateurs > Mettre à jour passes the buildbot dates it saw (CORES_STAMP, RPCS3_URL,
+# VITA3K_STAMP): a new value redoes that step (Docker's cache), "Reconstruire" passes the
+# installed ones (read from /opt/wolfy/cores/VERSIONS), so nothing changes by accident.
 ARG CORES="mednafen_psx_hw pcsx2 ppsspp"
 ARG BUILDBOT=https://buildbot.libretro.com/nightly/linux/x86_64/latest
-RUN set -e; mkdir -p /opt/wolfy/cores /opt/wolfy/info; cd /tmp; \
+ARG CORES_STAMP=
+RUN set -e; echo "cores: ${CORES_STAMP:-latest}"; mkdir -p /opt/wolfy/cores /opt/wolfy/info; cd /tmp; \
     for c in $CORES; do \
       curl -fsSL -o core.zip "$BUILDBOT/${c}_libretro.so.zip"; \
       date=$(curl -fsSI "$BUILDBOT/${c}_libretro.so.zip" | sed -n 's/^last-modified: //Ip' | tr -d '\r'); \
@@ -45,14 +48,18 @@ RUN set -e; mkdir -p /opt/wolfy/cores /opt/wolfy/info; cd /tmp; \
     python3 -c "import zipfile, sys; z = zipfile.ZipFile('info.zip'); [z.extract(n, '/opt/wolfy/info') for n in z.namelist() if n.split('_libretro')[0] in sys.argv[1:]]" $CORES; \
     rm -f core.zip info.zip
 
-# RPCS3 (latest Linux build) and Vita3K (latest build), AppImages extracted in /opt.
-# Rebuilding the image updates them too.
+# RPCS3 (the AppImage of RPCS3_URL, else the latest Linux build) and Vita3K (latest
+# "continuous" build), AppImages extracted in /opt. VERSIONS: "rpcs3  <AppImage>  <url>".
+ARG RPCS3_URL=
 RUN set -e; cd /tmp; \
-    url=$(curl -fsSL https://api.github.com/repos/RPCS3/rpcs3-binaries-linux/releases/latest \
+    url="$RPCS3_URL"; \
+    [ -n "$url" ] || url=$(curl -fsSL https://api.github.com/repos/RPCS3/rpcs3-binaries-linux/releases/latest \
           | python3 -c "import json, sys; print(next(a['browser_download_url'] for a in json.load(sys.stdin)['assets'] if a['name'].endswith('.AppImage')))"); \
     curl -fsSL -o rpcs3.AppImage "$url"; chmod +x rpcs3.AppImage; ./rpcs3.AppImage --appimage-extract >/dev/null; \
     mv "$(readlink -f squashfs-root)" /opt/rpcs3; rm -f squashfs-root rpcs3.AppImage; \
-    echo "rpcs3  $(basename "$url")" >> /opt/wolfy/cores/VERSIONS; \
+    echo "rpcs3  $(basename "$url")  $url" >> /opt/wolfy/cores/VERSIONS
+ARG VITA3K_STAMP=
+RUN set -e; cd /tmp; echo "vita3k: ${VITA3K_STAMP:-latest}"; \
     curl -fsSL -o vita3k.AppImage https://github.com/Vita3K/Vita3K/releases/download/continuous/Vita3K-x86_64.AppImage; \
     chmod +x vita3k.AppImage; ./vita3k.AppImage --appimage-extract >/dev/null; \
     mv "$(readlink -f squashfs-root)" /opt/vita3k; rm -f squashfs-root vita3k.AppImage; \

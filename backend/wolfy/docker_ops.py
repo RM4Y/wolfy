@@ -244,15 +244,19 @@ def _context_tar(root, build_dir: str):
     return buf
 
 
-def build_steps(job: Job, ref: str, build_dir: str) -> None:
-    """Builds REF from images/<build_dir> within JOB (its output in the job log)."""
+def build_steps(job: Job, ref: str, build_dir: str, buildargs: dict | None = None) -> None:
+    """Builds REF from images/<build_dir> within JOB (its output in the job log), with BUILDARGS
+    (versions pinned by image_update)."""
     ctx = build_context(build_dir)
     if ctx is None:
         raise RuntimeError(f"Pas de Dockerfile pour « {build_dir} »")
     job.log(f"Construction de {ref} depuis {ctx}")
+    for k, v in (buildargs or {}).items():
+        job.log(f"  {k}={v}")
     context = _context_tar(ctx.parent, build_dir)
     for chunk in client().api.build(fileobj=context, custom_context=True, dockerfile=f"{build_dir}/Dockerfile",
-                                    tag=ref, rm=True, pull=True, decode=True):
+                                    tag=ref, rm=True, pull=True, decode=True,
+                                    buildargs=buildargs or None):
         if "stream" in chunk:
             job.log(chunk["stream"])
         elif "status" in chunk:
@@ -276,13 +280,13 @@ def step_progress(job: Job, phase: str) -> None:
                             "elapsed": int(time.time() - state["start"])}
 
 
-def build_image(ref: str, build_dir: str) -> Job:
+def build_image(ref: str, build_dir: str, buildargs: dict | None = None) -> Job:
     if build_context(build_dir) is None:
         raise HTTPException(404, f"Pas de Dockerfile pour « {build_dir} »")
 
     def work(job: Job):
         step_progress(job, f"Construction de {ref}")
-        build_steps(job, ref, build_dir)
+        build_steps(job, ref, build_dir, buildargs)
 
     return run_job(f"Construction {ref}", work)
 

@@ -22,7 +22,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libswresample-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Better Wii Menu DE, same commit as the PC's flatpak (Dolphin > About)
+# Better Wii Menu DE: the commit installed (first the PC flatpak's one, Dolphin > About);
+# Wolfy > Émulateurs > Mettre à jour builds the fork's newest commit and rewrites this line
 ARG REPO=https://github.com/Gavin-S-Dev/Better-Wii-Menu-DE
 ARG REF=0e57690c0b0829a2b8870d48e274ead39932e365
 RUN git clone --filter=blob:none "$REPO" /src && cd /src && git checkout "$REF" \
@@ -43,7 +44,8 @@ RUN cmake -S /src -B /build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_
       -DENABLE_AUTOUPDATE=OFF -DENABLE_ANALYTICS=OFF -DUSE_DISCORD_PRESENCE=OFF \
       -DDISTRIBUTOR=wolfy \
     && ninja -C /build && ninja -C /build install \
-    && git -C /src describe --always --tags > /opt/dolphin/VERSION
+    && git -C /src describe --always --tags > /opt/dolphin/VERSION \
+    && git -C /src rev-parse HEAD > /opt/dolphin/COMMIT
 # sdl-pads: the gamepads SDL sees, named exactly as Dolphin names them (same static SDL);
 # used by Wolfy to list the PC's gamepads and by the sessions (host-pads.py)
 COPY dolphin/sdl-pads.c /tmp/sdl-pads.c
